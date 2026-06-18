@@ -143,7 +143,7 @@ Import this repository into Vercel.
 
 Use:
 
-- Build command: `npm run build`
+- Build command: `npm run verify:production-env && npm run build`
 - Output directory: `dist`
 - Install command: `npm install`
 
