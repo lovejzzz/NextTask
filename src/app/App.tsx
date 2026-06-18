@@ -347,10 +347,19 @@ function AppHeader({
   const [emailInput, setEmailInput] = useState(session.email ?? '');
   const [authBusy, setAuthBusy] = useState<'save' | 'link' | 'signout' | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const confirmedEmail = session.email?.trim().toLowerCase() ?? '';
+  const enteredEmail = emailInput.trim().toLowerCase();
+  const boardAlreadySaved = Boolean(confirmedEmail && !session.isAnonymous && confirmedEmail === enteredEmail);
 
   async function runAuthAction(kind: 'save' | 'link') {
     setAuthBusy(kind);
     setAuthMessage(null);
+    if (kind === 'save' && boardAlreadySaved) {
+      setAuthMessage('This board is already recoverable with this email.');
+      setAuthBusy(null);
+      return;
+    }
+
     try {
       const message =
         kind === 'save' ? await session.saveBoardToEmail(emailInput) : await session.sendSignInLink(emailInput);
@@ -524,10 +533,10 @@ function AppHeader({
                 className="primary-button"
                 onClick={() => void runAuthAction('save')}
                 type="button"
-                disabled={Boolean(authBusy)}
+                disabled={Boolean(authBusy) || boardAlreadySaved}
               >
                 {authBusy === 'save' ? <Loader2 className="spin" size={16} /> : <ShieldCheck size={16} />}
-                Save board
+                {boardAlreadySaved ? 'Board saved' : 'Save board'}
               </button>
               <button
                 className="ghost-button"
@@ -543,7 +552,11 @@ function AppHeader({
                 Sign out
               </button>
             </div>
-            {authMessage ? <p className="account-message">{authMessage}</p> : null}
+            {authMessage ? (
+              <p className="account-message">{authMessage}</p>
+            ) : boardAlreadySaved ? (
+              <p className="account-message success">Board recovery is active for this email.</p>
+            ) : null}
           </motion.div>
         ) : null}
       </AnimatePresence>

@@ -907,6 +907,12 @@ button:disabled {
   font-weight: 700;
 }
 
+.account-message.success {
+  border-color: rgba(18, 155, 107, 0.22);
+  background: rgba(238, 251, 244, 0.86);
+  color: var(--emerald);
+}
+
 .drawer-backdrop {
   position: fixed;
   inset: 0;

@@ -100,6 +100,10 @@ export function useAnonymousSession() {
     if (LOCAL_DEMO_ENABLED) throw new Error(localDemoMessage);
 
     const normalizedEmail = normalizeEmail(email);
+    if (!state.isAnonymous && state.email?.toLowerCase() === normalizedEmail) {
+      return 'This board is already recoverable with this email.';
+    }
+
     const { data, error } = await supabase.auth.updateUser(
       { email: normalizedEmail },
       { emailRedirectTo: window.location.origin },
