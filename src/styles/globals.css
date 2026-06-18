@@ -495,6 +495,31 @@ button:disabled {
   justify-content: space-between;
 }
 
+.mobile-move-row {
+  display: none;
+  margin-top: 12px;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.mobile-move-row select {
+  height: 34px;
+  min-width: 140px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .due-pill,
 .comment-pill,
 .unassigned {
@@ -700,6 +725,56 @@ button:disabled {
   z-index: 40;
   background: rgba(16, 24, 40, 0.42);
   backdrop-filter: blur(6px);
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(16, 24, 40, 0.46);
+  backdrop-filter: blur(6px);
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 90;
+  width: min(420px, calc(100vw - 32px));
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+
+.confirm-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: var(--radius);
+  background: #fff3f2;
+  color: var(--danger);
+}
+
+.confirm-dialog h2 {
+  margin: 13px 0 6px;
+  font-size: 18px;
+}
+
+.confirm-dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .task-drawer,
@@ -1181,6 +1256,10 @@ button:disabled {
     left: 8px;
     width: auto;
     height: min(86vh, 760px);
+  }
+
+  .mobile-move-row {
+    display: flex;
   }
 
   .field-grid,

@@ -56,6 +56,16 @@ import { useQueryClient } from '@tanstack/react-query';
 
 type DrawerMode = 'create' | 'edit';
 type Toast = { id: number; tone: 'success' | 'error'; message: string };
+type ConfirmOptions = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+};
+type ConfirmRequest = ConfirmOptions & {
+  id: number;
+  resolve: (confirmed: boolean) => void;
+};
 
 const defaultFilters: BoardFilters = {
   search: '',
@@ -87,6 +97,7 @@ export function App() {
   const [managerOpen, setManagerOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const queryClient = useQueryClient();
 
   const boardQuery = useBoardData(filters, session.status === 'ready');
@@ -124,6 +135,19 @@ export function App() {
     }, 3200);
   }
 
+  function confirmAction(options: ConfirmOptions) {
+    return new Promise<boolean>((resolve) => {
+      setConfirmRequest({ ...options, id: Date.now(), resolve });
+    });
+  }
+
+  function resolveConfirm(confirmed: boolean) {
+    setConfirmRequest((current) => {
+      current?.resolve(confirmed);
+      return null;
+    });
+  }
+
   function onDragStart(event: DragStartEvent) {
     setActiveTaskId(String(event.active.id));
   }
@@ -144,6 +168,20 @@ export function App() {
     const updates = reorderForDrop(tasks, active, targetStatus, overTask?.id);
     if (!updates.length) return;
 
+    await applyReorder(updates);
+  }
+
+  async function moveTask(taskId: string, targetStatus: TaskStatus) {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task || task.status === targetStatus) return;
+
+    const updates = reorderForDrop(tasks, task, targetStatus);
+    if (!updates.length) return;
+
+    await applyReorder(updates);
+  }
+
+  async function applyReorder(updates: Array<{ id: string; status: TaskStatus; position: number }>) {
     const previous = board;
     if (previous) {
       queryClient.setQueryData<BoardPayload>(boardQueryKey(filters), {
@@ -202,6 +240,7 @@ export function App() {
                   loading={boardQuery.isLoading}
                   onCreate={() => openCreate(status.id)}
                   onOpen={openEdit}
+                  onMove={moveTask}
                 />
               ))}
             </section>
@@ -238,6 +277,7 @@ export function App() {
           setDrawerMode('edit');
         }}
         notify={notify}
+        confirm={confirmAction}
       />
 
       <TeamLabelManager
@@ -245,7 +285,10 @@ export function App() {
         board={board}
         onClose={() => setManagerOpen(false)}
         notify={notify}
+        confirm={confirmAction}
       />
+
+      <ConfirmDialog request={confirmRequest} onResolve={resolveConfirm} />
 
       <AnimatePresence>
         {toast ? (
@@ -423,6 +466,7 @@ function BoardColumn({
   loading,
   onCreate,
   onOpen,
+  onMove,
 }: {
   status: TaskStatus;
   title: string;
@@ -431,6 +475,7 @@ function BoardColumn({
   loading: boolean;
   onCreate: () => void;
   onOpen: (id: string) => void;
+  onMove: (id: string, status: TaskStatus) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
   return (
@@ -457,7 +502,7 @@ function BoardColumn({
               <TaskSkeleton />
             </>
           ) : tasks.length ? (
-            tasks.map((task) => <SortableTaskCard key={task.id} task={task} onOpen={onOpen} />)
+            tasks.map((task) => <SortableTaskCard key={task.id} task={task} onOpen={onOpen} onMove={onMove} />)
           ) : (
             <div className="empty-column">
               <Sparkles size={17} />
@@ -475,7 +520,7 @@ function BoardColumn({
   );
 }
 
-function SortableTaskCard({ task, onOpen }: { task: Task; onOpen: (id: string) => void }) {
+function SortableTaskCard({ task, onOpen, onMove }: { task: Task; onOpen: (id: string) => void; onMove: (id: string, status: TaskStatus) => void }) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   return (
     <TaskCard
@@ -483,6 +528,7 @@ function SortableTaskCard({ task, onOpen }: { task: Task; onOpen: (id: string) =
       activatorRef={setActivatorNodeRef}
       task={task}
       onOpen={onOpen}
+      onMove={onMove}
       attributes={attributes}
       listeners={listeners}
       isDragging={isDragging}
@@ -494,6 +540,7 @@ function SortableTaskCard({ task, onOpen }: { task: Task; onOpen: (id: string) =
 function TaskCard({
   task,
   onOpen,
+  onMove,
   refCallback,
   activatorRef,
   attributes,
@@ -504,6 +551,7 @@ function TaskCard({
 }: {
   task: Task;
   onOpen: (id: string) => void;
+  onMove?: (id: string, status: TaskStatus) => void;
   refCallback?: (element: HTMLElement | null) => void;
   activatorRef?: (element: HTMLElement | null) => void;
   attributes?: Record<string, unknown> | any;
@@ -559,6 +607,22 @@ function TaskCard({
         </span>
         <AvatarStack members={task.assignees} />
       </div>
+      {onMove ? (
+        <label className="mobile-move-row" onClick={(event) => event.stopPropagation()}>
+          <span>Move</span>
+          <select
+            aria-label={`Move ${task.title}`}
+            value={task.status}
+            onChange={(event) => onMove(task.id, event.target.value as TaskStatus)}
+          >
+            {STATUSES.map((status) => (
+              <option value={status.id} key={status.id}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
     </motion.article>
   );
 }
@@ -571,6 +635,7 @@ function TaskDrawer({
   initialStatus,
   onClose,
   notify,
+  confirm,
 }: {
   open: boolean;
   mode: DrawerMode;
@@ -579,6 +644,7 @@ function TaskDrawer({
   initialStatus: TaskStatus;
   onClose: () => void;
   notify: (tone: Toast['tone'], message: string) => void;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState(defaultDraft);
   const commentsQuery = useComments(task?.id ?? null);
@@ -640,6 +706,13 @@ function TaskDrawer({
 
   async function remove() {
     if (!task) return;
+    const confirmed = await confirm({
+      title: 'Delete task?',
+      message: `"${task.title}" and its comments/activity will be permanently removed.`,
+      confirmLabel: 'Delete task',
+    });
+    if (!confirmed) return;
+
     try {
       await mutations.deleteTask.mutateAsync(task.id);
       notify('success', 'Task deleted');
@@ -734,8 +807,16 @@ function TaskDrawer({
                       }
                     }}
                     onDelete={async (commentId) => {
+                      const confirmed = await confirm({
+                        title: 'Delete comment?',
+                        message: 'This comment will be permanently removed from the task.',
+                        confirmLabel: 'Delete comment',
+                      });
+                      if (!confirmed) return;
+
                       try {
                         await mutations.deleteComment.mutateAsync({ taskId: task.id, commentId });
+                        notify('success', 'Comment deleted');
                       } catch (error) {
                         notify('error', readableError(error));
                       }
@@ -891,11 +972,13 @@ function TeamLabelManager({
   board,
   onClose,
   notify,
+  confirm,
 }: {
   open: boolean;
   board?: BoardPayload;
   onClose: () => void;
   notify: (tone: Toast['tone'], message: string) => void;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
 }) {
   const [memberName, setMemberName] = useState('');
   const [labelName, setLabelName] = useState('');
@@ -918,6 +1001,38 @@ function TeamLabelManager({
       await mutations.createLabel.mutateAsync({ name: labelName, color: randomColor(board?.labels.length ?? 0) });
       setLabelName('');
       notify('success', 'Label added');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
+  async function removeMember(member: TeamMember) {
+    const confirmed = await confirm({
+      title: 'Delete team member?',
+      message: `"${member.name}" will be removed from the workspace and unassigned from tasks.`,
+      confirmLabel: 'Delete member',
+    });
+    if (!confirmed) return;
+
+    try {
+      await mutations.deleteTeamMember.mutateAsync(member.id);
+      notify('success', 'Team member deleted');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
+  async function removeLabel(label: Label) {
+    const confirmed = await confirm({
+      title: 'Delete label?',
+      message: `"${label.name}" will be removed from the workspace and from any tagged tasks.`,
+      confirmLabel: 'Delete label',
+    });
+    if (!confirmed) return;
+
+    try {
+      await mutations.deleteLabel.mutateAsync(label.id);
+      notify('success', 'Label deleted');
     } catch (error) {
       notify('error', readableError(error));
     }
@@ -955,7 +1070,7 @@ function TeamLabelManager({
                     <div className="manager-row" key={member.id}>
                       <Avatar member={member} />
                       <span>{member.name}</span>
-                      <button className="mini-button" onClick={() => mutations.deleteTeamMember.mutate(member.id)} type="button" aria-label={`Delete ${member.name}`}>
+                      <button className="mini-button" onClick={() => void removeMember(member)} type="button" aria-label={`Delete ${member.name}`}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -978,7 +1093,7 @@ function TeamLabelManager({
                     <div className="manager-row" key={label.id}>
                       <span className="picker-color" style={{ background: label.color }} />
                       <span>{label.name}</span>
-                      <button className="mini-button" onClick={() => mutations.deleteLabel.mutate(label.id)} type="button" aria-label={`Delete ${label.name}`}>
+                      <button className="mini-button" onClick={() => void removeLabel(label)} type="button" aria-label={`Delete ${label.name}`}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -987,6 +1102,67 @@ function TeamLabelManager({
               </section>
             </div>
           </motion.aside>
+        </>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function ConfirmDialog({
+  request,
+  onResolve,
+}: {
+  request: ConfirmRequest | null;
+  onResolve: (confirmed: boolean) => void;
+}) {
+  useEffect(() => {
+    if (!request) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onResolve(false);
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [request, onResolve]);
+
+  return (
+    <AnimatePresence>
+      {request ? (
+        <>
+          <motion.div
+            className="confirm-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => onResolve(false)}
+          />
+          <motion.div
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`confirm-title-${request.id}`}
+            aria-describedby={`confirm-message-${request.id}`}
+            initial={{ opacity: 0, x: '-50%', y: 'calc(-50% + 14px)', scale: 0.98 }}
+            animate={{ opacity: 1, x: '-50%', y: '-50%', scale: 1 }}
+            exit={{ opacity: 0, x: '-50%', y: 'calc(-50% + 12px)', scale: 0.98 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+          >
+            <div className="confirm-icon">
+              <AlertCircle size={19} />
+            </div>
+            <h2 id={`confirm-title-${request.id}`}>{request.title}</h2>
+            <p id={`confirm-message-${request.id}`}>{request.message}</p>
+            <div className="confirm-actions">
+              <button className="ghost-button" onClick={() => onResolve(false)} type="button">
+                {request.cancelLabel ?? 'Cancel'}
+              </button>
+              <button className="danger-button" onClick={() => onResolve(true)} type="button">
+                <Trash2 size={16} />
+                {request.confirmLabel ?? 'Delete'}
+              </button>
+            </div>
+          </motion.div>
         </>
       ) : null}
     </AnimatePresence>
