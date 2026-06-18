@@ -303,6 +303,11 @@ function AppHeader({
             placeholder="Search tasks"
             aria-label="Search tasks"
           />
+          {filters.search ? (
+            <button className="search-clear" onClick={() => setFilters({ ...filters, search: '' })} type="button" aria-label="Clear search">
+              <X size={14} />
+            </button>
+          ) : null}
         </div>
         <button className="icon-button text-button" onClick={() => setFiltersOpen((value) => !value)} type="button">
           <Filter size={16} />
@@ -912,13 +917,13 @@ function TeamLabelManager({
       {open ? (
         <>
           <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.aside className="manager-panel" initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 28 }}>
+          <motion.aside className="manager-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="drawer-header">
               <div>
                 <span className="drawer-kicker">Workspace setup</span>
                 <h2>Team & labels</h2>
               </div>
-              <button className="icon-button" onClick={onClose} type="button">
+              <button className="icon-button" onClick={onClose} type="button" aria-label="Close team and labels">
                 <X size={18} />
               </button>
             </div>
@@ -930,7 +935,7 @@ function TeamLabelManager({
                 </h3>
                 <div className="inline-create">
                   <input value={memberName} onChange={(event) => setMemberName(event.target.value)} placeholder="Add member" />
-                  <button className="icon-button" onClick={() => void addMember()} type="button">
+                  <button className="icon-button" onClick={() => void addMember()} type="button" aria-label="Add team member">
                     <Plus size={15} />
                   </button>
                 </div>
@@ -939,7 +944,7 @@ function TeamLabelManager({
                     <div className="manager-row" key={member.id}>
                       <Avatar member={member} />
                       <span>{member.name}</span>
-                      <button className="mini-button" onClick={() => mutations.deleteTeamMember.mutate(member.id)} type="button">
+                      <button className="mini-button" onClick={() => mutations.deleteTeamMember.mutate(member.id)} type="button" aria-label={`Delete ${member.name}`}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -953,7 +958,7 @@ function TeamLabelManager({
                 </h3>
                 <div className="inline-create">
                   <input value={labelName} onChange={(event) => setLabelName(event.target.value)} placeholder="Add label" />
-                  <button className="icon-button" onClick={() => void addLabel()} type="button">
+                  <button className="icon-button" onClick={() => void addLabel()} type="button" aria-label="Add label">
                     <Plus size={15} />
                   </button>
                 </div>
@@ -962,7 +967,7 @@ function TeamLabelManager({
                     <div className="manager-row" key={label.id}>
                       <span className="picker-color" style={{ background: label.color }} />
                       <span>{label.name}</span>
-                      <button className="mini-button" onClick={() => mutations.deleteLabel.mutate(label.id)} type="button">
+                      <button className="mini-button" onClick={() => mutations.deleteLabel.mutate(label.id)} type="button" aria-label={`Delete ${label.name}`}>
                         <Trash2 size={13} />
                       </button>
                     </div>
