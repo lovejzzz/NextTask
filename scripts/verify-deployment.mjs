@@ -6,12 +6,14 @@ loadDotEnv();
 const deploymentUrl = normalizeUrl(process.argv[2] ?? process.env.DEPLOYMENT_URL);
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
+const protectionBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? process.env.VERCEL_PROTECTION_BYPASS;
 
 if (!deploymentUrl) fail('Usage: npm run verify:deployment -- https://your-deployment.vercel.app');
 if (!supabaseUrl || !supabaseAnonKey) fail('Missing Supabase environment variables.');
 
 const result = {
   deploymentUrl,
+  protectionBypassConfigured: Boolean(protectionBypassSecret),
   page: null,
   bundle: null,
   auth: null,
@@ -19,7 +21,7 @@ const result = {
   mutationCycle: null,
 };
 
-const page = await fetch(deploymentUrl);
+const page = await protectedFetch(deploymentUrl);
 const html = await page.text();
 result.page = { ok: page.ok, status: page.status, hasRoot: html.includes('<div id="root">') };
 if (!page.ok || !result.page.hasRoot) printAndExit(1);
@@ -86,7 +88,7 @@ result.mutationCycle = { ok: true, taskId };
 printAndExit(0);
 
 async function apiFetch(path, token, init = {}) {
-  const response = await fetch(new URL(path, deploymentUrl), {
+  const response = await protectedFetch(new URL(path, deploymentUrl), {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -117,7 +119,7 @@ async function inspectBundles(baseUrl, html) {
   const foundMarkers = [];
 
   for (const path of assetPaths) {
-    const response = await fetch(new URL(path, baseUrl));
+    const response = await protectedFetch(new URL(path, baseUrl));
     if (!response.ok) return { ok: false, failedAsset: path, status: response.status, foundMarkers };
     const content = await response.text();
     for (const marker of markers) {
@@ -126,6 +128,16 @@ async function inspectBundles(baseUrl, html) {
   }
 
   return { ok: foundMarkers.length === 0, assetsChecked: assetPaths.length, foundMarkers };
+}
+
+function protectedFetch(url, init = {}) {
+  return fetch(url, {
+    ...init,
+    headers: {
+      ...(protectionBypassSecret ? { 'x-vercel-protection-bypass': protectionBypassSecret } : {}),
+      ...init.headers,
+    },
+  });
 }
 
 function normalizeUrl(value) {
