@@ -15,7 +15,6 @@ type SessionState = {
 export type SessionRecovery = {
   saveBoardToEmail: (email: string) => Promise<string>;
   sendSignInLink: (email: string) => Promise<string>;
-  continueWithProvider: (provider: OAuthProvider) => Promise<string>;
   signInWithProvider: (provider: OAuthProvider) => Promise<string>;
   signOut: () => Promise<void>;
 };
@@ -149,33 +148,6 @@ export function useAnonymousSession() {
     return 'Check your email for the sign-in link.';
   }
 
-  async function continueWithProvider(provider: OAuthProvider) {
-    if (LOCAL_DEMO_ENABLED) throw new Error(localDemoMessage);
-
-    const redirectTo = window.location.origin;
-    rememberOAuthAttempt(provider, 'connect');
-    const { error: linkError } = await supabase.auth.linkIdentity({
-      provider,
-      options: {
-        redirectTo,
-      },
-    });
-
-    if (!linkError) return `Redirecting to ${providerLabels[provider]} to connect this board.`;
-    if (!isManualLinkingDisabled(linkError)) throw linkError;
-
-    rememberOAuthAttempt(provider, 'signin');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo,
-      },
-    });
-
-    if (error) throw error;
-    return `Redirecting to ${providerLabels[provider]}.`;
-  }
-
   async function signInWithProvider(provider: OAuthProvider) {
     if (LOCAL_DEMO_ENABLED) throw new Error(localDemoMessage);
 
@@ -202,14 +174,9 @@ export function useAnonymousSession() {
     ...state,
     saveBoardToEmail,
     sendSignInLink,
-    continueWithProvider,
     signInWithProvider,
     signOut,
   };
-}
-
-function isManualLinkingDisabled(error: { message?: string }) {
-  return error.message?.toLowerCase().includes('manual linking is disabled') ?? false;
 }
 
 function normalizeEmail(email: string) {

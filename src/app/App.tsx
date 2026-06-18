@@ -112,7 +112,7 @@ const socialProviders = [
   { id: 'google', label: 'Google' },
   { id: 'github', label: 'GitHub' },
 ] satisfies Array<{ id: OAuthProvider; label: string }>;
-type AuthBusy = 'save' | 'link' | 'signout' | `provider-${OAuthProvider}` | `signin-${OAuthProvider}`;
+type AuthBusy = 'save' | 'link' | 'signout' | `signin-${OAuthProvider}`;
 
 export function App() {
   const session = useAnonymousSession();
@@ -401,25 +401,11 @@ function AppHeader({
     }
   }
 
-  async function continueWithProvider(provider: OAuthProvider) {
-    const action = `provider-${provider}` as const;
-    setAuthBusy(action);
-    setAuthMessage(null);
-    setAuthRecoveryProvider(null);
-    try {
-      const message = await session.continueWithProvider(provider);
-      setAuthMessage(message);
-    } catch (error) {
-      setAuthMessage(readableError(error));
-    } finally {
-      setAuthBusy(null);
-    }
-  }
-
-  async function signInWithExistingProvider(provider: OAuthProvider) {
+  async function signInWithProvider(provider: OAuthProvider) {
     const action = `signin-${provider}` as const;
     setAuthBusy(action);
     setAuthMessage(null);
+    setAuthRecoveryProvider(null);
     try {
       const message = await session.signInWithProvider(provider);
       setAuthMessage(message);
@@ -577,17 +563,17 @@ function AppHeader({
             <div className="account-actions">
               <div className="auth-choice-grid" aria-label="Account recovery options">
                 {socialProviders.map((provider) => {
-                  const action = `provider-${provider.id}` as const;
+                  const action = `signin-${provider.id}` as const;
                   return (
                     <button
                       className="ghost-button provider-button"
                       key={provider.id}
-                      onClick={() => void continueWithProvider(provider.id)}
+                      onClick={() => void signInWithProvider(provider.id)}
                       type="button"
                       disabled={Boolean(authBusy)}
                     >
                       {authBusy === action ? <Loader2 className="spin" size={16} /> : <ProviderMark provider={provider.id} />}
-                      Use {provider.label}
+                      Continue with {provider.label}
                     </button>
                   );
                 })}
@@ -653,7 +639,7 @@ function AppHeader({
                 {authRecoveryProvider ? (
                   <button
                     className="ghost-button"
-                    onClick={() => void signInWithExistingProvider(authRecoveryProvider)}
+                    onClick={() => void signInWithProvider(authRecoveryProvider)}
                     type="button"
                     disabled={Boolean(authBusy)}
                   >
