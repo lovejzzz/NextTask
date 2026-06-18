@@ -125,9 +125,10 @@ export function App() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const queryClient = useQueryClient();
+  const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
-  const boardQuery = useBoardData(filters, session.status === 'ready');
-  const statsQuery = useBoardStats(session.status === 'ready');
+  const boardQuery = useBoardData(session.userId, filters, sessionReady);
+  const statsQuery = useBoardStats(session.userId, sessionReady);
   const mutations = useTaskMutations();
   const board = boardQuery.data;
   const stats = statsQuery.data;
@@ -141,6 +142,21 @@ export function App() {
   );
 
   const grouped = useMemo(() => groupTasks(tasks), [tasks]);
+
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setSelectedTaskId(null);
+      setActiveTaskId(null);
+      setDrawerMode('edit');
+      setManagerOpen(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [session.userId]);
 
   function openCreate(status: TaskStatus = 'todo') {
     setDrawerMode('create');
@@ -210,7 +226,7 @@ export function App() {
   async function applyReorder(updates: Array<{ id: string; status: TaskStatus; position: number }>) {
     const previous = board;
     if (previous) {
-      queryClient.setQueryData<BoardPayload>(boardQueryKey(filters), {
+      queryClient.setQueryData<BoardPayload>(boardQueryKey(session.userId, filters), {
         ...previous,
         tasks: previous.tasks.map((task) => {
           const update = updates.find((item) => item.id === task.id);
@@ -223,7 +239,7 @@ export function App() {
       await mutations.reorderTasks.mutateAsync(updates);
       notify('success', 'Board updated');
     } catch (error) {
-      if (previous) queryClient.setQueryData(boardQueryKey(filters), previous);
+      if (previous) queryClient.setQueryData(boardQueryKey(session.userId, filters), previous);
       notify('error', readableError(error));
     }
   }
@@ -296,6 +312,7 @@ export function App() {
         open={drawerMode === 'create' || Boolean(selectedTask)}
         mode={drawerMode}
         initialStatus={initialStatus}
+        userId={session.userId}
         task={selectedTask}
         board={board}
         onClose={() => {
@@ -556,78 +573,84 @@ function AppHeader({
                 <ShieldCheck size={16} />
               </span>
               <div>
-                <strong>{session.isAnonymous ? 'Guest board' : 'Recoverable board'}</strong>
+                <strong>{session.isAnonymous ? 'Guest board' : 'Signed-in account'}</strong>
                 <span>{session.email || 'Sign in to recover this board anywhere.'}</span>
               </div>
             </div>
             <div className="account-actions">
-              <div className="auth-choice-grid" aria-label="Account recovery options">
-                {socialProviders.map((provider) => {
-                  const action = `signin-${provider.id}` as const;
-                  return (
+              {session.isAnonymous ? (
+                <>
+                  <div className="auth-choice-grid" aria-label="Account recovery options">
+                    {socialProviders.map((provider) => {
+                      const action = `signin-${provider.id}` as const;
+                      return (
+                        <button
+                          className="ghost-button provider-button"
+                          key={provider.id}
+                          onClick={() => void signInWithProvider(provider.id)}
+                          type="button"
+                          disabled={Boolean(authBusy)}
+                        >
+                          {authBusy === action ? <Loader2 className="spin" size={16} /> : <ProviderMark provider={provider.id} />}
+                          Continue with {provider.label}
+                        </button>
+                      );
+                    })}
                     <button
-                      className="ghost-button provider-button"
-                      key={provider.id}
-                      onClick={() => void signInWithProvider(provider.id)}
+                      className="ghost-button provider-button email-provider-button"
+                      onClick={toggleEmailPanel}
                       type="button"
                       disabled={Boolean(authBusy)}
+                      aria-expanded={emailOpen}
                     >
-                      {authBusy === action ? <Loader2 className="spin" size={16} /> : <ProviderMark provider={provider.id} />}
-                      Continue with {provider.label}
+                      <Mail size={16} />
+                      Use email
                     </button>
-                  );
-                })}
-                <button
-                  className="ghost-button provider-button email-provider-button"
-                  onClick={toggleEmailPanel}
-                  type="button"
-                  disabled={Boolean(authBusy)}
-                  aria-expanded={emailOpen}
-                >
-                  <Mail size={16} />
-                  Use email
-                </button>
-              </div>
-              <AnimatePresence>
-                {emailOpen ? (
-                  <motion.div
-                    className="email-auth-panel"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                  >
-                    <label className="field compact-field">
-                      <span>Email recovery</span>
-                      <input
-                        type="email"
-                        value={emailInput}
-                        onChange={(event) => setEmailInput(event.target.value)}
-                        placeholder="you@example.com"
-                      />
-                    </label>
-                    <div className="email-auth-actions">
-                      <button
-                        className="primary-button"
-                        onClick={() => void runAuthAction('save')}
-                        type="button"
-                        disabled={Boolean(authBusy) || boardAlreadySaved}
+                  </div>
+                  <AnimatePresence>
+                    {emailOpen ? (
+                      <motion.div
+                        className="email-auth-panel"
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
                       >
-                        {authBusy === 'save' ? <Loader2 className="spin" size={16} /> : <ShieldCheck size={16} />}
-                        {boardAlreadySaved ? 'Board saved' : 'Save with email'}
-                      </button>
-                      <button
-                        className="ghost-button"
-                        onClick={() => void runAuthAction('link')}
-                        type="button"
-                        disabled={Boolean(authBusy)}
-                      >
-                        {authBusy === 'link' ? <Loader2 className="spin" size={16} /> : <Mail size={16} />}
-                        Sign-in link
-                      </button>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+                        <label className="field compact-field">
+                          <span>Email recovery</span>
+                          <input
+                            type="email"
+                            value={emailInput}
+                            onChange={(event) => setEmailInput(event.target.value)}
+                            placeholder="you@example.com"
+                          />
+                        </label>
+                        <div className="email-auth-actions">
+                          <button
+                            className="primary-button"
+                            onClick={() => void runAuthAction('save')}
+                            type="button"
+                            disabled={Boolean(authBusy) || boardAlreadySaved}
+                          >
+                            {authBusy === 'save' ? <Loader2 className="spin" size={16} /> : <ShieldCheck size={16} />}
+                            {boardAlreadySaved ? 'Board saved' : 'Save with email'}
+                          </button>
+                          <button
+                            className="ghost-button"
+                            onClick={() => void runAuthAction('link')}
+                            type="button"
+                            disabled={Boolean(authBusy)}
+                          >
+                            {authBusy === 'link' ? <Loader2 className="spin" size={16} /> : <Mail size={16} />}
+                            Sign-in link
+                          </button>
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </>
+              ) : (
+                <p className="account-message success">Work is saving to this signed-in account.</p>
+              )}
               <button className="ghost-button" onClick={() => void signOut()} type="button" disabled={Boolean(authBusy)}>
                 {authBusy === 'signout' ? <Loader2 className="spin" size={16} /> : <LogOut size={16} />}
                 Sign out
@@ -652,8 +675,6 @@ function AppHeader({
                   </button>
                 ) : null}
               </div>
-            ) : boardAlreadySaved ? (
-              <p className="account-message success">Board recovery is active for this email.</p>
             ) : null}
           </motion.div>
         ) : null}
@@ -935,6 +956,7 @@ function TaskCard({
 function TaskDrawer({
   open,
   mode,
+  userId,
   task,
   board,
   initialStatus,
@@ -944,6 +966,7 @@ function TaskDrawer({
 }: {
   open: boolean;
   mode: DrawerMode;
+  userId: string | null;
   task: Task | null;
   board?: BoardPayload;
   initialStatus: TaskStatus;
@@ -952,8 +975,8 @@ function TaskDrawer({
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState(defaultDraft);
-  const commentsQuery = useComments(task?.id ?? null);
-  const activityQuery = useActivity(task?.id ?? null);
+  const commentsQuery = useComments(userId, task?.id ?? null);
+  const activityQuery = useActivity(userId, task?.id ?? null);
   const mutations = useTaskMutations();
 
   useEffect(() => {
