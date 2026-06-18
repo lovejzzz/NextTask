@@ -156,9 +156,11 @@ VITE_ENABLE_LOCAL_DEMO=false
 SUPABASE_URL=https://volqeerbqugpwbedsbch.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
 API_WRITE_LIMIT_PER_MINUTE=45
+API_IP_WRITE_LIMIT_PER_MINUTE=120
 ```
 
 Do not deploy with `VITE_ENABLE_LOCAL_DEMO=true`; that bypasses the API-backed data path in the browser bundle.
+Write APIs enforce both per-user and per-IP minute buckets to reduce anonymous-session abuse.
 
 ## Verification checklist
 

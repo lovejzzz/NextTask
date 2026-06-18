@@ -7,6 +7,7 @@ const result = {
   required: {},
   localDemo: process.env.VITE_ENABLE_LOCAL_DEMO ?? null,
   writeLimit: process.env.API_WRITE_LIMIT_PER_MINUTE ?? null,
+  ipWriteLimit: process.env.API_IP_WRITE_LIMIT_PER_MINUTE ?? null,
 };
 
 let failed = false;
@@ -19,9 +20,11 @@ if (process.env.VITE_ENABLE_LOCAL_DEMO !== 'false') {
   failed = true;
 }
 
-if (process.env.API_WRITE_LIMIT_PER_MINUTE) {
-  const limit = Number(process.env.API_WRITE_LIMIT_PER_MINUTE);
-  if (!Number.isFinite(limit) || limit <= 0) failed = true;
+for (const key of ['API_WRITE_LIMIT_PER_MINUTE', 'API_IP_WRITE_LIMIT_PER_MINUTE']) {
+  if (process.env[key]) {
+    const limit = Number(process.env[key]);
+    if (!Number.isFinite(limit) || limit <= 0) failed = true;
+  }
 }
 
 console.log(JSON.stringify(result, null, 2));
