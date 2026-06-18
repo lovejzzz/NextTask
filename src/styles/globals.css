@@ -898,6 +898,7 @@ button:disabled {
   width: 100%;
 }
 
+.auth-choice-grid,
 .social-auth-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -906,6 +907,30 @@ button:disabled {
 
 .provider-button {
   min-width: 0;
+}
+
+.email-provider-button {
+  grid-column: 1 / -1;
+}
+
+.email-auth-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(211, 220, 232, 0.9);
+  border-radius: var(--radius);
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.email-auth-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.email-auth-actions .primary-button,
+.email-auth-actions .ghost-button {
+  width: 100%;
 }
 
 .provider-mark {

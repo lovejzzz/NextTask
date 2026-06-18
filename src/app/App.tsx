@@ -351,6 +351,7 @@ function AppHeader({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [emailInput, setEmailInput] = useState(session.email ?? '');
+  const [emailOpen, setEmailOpen] = useState(Boolean(session.email));
   const [authBusy, setAuthBusy] = useState<AuthBusy | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const confirmedEmail = session.email?.trim().toLowerCase() ?? '';
@@ -405,8 +406,17 @@ function AppHeader({
   }
 
   function toggleAccount() {
-    if (!accountOpen && session.email) setEmailInput(session.email);
+    if (!accountOpen && session.email) {
+      setEmailInput(session.email);
+      setEmailOpen(true);
+    }
     setAccountOpen((value) => !value);
+  }
+
+  function toggleEmailPanel() {
+    if (!emailOpen && session.email) setEmailInput(session.email);
+    setAuthMessage(null);
+    setEmailOpen((value) => !value);
   }
 
   return (
@@ -536,38 +546,11 @@ function AppHeader({
               </span>
               <div>
                 <strong>{session.isAnonymous ? 'Guest board' : 'Recoverable board'}</strong>
-                <span>{session.email ?? `ID ${session.userId?.slice(0, 8) ?? 'local'}`}</span>
+                <span>{session.email || 'Sign in to recover this board anywhere.'}</span>
               </div>
             </div>
-            <label className="field compact-field">
-              <span>Email recovery</span>
-              <input
-                type="email"
-                value={emailInput}
-                onChange={(event) => setEmailInput(event.target.value)}
-                placeholder="you@example.com"
-              />
-            </label>
             <div className="account-actions">
-              <button
-                className="primary-button"
-                onClick={() => void runAuthAction('save')}
-                type="button"
-                disabled={Boolean(authBusy) || boardAlreadySaved}
-              >
-                {authBusy === 'save' ? <Loader2 className="spin" size={16} /> : <ShieldCheck size={16} />}
-                {boardAlreadySaved ? 'Board saved' : 'Save board'}
-              </button>
-              <button
-                className="ghost-button"
-                onClick={() => void runAuthAction('link')}
-                type="button"
-                disabled={Boolean(authBusy)}
-              >
-                {authBusy === 'link' ? <Loader2 className="spin" size={16} /> : <Mail size={16} />}
-                Sign-in link
-              </button>
-              <div className="social-auth-grid" aria-label="Social account connections">
+              <div className="auth-choice-grid" aria-label="Account recovery options">
                 {socialProviders.map((provider) => {
                   const action = `provider-${provider.id}` as const;
                   return (
@@ -583,7 +566,57 @@ function AppHeader({
                     </button>
                   );
                 })}
+                <button
+                  className="ghost-button provider-button email-provider-button"
+                  onClick={toggleEmailPanel}
+                  type="button"
+                  disabled={Boolean(authBusy)}
+                  aria-expanded={emailOpen}
+                >
+                  <Mail size={16} />
+                  Use email
+                </button>
               </div>
+              <AnimatePresence>
+                {emailOpen ? (
+                  <motion.div
+                    className="email-auth-panel"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                  >
+                    <label className="field compact-field">
+                      <span>Email recovery</span>
+                      <input
+                        type="email"
+                        value={emailInput}
+                        onChange={(event) => setEmailInput(event.target.value)}
+                        placeholder="you@example.com"
+                      />
+                    </label>
+                    <div className="email-auth-actions">
+                      <button
+                        className="primary-button"
+                        onClick={() => void runAuthAction('save')}
+                        type="button"
+                        disabled={Boolean(authBusy) || boardAlreadySaved}
+                      >
+                        {authBusy === 'save' ? <Loader2 className="spin" size={16} /> : <ShieldCheck size={16} />}
+                        {boardAlreadySaved ? 'Board saved' : 'Save with email'}
+                      </button>
+                      <button
+                        className="ghost-button"
+                        onClick={() => void runAuthAction('link')}
+                        type="button"
+                        disabled={Boolean(authBusy)}
+                      >
+                        {authBusy === 'link' ? <Loader2 className="spin" size={16} /> : <Mail size={16} />}
+                        Sign-in link
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
               <button className="ghost-button" onClick={() => void signOut()} type="button" disabled={Boolean(authBusy)}>
                 {authBusy === 'signout' ? <Loader2 className="spin" size={16} /> : <LogOut size={16} />}
                 Sign out
