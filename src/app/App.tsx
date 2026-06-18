@@ -476,10 +476,11 @@ function BoardColumn({
 }
 
 function SortableTaskCard({ task, onOpen }: { task: Task; onOpen: (id: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   return (
     <TaskCard
       refCallback={setNodeRef}
+      activatorRef={setActivatorNodeRef}
       task={task}
       onOpen={onOpen}
       attributes={attributes}
@@ -494,6 +495,7 @@ function TaskCard({
   task,
   onOpen,
   refCallback,
+  activatorRef,
   attributes,
   listeners,
   isDragging,
@@ -503,6 +505,7 @@ function TaskCard({
   task: Task;
   onOpen: (id: string) => void;
   refCallback?: (element: HTMLElement | null) => void;
+  activatorRef?: (element: HTMLElement | null) => void;
   attributes?: Record<string, unknown> | any;
   listeners?: Record<string, unknown> | any;
   isDragging?: boolean;
@@ -523,7 +526,15 @@ function TaskCard({
       <div className="task-topline">
         <span className={cx('priority-dot', `priority-${task.priority}`)} />
         <span className="priority-label">{task.priority}</span>
-        <button className="drag-handle" type="button" aria-label={`Drag ${task.title}`} {...attributes} {...listeners}>
+        <button
+          ref={activatorRef}
+          className="drag-handle"
+          type="button"
+          aria-label={`Drag ${task.title}`}
+          onClick={(event) => event.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
           <MoreHorizontal size={15} />
         </button>
       </div>
@@ -1138,7 +1149,8 @@ function reorderForDrop(tasks: Task[], active: Task, targetStatus: TaskStatus, o
 
   targetTasks.forEach((task, index) => {
     const position = (index + 1) * 1000;
-    if (task.position !== position || task.status !== targetStatus) {
+    const original = tasks.find((item) => item.id === task.id);
+    if (original?.position !== position || original?.status !== targetStatus) {
       updates.push({ id: task.id, status: targetStatus, position });
     }
   });
