@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
+import type { Provider, User } from '@supabase/supabase-js';
 
 import { LOCAL_DEMO_ENABLED } from '../lib/constants';
 import { supabase } from '../lib/supabaseClient';
@@ -15,10 +15,17 @@ type SessionState = {
 export type SessionRecovery = {
   saveBoardToEmail: (email: string) => Promise<string>;
   sendSignInLink: (email: string) => Promise<string>;
+  continueWithProvider: (provider: OAuthProvider) => Promise<string>;
   signOut: () => Promise<void>;
 };
 
+export type OAuthProvider = Extract<Provider, 'google' | 'github'>;
+
 const localDemoMessage = 'Email recovery is disabled while local demo mode is enabled.';
+const providerLabels: Record<OAuthProvider, string> = {
+  google: 'Google',
+  github: 'GitHub',
+};
 
 export function useAnonymousSession() {
   const [state, setState] = useState<SessionState>({
@@ -139,6 +146,31 @@ export function useAnonymousSession() {
     return 'Check your email for the sign-in link.';
   }
 
+  async function continueWithProvider(provider: OAuthProvider) {
+    if (LOCAL_DEMO_ENABLED) throw new Error(localDemoMessage);
+
+    const redirectTo = window.location.origin;
+    const { error: linkError } = await supabase.auth.linkIdentity({
+      provider,
+      options: {
+        redirectTo,
+      },
+    });
+
+    if (!linkError) return `Redirecting to ${providerLabels[provider]} to connect this board.`;
+    if (!isManualLinkingDisabled(linkError)) throw linkError;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo,
+      },
+    });
+
+    if (error) throw error;
+    return `Redirecting to ${providerLabels[provider]}.`;
+  }
+
   async function signOut() {
     if (LOCAL_DEMO_ENABLED) return;
     setState((current) => ({ ...current, status: 'loading' }));
@@ -150,8 +182,13 @@ export function useAnonymousSession() {
     ...state,
     saveBoardToEmail,
     sendSignInLink,
+    continueWithProvider,
     signOut,
   };
+}
+
+function isManualLinkingDisabled(error: { message?: string }) {
+  return error.message?.toLowerCase().includes('manual linking is disabled') ?? false;
 }
 
 function normalizeEmail(email: string) {

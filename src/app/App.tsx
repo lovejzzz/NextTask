@@ -25,6 +25,7 @@ import {
   Filter,
   Flame,
   Gauge,
+  Github,
   KanbanSquare,
   LogOut,
   Loader2,
@@ -43,7 +44,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useAnonymousSession, type SessionRecovery } from '../hooks/useAnonymousSession';
+import { useAnonymousSession, type OAuthProvider, type SessionRecovery } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useActivity, useBoardData, useBoardStats, useComments } from '../hooks/useBoardData';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { PRIORITIES, STATUSES } from '../lib/constants';
@@ -101,6 +102,11 @@ const statusIcons = {
   in_review: Gauge,
   done: BadgeCheck,
 } satisfies Record<TaskStatus, typeof CircleDotDashed>;
+const socialProviders = [
+  { id: 'google', label: 'Google' },
+  { id: 'github', label: 'GitHub' },
+] satisfies Array<{ id: OAuthProvider; label: string }>;
+type AuthBusy = 'save' | 'link' | 'signout' | `provider-${OAuthProvider}`;
 
 export function App() {
   const session = useAnonymousSession();
@@ -345,7 +351,7 @@ function AppHeader({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [emailInput, setEmailInput] = useState(session.email ?? '');
-  const [authBusy, setAuthBusy] = useState<'save' | 'link' | 'signout' | null>(null);
+  const [authBusy, setAuthBusy] = useState<AuthBusy | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const confirmedEmail = session.email?.trim().toLowerCase() ?? '';
   const enteredEmail = emailInput.trim().toLowerCase();
@@ -377,6 +383,20 @@ function AppHeader({
     try {
       await session.signOut();
       setAccountOpen(false);
+    } catch (error) {
+      setAuthMessage(readableError(error));
+    } finally {
+      setAuthBusy(null);
+    }
+  }
+
+  async function continueWithProvider(provider: OAuthProvider) {
+    const action = `provider-${provider}` as const;
+    setAuthBusy(action);
+    setAuthMessage(null);
+    try {
+      const message = await session.continueWithProvider(provider);
+      setAuthMessage(message);
     } catch (error) {
       setAuthMessage(readableError(error));
     } finally {
@@ -547,6 +567,23 @@ function AppHeader({
                 {authBusy === 'link' ? <Loader2 className="spin" size={16} /> : <Mail size={16} />}
                 Sign-in link
               </button>
+              <div className="social-auth-grid" aria-label="Social account connections">
+                {socialProviders.map((provider) => {
+                  const action = `provider-${provider.id}` as const;
+                  return (
+                    <button
+                      className="ghost-button provider-button"
+                      key={provider.id}
+                      onClick={() => void continueWithProvider(provider.id)}
+                      type="button"
+                      disabled={Boolean(authBusy)}
+                    >
+                      {authBusy === action ? <Loader2 className="spin" size={16} /> : <ProviderMark provider={provider.id} />}
+                      Use {provider.label}
+                    </button>
+                  );
+                })}
+              </div>
               <button className="ghost-button" onClick={() => void signOut()} type="button" disabled={Boolean(authBusy)}>
                 {authBusy === 'signout' ? <Loader2 className="spin" size={16} /> : <LogOut size={16} />}
                 Sign out
@@ -562,6 +599,11 @@ function AppHeader({
       </AnimatePresence>
     </header>
   );
+}
+
+function ProviderMark({ provider }: { provider: OAuthProvider }) {
+  if (provider === 'github') return <Github size={16} />;
+  return <span className="provider-mark">G</span>;
 }
 
 function StatsStrip({ stats, loading }: { stats?: BoardStats; loading: boolean }) {

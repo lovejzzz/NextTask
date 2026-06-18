@@ -82,14 +82,16 @@ This starts a Vite middleware server on `http://127.0.0.1:5174` and serves the V
 1. Create or open the Supabase project.
 2. Enable anonymous sign-ins in Auth settings.
 3. Enable Email Auth and magic links in Auth settings.
-4. Add the production URL and local dev URLs to Auth redirect URLs:
+4. Enable Google and GitHub sign-in providers.
+5. Enable manual identity linking so a guest board can be connected to Google or GitHub without creating a separate empty account. If this is off, Google/GitHub still sign in, but they may not preserve an unsaved guest board.
+6. Add the production URL and local dev URLs to Auth redirect URLs:
    - `http://127.0.0.1:5174`
    - `http://localhost:5174`
    - the deployed Vercel URL
    - the custom domain, if used
-5. Open the SQL Editor.
-6. Run `supabase/migrations/001_init.sql`.
-7. Confirm RLS is enabled on:
+7. Open the SQL Editor.
+8. Run `supabase/migrations/001_init.sql`.
+9. Confirm RLS is enabled on:
    - `tasks`
    - `team_members`
    - `task_assignees`
