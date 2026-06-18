@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireUser } from '../_shared/auth';
+import { requireUser } from '../_shared/auth.js';
 import {
   getNextPosition,
   hydrateBoard,
@@ -10,9 +10,9 @@ import {
   type BoardFilters,
   type TaskPriority,
   type TaskStatus,
-} from '../_shared/data';
-import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http';
-import { taskCreateSchema } from '../_shared/validation';
+} from '../_shared/data.js';
+import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http.js';
+import { taskCreateSchema } from '../_shared/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

@@ -1,6 +1,6 @@
 import type { VercelRequest } from '@vercel/node';
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
-import { ApiHttpError } from './http';
+import { ApiHttpError } from './http.js';
 
 export type AuthedContext = {
   supabase: SupabaseClient;

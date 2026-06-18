@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireUser } from '../_shared/auth';
-import { getTaskOrThrow, hydrateBoard, recordActivity, taskMoveMessage } from '../_shared/data';
-import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http';
-import { reorderSchema } from '../_shared/validation';
+import { requireUser } from '../_shared/auth.js';
+import { getTaskOrThrow, hydrateBoard, recordActivity, taskMoveMessage } from '../_shared/data.js';
+import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http.js';
+import { reorderSchema } from '../_shared/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

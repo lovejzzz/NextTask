@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiHttpError } from './http';
+import { ApiHttpError } from './http.js';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 export type TaskPriority = 'low' | 'normal' | 'high';

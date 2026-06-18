@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireUser } from '../../../_shared/auth';
-import { getTaskOrThrow, recordActivity } from '../../../_shared/data';
-import { getParam, handleApiError, methodNotAllowed, sendNoContent } from '../../../_shared/http';
+import { requireUser } from '../../../_shared/auth.js';
+import { getTaskOrThrow, recordActivity } from '../../../_shared/data.js';
+import { getParam, handleApiError, methodNotAllowed, sendNoContent } from '../../../_shared/http.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

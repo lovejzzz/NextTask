@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireUser } from '../_shared/auth';
+import { requireUser } from '../_shared/auth.js';
 import {
   getTaskOrThrow,
   hydrateTask,
@@ -7,9 +7,9 @@ import {
   replaceAssignees,
   replaceLabels,
   taskMoveMessage,
-} from '../_shared/data';
-import { getParam, handleApiError, methodNotAllowed, parseJsonBody, sendData, sendNoContent } from '../_shared/http';
-import { taskUpdateSchema } from '../_shared/validation';
+} from '../_shared/data.js';
+import { getParam, handleApiError, methodNotAllowed, parseJsonBody, sendData, sendNoContent } from '../_shared/http.js';
+import { taskUpdateSchema } from '../_shared/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireUser } from '../_shared/auth';
-import { hydrateBoard, recordActivity } from '../_shared/data';
-import { handleApiError, methodNotAllowed, sendData } from '../_shared/http';
+import { requireUser } from '../_shared/auth.js';
+import { hydrateBoard, recordActivity } from '../_shared/data.js';
+import { handleApiError, methodNotAllowed, sendData } from '../_shared/http.js';
 
 const memberSeed = [
   { name: 'Avery Stone', color: '#7A5AF8' },

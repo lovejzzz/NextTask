@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireUser } from './_shared/auth';
-import { hydrateBoard } from './_shared/data';
-import { handleApiError, methodNotAllowed, sendData } from './_shared/http';
+import { requireUser } from './_shared/auth.js';
+import { hydrateBoard } from './_shared/data.js';
+import { handleApiError, methodNotAllowed, sendData } from './_shared/http.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
