@@ -70,6 +70,16 @@ Run locally:
 npm run dev
 ```
 
+`npm run dev` runs the Vite frontend only. Use it with `VITE_ENABLE_LOCAL_DEMO=true` for fast UI work.
+
+To run the frontend with the local API handlers and real Supabase data, set `VITE_ENABLE_LOCAL_DEMO=false`, then run:
+
+```bash
+npm run dev:full
+```
+
+This starts a Vite middleware server on `http://127.0.0.1:5174` and serves the Vercel-style routes from `api/`.
+
 ## Supabase setup
 
 1. Create or open the Supabase project.
