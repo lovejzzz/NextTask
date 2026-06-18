@@ -1,12 +1,13 @@
 # Next Task
 
-Next Task is a polished full-stack Kanban board built for the NP SDE assessment. It uses React, TypeScript, Vite, Vercel Serverless Functions, Supabase anonymous auth, and Supabase Row Level Security.
+Next Task is a polished full-stack Kanban board built for the NP SDE assessment. It uses React, TypeScript, Vite, Vercel Serverless Functions, Supabase anonymous auth with email recovery, and Supabase Row Level Security.
 
 ## Features
 
 - Four-column Kanban board: To Do, In Progress, In Review, Done
 - Smooth drag-and-drop task movement and ordering
 - Automatic guest session via Supabase anonymous auth
+- Email recovery links so users can save and reopen a board across devices
 - User-isolated data through RLS policies
 - Backend API endpoints for task reads, creation, updates, reorder, comments, activity, team members, labels, and stats
 - Team members and multi-assignee tasks
@@ -43,25 +44,21 @@ Create `.env` from `.env.example`:
 cp .env.example .env
 ```
 
-The supplied public Supabase values are already included:
+The supplied public Supabase values and production-safe defaults are already included:
 
 ```bash
 VITE_SUPABASE_URL=https://volqeerbqugpwbedsbch.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
 SUPABASE_URL=https://volqeerbqugpwbedsbch.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
+VITE_ENABLE_LOCAL_DEMO=false
+API_WRITE_LIMIT_PER_MINUTE=45
 ```
 
-For local UI inspection before the Supabase SQL migration is applied, keep:
+For fast local UI work without API handlers, set:
 
 ```bash
 VITE_ENABLE_LOCAL_DEMO=true
-```
-
-For deployed API-backed operation, set:
-
-```bash
-VITE_ENABLE_LOCAL_DEMO=false
 ```
 
 Run locally:
@@ -84,9 +81,15 @@ This starts a Vite middleware server on `http://127.0.0.1:5174` and serves the V
 
 1. Create or open the Supabase project.
 2. Enable anonymous sign-ins in Auth settings.
-3. Open the SQL Editor.
-4. Run `supabase/migrations/001_init.sql`.
-5. Confirm RLS is enabled on:
+3. Enable Email Auth and magic links in Auth settings.
+4. Add the production URL and local dev URLs to Auth redirect URLs:
+   - `http://127.0.0.1:5174`
+   - `http://localhost:5174`
+   - the deployed Vercel URL
+   - the custom domain, if used
+5. Open the SQL Editor.
+6. Run `supabase/migrations/001_init.sql`.
+7. Confirm RLS is enabled on:
    - `tasks`
    - `team_members`
    - `task_assignees`
@@ -96,6 +99,8 @@ This starts a Vite middleware server on `http://127.0.0.1:5174` and serves the V
    - `activity_events`
 
 Do not use or expose the Supabase service role key. This project only needs the public anon/publishable key.
+
+For public deployments, keep anonymous sign-ins protected with Supabase CAPTCHA/rate-limit settings where available. The API also enforces a configurable per-user write limit through `API_WRITE_LIMIT_PER_MINUTE`.
 
 ## API routes
 
@@ -150,7 +155,10 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
 VITE_ENABLE_LOCAL_DEMO=false
 SUPABASE_URL=https://volqeerbqugpwbedsbch.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
+API_WRITE_LIMIT_PER_MINUTE=45
 ```
+
+Do not deploy with `VITE_ENABLE_LOCAL_DEMO=true`; that bypasses the API-backed data path in the browser bundle.
 
 ## Verification checklist
 
@@ -161,11 +169,20 @@ npm run typecheck
 npm run lint
 npm run build
 npm run verify:supabase
+npm run verify:production-env
+```
+
+After deployment, run:
+
+```bash
+npm run verify:deployment -- https://your-deployment.vercel.app
 ```
 
 Manual checks:
 
 - Guest auth starts automatically
+- Email recovery sends a board-save confirmation link
+- Returning users can request a sign-in link
 - Demo board can be loaded
 - Task create/edit/delete works
 - Drag-and-drop persists

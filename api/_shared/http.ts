@@ -7,6 +7,7 @@ export type ApiErrorCode =
   | 'not_found'
   | 'method_not_allowed'
   | 'conflict'
+  | 'too_many_requests'
   | 'server_error';
 
 export function sendData<T>(res: VercelResponse, data: T, status = 200) {

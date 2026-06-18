@@ -1,6 +1,7 @@
 import type { VercelRequest } from '@vercel/node';
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { ApiHttpError } from './http.js';
+import { enforceWriteRateLimit } from './rateLimit.js';
 
 export type AuthedContext = {
   supabase: SupabaseClient;
@@ -40,6 +41,8 @@ export async function requireUser(req: VercelRequest): Promise<AuthedContext> {
   if (error || !data.user) {
     throw new ApiHttpError('unauthorized', 'Invalid or expired authorization token', 401);
   }
+
+  enforceWriteRateLimit(req, data.user.id);
 
   return { supabase, user: data.user };
 }

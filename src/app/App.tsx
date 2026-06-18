@@ -15,27 +15,35 @@ import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
+  BadgeCheck,
   Calendar,
   Check,
   ChevronDown,
+  CircleDotDashed,
   Clock3,
   Command,
   Filter,
+  Flame,
+  Gauge,
   KanbanSquare,
+  LogOut,
   Loader2,
+  Mail,
   MessageSquare,
   MoreHorizontal,
   Plus,
   Search,
+  ShieldCheck,
   Sparkles,
   Tag,
   Trash2,
   Users,
+  Workflow,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useAnonymousSession } from '../hooks/useAnonymousSession';
+import { useAnonymousSession, type SessionRecovery } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useActivity, useBoardData, useBoardStats, useComments } from '../hooks/useBoardData';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { PRIORITIES, STATUSES } from '../lib/constants';
@@ -87,6 +95,12 @@ const defaultDraft = {
 };
 
 const EMPTY_TASKS: Task[] = [];
+const statusIcons = {
+  todo: CircleDotDashed,
+  in_progress: Workflow,
+  in_review: Gauge,
+  done: BadgeCheck,
+} satisfies Record<TaskStatus, typeof CircleDotDashed>;
 
 export function App() {
   const session = useAnonymousSession();
@@ -213,7 +227,7 @@ export function App() {
   return (
     <div className="app-shell">
       <AppHeader
-        userId={session.userId}
+        session={session}
         filters={filters}
         setFilters={setFilters}
         labels={board?.labels ?? []}
@@ -308,7 +322,7 @@ export function App() {
 }
 
 function AppHeader({
-  userId,
+  session,
   filters,
   setFilters,
   labels,
@@ -316,7 +330,11 @@ function AppHeader({
   onCreate,
   onManage,
 }: {
-  userId: string | null;
+  session: {
+    userId: string | null;
+    email: string | null;
+    isAnonymous: boolean;
+  } & SessionRecovery;
   filters: BoardFilters;
   setFilters: (filters: BoardFilters) => void;
   labels: Label[];
@@ -325,6 +343,43 @@ function AppHeader({
   onManage: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [emailInput, setEmailInput] = useState(session.email ?? '');
+  const [authBusy, setAuthBusy] = useState<'save' | 'link' | 'signout' | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+
+  async function runAuthAction(kind: 'save' | 'link') {
+    setAuthBusy(kind);
+    setAuthMessage(null);
+    try {
+      const message =
+        kind === 'save' ? await session.saveBoardToEmail(emailInput) : await session.sendSignInLink(emailInput);
+      setAuthMessage(message);
+    } catch (error) {
+      setAuthMessage(readableError(error));
+    } finally {
+      setAuthBusy(null);
+    }
+  }
+
+  async function signOut() {
+    setAuthBusy('signout');
+    setAuthMessage(null);
+    try {
+      await session.signOut();
+      setAccountOpen(false);
+    } catch (error) {
+      setAuthMessage(readableError(error));
+    } finally {
+      setAuthBusy(null);
+    }
+  }
+
+  function toggleAccount() {
+    if (!accountOpen && session.email) setEmailInput(session.email);
+    setAccountOpen((value) => !value);
+  }
+
   return (
     <header className="app-header">
       <div className="brand-block">
@@ -333,7 +388,7 @@ function AppHeader({
         </div>
         <div>
           <div className="brand-title">Next Task</div>
-          <div className="brand-subtitle">Studio-grade Kanban for focused teams</div>
+          <div className="brand-subtitle">Plan. Review. Ship.</div>
         </div>
       </div>
 
@@ -352,29 +407,44 @@ function AppHeader({
             </button>
           ) : null}
         </div>
-        <button className="icon-button text-button" onClick={() => setFiltersOpen((value) => !value)} type="button">
+        <button
+          className="icon-button text-button"
+          onClick={() => setFiltersOpen((value) => !value)}
+          type="button"
+          title="Filters"
+          aria-expanded={filtersOpen}
+          aria-controls="board-filters"
+        >
           <Filter size={16} />
           Filters
           <ChevronDown size={14} />
         </button>
-        <button className="icon-button text-button" onClick={onManage} type="button">
+        <button className="icon-button text-button" onClick={onManage} type="button" title="Team and labels">
           <Users size={16} />
           Team & labels
         </button>
-        <button className="primary-button" onClick={onCreate} type="button">
+        <button className="primary-button" onClick={onCreate} type="button" title="New task">
           <Plus size={17} />
           New task
         </button>
       </div>
 
-      <div className="guest-chip">
+      <button
+        className="guest-chip"
+        onClick={toggleAccount}
+        type="button"
+        aria-expanded={accountOpen}
+        aria-controls="account-menu"
+        title="Account recovery"
+      >
         <span className="pulse-dot" />
-        Guest {userId?.slice(0, 8) ?? 'local'}
-      </div>
+        {session.email ? session.email : `Guest ${session.userId?.slice(0, 8) ?? 'local'}`}
+      </button>
 
       <AnimatePresence>
         {filtersOpen ? (
           <motion.div
+            id="board-filters"
             className="filter-popover"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -418,6 +488,62 @@ function AppHeader({
             <button className="ghost-button" onClick={() => setFilters(defaultFilters)} type="button">
               Reset filters
             </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {accountOpen ? (
+          <motion.div
+            id="account-menu"
+            className="account-popover"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+          >
+            <div className="account-heading">
+              <span className="account-icon">
+                <ShieldCheck size={16} />
+              </span>
+              <div>
+                <strong>{session.isAnonymous ? 'Guest board' : 'Recoverable board'}</strong>
+                <span>{session.email ?? `ID ${session.userId?.slice(0, 8) ?? 'local'}`}</span>
+              </div>
+            </div>
+            <label className="field compact-field">
+              <span>Email recovery</span>
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(event) => setEmailInput(event.target.value)}
+                placeholder="you@example.com"
+              />
+            </label>
+            <div className="account-actions">
+              <button
+                className="primary-button"
+                onClick={() => void runAuthAction('save')}
+                type="button"
+                disabled={Boolean(authBusy)}
+              >
+                {authBusy === 'save' ? <Loader2 className="spin" size={16} /> : <ShieldCheck size={16} />}
+                Save board
+              </button>
+              <button
+                className="ghost-button"
+                onClick={() => void runAuthAction('link')}
+                type="button"
+                disabled={Boolean(authBusy)}
+              >
+                {authBusy === 'link' ? <Loader2 className="spin" size={16} /> : <Mail size={16} />}
+                Sign-in link
+              </button>
+              <button className="ghost-button" onClick={() => void signOut()} type="button" disabled={Boolean(authBusy)}>
+                {authBusy === 'signout' ? <Loader2 className="spin" size={16} /> : <LogOut size={16} />}
+                Sign out
+              </button>
+            </div>
+            {authMessage ? <p className="account-message">{authMessage}</p> : null}
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -478,13 +604,16 @@ function BoardColumn({
   onMove: (id: string, status: TaskStatus) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
+  const StatusIcon = statusIcons[status];
   return (
     <div ref={setNodeRef} className={cx('board-column', `tone-${tone}`, isOver && 'column-over')}>
       <div className="column-header">
         <div>
           <span className="column-kicker">Status</span>
           <h2>
-            <span className="status-dot" />
+            <span className="status-icon">
+              <StatusIcon size={15} />
+            </span>
             {title}
           </h2>
         </div>
@@ -574,6 +703,11 @@ function TaskCard({
       <div className="task-topline">
         <span className={cx('priority-dot', `priority-${task.priority}`)} />
         <span className="priority-label">{task.priority}</span>
+        {task.priority === 'high' ? (
+          <span className="priority-signal" aria-label="High priority">
+            <Flame size={12} />
+          </span>
+        ) : null}
         <button
           ref={activatorRef}
           className="drag-handle"

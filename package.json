@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify:supabase": "node scripts/verify-supabase.mjs"
+    "verify:supabase": "node scripts/verify-supabase.mjs",
+    "verify:production-env": "node scripts/verify-production-env.mjs",
+    "verify:deployment": "node scripts/verify-deployment.mjs",
+    "verify:release": "npm run lint && npm run build && npm run verify:supabase && npm run verify:production-env"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
