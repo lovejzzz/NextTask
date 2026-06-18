@@ -44,7 +44,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useAnonymousSession, type OAuthProvider, type SessionRecovery } from '../hooks/useAnonymousSession';
+import {
+  pendingOAuthFlowKey,
+  pendingOAuthProviderKey,
+  useAnonymousSession,
+  type OAuthProvider,
+  type SessionRecovery,
+} from '../hooks/useAnonymousSession';
 import { boardQueryKey, useActivity, useBoardData, useBoardStats, useComments } from '../hooks/useBoardData';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { PRIORITIES, STATUSES } from '../lib/constants';
@@ -106,7 +112,7 @@ const socialProviders = [
   { id: 'google', label: 'Google' },
   { id: 'github', label: 'GitHub' },
 ] satisfies Array<{ id: OAuthProvider; label: string }>;
-type AuthBusy = 'save' | 'link' | 'signout' | `provider-${OAuthProvider}`;
+type AuthBusy = 'save' | 'link' | 'signout' | `provider-${OAuthProvider}` | `signin-${OAuthProvider}`;
 
 export function App() {
   const session = useAnonymousSession();
@@ -349,11 +355,13 @@ function AppHeader({
   onManage: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [authRedirectError] = useState(() => readAuthRedirectError());
+  const [accountOpen, setAccountOpen] = useState(Boolean(authRedirectError));
   const [emailInput, setEmailInput] = useState(session.email ?? '');
-  const [emailOpen, setEmailOpen] = useState(Boolean(session.email));
+  const [emailOpen, setEmailOpen] = useState(!authRedirectError && Boolean(session.email));
   const [authBusy, setAuthBusy] = useState<AuthBusy | null>(null);
-  const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(authRedirectError?.message ?? null);
+  const [authRecoveryProvider, setAuthRecoveryProvider] = useState<OAuthProvider | null>(authRedirectError?.provider ?? null);
   const confirmedEmail = session.email?.trim().toLowerCase() ?? '';
   const enteredEmail = emailInput.trim().toLowerCase();
   const boardAlreadySaved = Boolean(confirmedEmail && !session.isAnonymous && confirmedEmail === enteredEmail);
@@ -361,6 +369,7 @@ function AppHeader({
   async function runAuthAction(kind: 'save' | 'link') {
     setAuthBusy(kind);
     setAuthMessage(null);
+    setAuthRecoveryProvider(null);
     if (kind === 'save' && boardAlreadySaved) {
       setAuthMessage('This board is already recoverable with this email.');
       setAuthBusy(null);
@@ -381,6 +390,7 @@ function AppHeader({
   async function signOut() {
     setAuthBusy('signout');
     setAuthMessage(null);
+    setAuthRecoveryProvider(null);
     try {
       await session.signOut();
       setAccountOpen(false);
@@ -395,8 +405,23 @@ function AppHeader({
     const action = `provider-${provider}` as const;
     setAuthBusy(action);
     setAuthMessage(null);
+    setAuthRecoveryProvider(null);
     try {
       const message = await session.continueWithProvider(provider);
+      setAuthMessage(message);
+    } catch (error) {
+      setAuthMessage(readableError(error));
+    } finally {
+      setAuthBusy(null);
+    }
+  }
+
+  async function signInWithExistingProvider(provider: OAuthProvider) {
+    const action = `signin-${provider}` as const;
+    setAuthBusy(action);
+    setAuthMessage(null);
+    try {
+      const message = await session.signInWithProvider(provider);
       setAuthMessage(message);
     } catch (error) {
       setAuthMessage(readableError(error));
@@ -623,7 +648,24 @@ function AppHeader({
               </button>
             </div>
             {authMessage ? (
-              <p className="account-message">{authMessage}</p>
+              <div className="account-message-stack">
+                <p className={cx('account-message', authRecoveryProvider && 'warning')}>{authMessage}</p>
+                {authRecoveryProvider ? (
+                  <button
+                    className="ghost-button"
+                    onClick={() => void signInWithExistingProvider(authRecoveryProvider)}
+                    type="button"
+                    disabled={Boolean(authBusy)}
+                  >
+                    {authBusy === `signin-${authRecoveryProvider}` ? (
+                      <Loader2 className="spin" size={16} />
+                    ) : (
+                      <ProviderMark provider={authRecoveryProvider} />
+                    )}
+                    Sign in with {providerLabel(authRecoveryProvider)}
+                  </button>
+                ) : null}
+              </div>
             ) : boardAlreadySaved ? (
               <p className="account-message success">Board recovery is active for this email.</p>
             ) : null}
@@ -637,6 +679,61 @@ function AppHeader({
 function ProviderMark({ provider }: { provider: OAuthProvider }) {
   if (provider === 'github') return <Github size={16} />;
   return <span className="provider-mark">G</span>;
+}
+
+function providerLabel(provider: OAuthProvider) {
+  return socialProviders.find((item) => item.id === provider)?.label ?? provider;
+}
+
+function readAuthRedirectError(): { message: string; provider: OAuthProvider | null } | null {
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const error = searchParams.get('error') ?? hashParams.get('error');
+  const code = searchParams.get('error_code') ?? hashParams.get('error_code');
+  const description = searchParams.get('error_description') ?? hashParams.get('error_description');
+
+  if (!error && !code && !description) return null;
+
+  const provider = readPendingOAuthProvider();
+  clearPendingOAuthProvider();
+  clearAuthRedirectFromUrl();
+
+  if (code === 'email_exists') {
+    return {
+      provider,
+      message: provider
+        ? `That email is already used by another Next Task account. Sign in to that account first, or choose a different ${providerLabel(
+            provider,
+          )} account to save this guest board.`
+        : 'That email is already used by another Next Task account. Sign in to that account first, or choose a different account to save this guest board.',
+    };
+  }
+
+  return {
+    provider: null,
+    message: description || 'Sign-in could not finish. Try again or choose another sign-in method.',
+  };
+}
+
+function readPendingOAuthProvider(): OAuthProvider | null {
+  const provider = window.sessionStorage.getItem(pendingOAuthProviderKey);
+  return provider === 'google' || provider === 'github' ? provider : null;
+}
+
+function clearPendingOAuthProvider() {
+  window.sessionStorage.removeItem(pendingOAuthProviderKey);
+  window.sessionStorage.removeItem(pendingOAuthFlowKey);
+}
+
+function clearAuthRedirectFromUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('error');
+  url.searchParams.delete('error_code');
+  url.searchParams.delete('error_description');
+  if (url.hash.includes('error=')) url.hash = '';
+
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, document.title, nextUrl || '/');
 }
 
 function StatsStrip({ stats, loading }: { stats?: BoardStats; loading: boolean }) {

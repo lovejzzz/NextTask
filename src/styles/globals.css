@@ -955,6 +955,17 @@ button:disabled {
   font-weight: 700;
 }
 
+.account-message-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.account-message.warning {
+  border-color: rgba(247, 144, 30, 0.26);
+  background: rgba(255, 247, 237, 0.9);
+  color: #9a3412;
+}
+
 .account-message.success {
   border-color: rgba(18, 155, 107, 0.22);
   background: rgba(238, 251, 244, 0.86);

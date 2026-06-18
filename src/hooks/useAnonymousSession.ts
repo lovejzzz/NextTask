@@ -16,6 +16,7 @@ export type SessionRecovery = {
   saveBoardToEmail: (email: string) => Promise<string>;
   sendSignInLink: (email: string) => Promise<string>;
   continueWithProvider: (provider: OAuthProvider) => Promise<string>;
+  signInWithProvider: (provider: OAuthProvider) => Promise<string>;
   signOut: () => Promise<void>;
 };
 
@@ -26,6 +27,8 @@ const providerLabels: Record<OAuthProvider, string> = {
   google: 'Google',
   github: 'GitHub',
 };
+export const pendingOAuthProviderKey = 'next-task:pending-oauth-provider';
+export const pendingOAuthFlowKey = 'next-task:pending-oauth-flow';
 
 export function useAnonymousSession() {
   const [state, setState] = useState<SessionState>({
@@ -150,6 +153,7 @@ export function useAnonymousSession() {
     if (LOCAL_DEMO_ENABLED) throw new Error(localDemoMessage);
 
     const redirectTo = window.location.origin;
+    rememberOAuthAttempt(provider, 'connect');
     const { error: linkError } = await supabase.auth.linkIdentity({
       provider,
       options: {
@@ -160,10 +164,26 @@ export function useAnonymousSession() {
     if (!linkError) return `Redirecting to ${providerLabels[provider]} to connect this board.`;
     if (!isManualLinkingDisabled(linkError)) throw linkError;
 
+    rememberOAuthAttempt(provider, 'signin');
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo,
+      },
+    });
+
+    if (error) throw error;
+    return `Redirecting to ${providerLabels[provider]}.`;
+  }
+
+  async function signInWithProvider(provider: OAuthProvider) {
+    if (LOCAL_DEMO_ENABLED) throw new Error(localDemoMessage);
+
+    rememberOAuthAttempt(provider, 'signin');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin,
       },
     });
 
@@ -183,6 +203,7 @@ export function useAnonymousSession() {
     saveBoardToEmail,
     sendSignInLink,
     continueWithProvider,
+    signInWithProvider,
     signOut,
   };
 }
@@ -197,4 +218,9 @@ function normalizeEmail(email: string) {
     throw new Error('Enter a valid email address.');
   }
   return value;
+}
+
+function rememberOAuthAttempt(provider: OAuthProvider, flow: 'connect' | 'signin') {
+  window.sessionStorage.setItem(pendingOAuthProviderKey, provider);
+  window.sessionStorage.setItem(pendingOAuthFlowKey, flow);
 }
