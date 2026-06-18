@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify:supabase": "node scripts/verify-supabase.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -150,6 +150,7 @@ Run:
 npm run typecheck
 npm run lint
 npm run build
+npm run verify:supabase
 ```
 
 Manual checks:
