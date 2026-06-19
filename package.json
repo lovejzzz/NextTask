@@ -1,7 +1,7 @@
 {
   "name": "next-task",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
+    "smoke:browser": "node scripts/smoke-browser.mjs",
     "verify:supabase": "node scripts/verify-supabase.mjs",
     "verify:production-env": "node scripts/verify-production-env.mjs",
     "verify:deployment": "node scripts/verify-deployment.mjs",

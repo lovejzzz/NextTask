@@ -2,10 +2,14 @@
 
 Next Task is a polished full-stack Kanban board built for the NP SDE assessment. It uses React, TypeScript, Vite, Vercel Serverless Functions, Supabase anonymous auth with email recovery, and Supabase Row Level Security.
 
+Current app version: `0.0.1`.
+
 ## Features
 
 - Four-column Kanban board: To Do, In Progress, In Review, Done
 - Smooth drag-and-drop task movement and ordering
+- 2.5 second card long-press drag activation plus immediate drag-handle activation
+- Mobile status navigation with one visible lane at a time and direct status move controls
 - Automatic guest session via Supabase anonymous auth
 - Email recovery links so users can save and reopen a board across devices
 - User-isolated data through RLS policies
@@ -16,8 +20,11 @@ Next Task is a polished full-stack Kanban board built for the NP SDE assessment.
 - Labels and filtering
 - Due-date urgency indicators
 - Search and filtering
+- Active filter chips with result counts
 - Board summary stats
-- High-end responsive UI with motion, skeleton states, empty states, and error states
+- Inline column task capture plus full task drawer editing
+- In-app changelog behind the bottom `v0.0.1` version link
+- High-end responsive UI with motion, skeleton states, empty states, retry states, and error states
 
 ## Stack
 
@@ -76,6 +83,14 @@ npm run dev:full
 ```
 
 This starts a Vite middleware server on `http://127.0.0.1:5174` and serves the Vercel-style routes from `api/`.
+
+For automated browser verification against the local API-backed app:
+
+```bash
+npm run smoke:browser
+```
+
+The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BASE_URL` is provided. It covers sample data, task create/edit, comments, filters, long-press drag, drag-handle drag, manager dialog focus, changelog access, and 390px mobile status/stat rendering. Screenshots are written to ignored `verification-smoke-*.png` files.
 
 ## Supabase setup
 
@@ -174,6 +189,7 @@ npm run lint
 npm run build
 npm run verify:supabase
 npm run verify:production-env
+npm run smoke:browser
 ```
 
 After deployment, run:
@@ -190,15 +206,29 @@ Manual checks:
 - Demo board can be loaded
 - Task create/edit/delete works
 - Drag-and-drop persists
+- Long-press drag and drag-handle drag both work
 - Team members can be created and assigned
+- Team members and labels can be edited
 - Labels can be created, assigned, and filtered
 - Comments appear with timestamps
 - Activity timeline updates
 - Search and filters work
+- Active filter chips clear filters correctly
 - Stats update after mutations
 - Empty/loading/error states are visible
-- Mobile layout is usable
+- Mobile layout exposes all statuses and stats at 390px width
+- The bottom grey version number opens the changelog
 - Two browser profiles cannot see each other's data after the migration is applied
+
+## v0.0.1 release checklist
+
+- Supabase migration `supabase/migrations/001_init.sql` has been applied.
+- Anonymous auth, email auth, and required OAuth redirect URLs are configured.
+- Vercel env vars match the deployment section and `VITE_ENABLE_LOCAL_DEMO=false`.
+- `npm run verify:production-env` passes before build.
+- `npm run verify:supabase` passes against the target Supabase project.
+- `npm run smoke:browser` passes locally against the full API-backed dev server.
+- After deploy, run `npm run verify:deployment -- https://your-deployment.vercel.app`.
 
 ## Repository hygiene
 

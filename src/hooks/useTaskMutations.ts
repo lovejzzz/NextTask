@@ -13,6 +13,12 @@ export function useTaskMutations() {
       queryClient.invalidateQueries({ queryKey: ['activity'] }),
     ]);
   };
+  const invalidateBoard = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['board'] }),
+      queryClient.invalidateQueries({ queryKey: ['stats'] }),
+    ]);
+  };
 
   return {
     bootstrapDemo: useMutation({ mutationFn: () => api.bootstrapDemo(), onSuccess: invalidate }),
@@ -22,7 +28,7 @@ export function useTaskMutations() {
       onSuccess: invalidate,
     }),
     reorderTasks: useMutation({ mutationFn: (updates: ReorderUpdate[]) => api.reorderTasks(updates), onSuccess: invalidate }),
-    deleteTask: useMutation({ mutationFn: (id: string) => api.deleteTask(id), onSuccess: invalidate }),
+    deleteTask: useMutation({ mutationFn: (id: string) => api.deleteTask(id), onSuccess: invalidateBoard }),
     createTeamMember: useMutation({ mutationFn: (input: TeamMemberInput) => api.createTeamMember(input), onSuccess: invalidate }),
     updateTeamMember: useMutation({
       mutationFn: ({ id, input }: { id: string; input: Partial<TeamMemberInput> }) => api.updateTeamMember(id, input),

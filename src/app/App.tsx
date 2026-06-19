@@ -36,7 +36,10 @@ import {
   Mail,
   MessageSquare,
   MoreHorizontal,
+  Pencil,
   Plus,
+  RefreshCw,
+  Save,
   Search,
   ShieldCheck,
   Sparkles,
@@ -46,7 +49,7 @@ import {
   Workflow,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   pendingOAuthFlowKey,
@@ -85,6 +88,11 @@ type ConfirmRequest = ConfirmOptions & {
   id: number;
   resolve: (confirmed: boolean) => void;
 };
+type ChangelogEntry = {
+  version: string;
+  date: string;
+  items: string[];
+};
 
 const defaultFilters: BoardFilters = {
   search: '',
@@ -106,6 +114,21 @@ const defaultDraft = {
 };
 
 const EMPTY_TASKS: Task[] = [];
+const APP_VERSION = '0.0.1';
+const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.0.1',
+    date: '2026-06-18',
+    items: [
+      'Added mobile status navigation and compact stats so every lane is discoverable at phone width.',
+      'Added repeatable browser smoke coverage for create, edit, comment, filter, and drag/drop workflows.',
+      'Refined drag/drop animation with long-press card activation, immediate handle drag, and stable overlay sizing.',
+      'Added active filter chips, manual sync status, inline column task capture, and richer activity details.',
+      'Improved task and workspace dialogs with focus handling, Escape close, and clearer keyboard states.',
+      'Added this in-app changelog behind the version number.',
+    ],
+  },
+];
 const CARD_LONG_PRESS_MS = 2500;
 const SORTABLE_TRANSITION = {
   duration: 185,
@@ -146,6 +169,8 @@ export function App() {
   const [initialStatus, setInitialStatus] = useState<TaskStatus>('todo');
   const [managerOpen, setManagerOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [mobileStatus, setMobileStatus] = useState<TaskStatus>('todo');
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const queryClient = useQueryClient();
@@ -159,6 +184,8 @@ export function App() {
   const tasks = board?.tasks ?? EMPTY_TASKS;
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const syncing = boardQuery.isFetching || statsQuery.isFetching || mutations.reorderTasks.isPending;
+  const lastSyncedAt = Math.max(boardQuery.dataUpdatedAt || 0, statsQuery.dataUpdatedAt || 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -252,6 +279,34 @@ export function App() {
     await applyReorder(updates);
   }
 
+  async function quickCreateTask(status: TaskStatus, title: string) {
+    try {
+      await mutations.createTask.mutateAsync({
+        title,
+        description: '',
+        status,
+        priority: 'normal',
+        due_date: null,
+        assignee_ids: [],
+        label_ids: [],
+      });
+      setMobileStatus(status);
+      notify('success', 'Task created');
+    } catch (error) {
+      notify('error', readableError(error));
+      throw error;
+    }
+  }
+
+  async function refreshBoard() {
+    try {
+      await Promise.all([boardQuery.refetch(), statsQuery.refetch()]);
+      notify('success', 'Board refreshed');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
   async function applyReorder(updates: Array<{ id: string; status: TaskStatus; position: number }>) {
     const previous = board;
     if (previous) {
@@ -291,13 +346,25 @@ export function App() {
         members={board?.teamMembers ?? []}
         onCreate={() => openCreate('todo')}
         onManage={() => setManagerOpen(true)}
+        onRefresh={() => void refreshBoard()}
+        syncing={syncing}
+        lastSyncedAt={lastSyncedAt}
       />
 
       <main className="app-main">
         <StatsStrip stats={stats} loading={statsQuery.isLoading} />
+        <ActiveFilterBar
+          filters={filters}
+          setFilters={setFilters}
+          labels={board?.labels ?? []}
+          members={board?.teamMembers ?? []}
+          resultCount={tasks.length}
+          totalCount={stats?.total ?? tasks.length}
+        />
+        <MobileStatusNav active={mobileStatus} grouped={grouped} onChange={setMobileStatus} />
 
         {boardQuery.isError ? (
-          <FatalState title="Board could not load" message={readableError(boardQuery.error)} />
+          <FatalState title="Board could not load" message={readableError(boardQuery.error)} onRetry={() => void refreshBoard()} />
         ) : (
           <DndContext sensors={sensors} collisionDetection={BOARD_COLLISION_DETECTION} onDragStart={onDragStart} onDragEnd={onDragEnd}>
             <section className="board-scroll" aria-label="Task board">
@@ -310,8 +377,10 @@ export function App() {
                   tasks={grouped[status.id]}
                   loading={boardQuery.isLoading}
                   onCreate={() => openCreate(status.id)}
+                  onQuickCreate={quickCreateTask}
                   onOpen={openEdit}
                   onMove={moveTask}
+                  mobileActive={mobileStatus === status.id}
                 />
               ))}
             </section>
@@ -339,6 +408,8 @@ export function App() {
         ) : null}
       </main>
 
+      <AppFooter version={APP_VERSION} onOpenChangelog={() => setChangelogOpen(true)} />
+
       <TaskDrawer
         open={drawerMode === 'create' || Boolean(selectedTask)}
         mode={drawerMode}
@@ -363,6 +434,7 @@ export function App() {
       />
 
       <ConfirmDialog request={confirmRequest} onResolve={resolveConfirm} />
+      <ChangelogDialog open={changelogOpen} entries={CHANGELOG} onClose={() => setChangelogOpen(false)} />
 
       <AnimatePresence>
         {toast ? (
@@ -389,6 +461,9 @@ function AppHeader({
   members,
   onCreate,
   onManage,
+  onRefresh,
+  syncing,
+  lastSyncedAt,
 }: {
   session: {
     userId: string | null;
@@ -401,6 +476,9 @@ function AppHeader({
   members: TeamMember[];
   onCreate: () => void;
   onManage: () => void;
+  onRefresh: () => void;
+  syncing: boolean;
+  lastSyncedAt: number;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [authRedirectError] = useState(() => readAuthRedirectError());
@@ -465,6 +543,7 @@ function AppHeader({
   }
 
   function toggleAccount() {
+    setFiltersOpen(false);
     if (!accountOpen && session.email) {
       setEmailInput(session.email);
       setEmailOpen(true);
@@ -517,14 +596,58 @@ function AppHeader({
           Filters
           <ChevronDown size={14} />
         </button>
-        <button className="icon-button text-button" onClick={onManage} type="button" title="Team and labels">
+        <button
+          className="icon-button text-button"
+          onClick={() => {
+            setFiltersOpen(false);
+            onManage();
+          }}
+          type="button"
+          title="Team and labels"
+        >
           <Users size={16} />
           Team & labels
         </button>
-        <button className="primary-button" onClick={onCreate} type="button" title="New task">
+        <button
+          className="icon-button text-button save-board-button"
+          onClick={() => {
+            setFiltersOpen(false);
+            setAccountOpen(true);
+            setEmailOpen(true);
+          }}
+          type="button"
+          title="Save board"
+        >
+          <ShieldCheck size={16} />
+          {session.isAnonymous ? 'Save board' : 'Saved'}
+        </button>
+        <button
+          className="icon-button sync-button"
+          onClick={() => {
+            setFiltersOpen(false);
+            onRefresh();
+          }}
+          type="button"
+          title="Refresh board"
+          aria-label="Refresh board"
+        >
+          <RefreshCw className={syncing ? 'spin' : undefined} size={16} />
+        </button>
+        <button
+          className="primary-button"
+          onClick={() => {
+            setFiltersOpen(false);
+            onCreate();
+          }}
+          type="button"
+          title="New task"
+        >
           <Plus size={17} />
           New task
         </button>
+        <span className="sync-status" title={lastSyncedAt ? `Last synced ${new Date(lastSyncedAt).toLocaleString()}` : 'Waiting for first sync'}>
+          {syncing ? 'Syncing' : lastSyncedAt ? 'Synced' : 'Ready'}
+        </span>
       </div>
 
       <button
@@ -807,6 +930,79 @@ function StatsStrip({ stats, loading }: { stats?: BoardStats; loading: boolean }
   );
 }
 
+function ActiveFilterBar({
+  filters,
+  setFilters,
+  labels,
+  members,
+  resultCount,
+  totalCount,
+}: {
+  filters: BoardFilters;
+  setFilters: (filters: BoardFilters) => void;
+  labels: Label[];
+  members: TeamMember[];
+  resultCount: number;
+  totalCount: number;
+}) {
+  const chips = activeFilterChips(filters, labels, members);
+  if (!chips.length) return null;
+
+  return (
+    <section className="active-filter-bar" aria-label="Active filters">
+      <span className="filter-result-count">
+        {resultCount} of {totalCount} tasks
+      </span>
+      {chips.map((chip) => (
+        <button
+          className="filter-chip"
+          key={chip.key}
+          onClick={() => setFilters({ ...filters, [chip.key]: chip.emptyValue })}
+          type="button"
+          aria-label={`Remove ${chip.label} filter`}
+        >
+          {chip.label}
+          <X size={13} />
+        </button>
+      ))}
+      <button className="filter-clear-all" onClick={() => setFilters(defaultFilters)} type="button">
+        Clear all
+      </button>
+    </section>
+  );
+}
+
+function MobileStatusNav({
+  active,
+  grouped,
+  onChange,
+}: {
+  active: TaskStatus;
+  grouped: Record<TaskStatus, Task[]>;
+  onChange: (status: TaskStatus) => void;
+}) {
+  return (
+    <nav className="mobile-status-nav" aria-label="Board statuses">
+      {STATUSES.map((status) => {
+        const Icon = statusIcons[status.id];
+        return (
+          <button
+            className={cx('mobile-status-tab', `tone-${status.tone}`, active === status.id && 'mobile-status-tab-active')}
+            key={status.id}
+            onClick={() => onChange(status.id)}
+            type="button"
+            aria-pressed={active === status.id}
+          >
+            <Icon size={14} />
+            <span>{status.shortLabel}</span>
+            <strong>{grouped[status.id].length}</strong>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 function BoardColumn({
   status,
   title,
@@ -814,8 +1010,10 @@ function BoardColumn({
   tasks,
   loading,
   onCreate,
+  onQuickCreate,
   onOpen,
   onMove,
+  mobileActive,
 }: {
   status: TaskStatus;
   title: string;
@@ -823,13 +1021,34 @@ function BoardColumn({
   tasks: Task[];
   loading: boolean;
   onCreate: () => void;
+  onQuickCreate: (status: TaskStatus, title: string) => Promise<void>;
   onOpen: (id: string) => void;
   onMove: (id: string, status: TaskStatus) => void;
+  mobileActive: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
+  const [inlineOpen, setInlineOpen] = useState(false);
+  const [quickTitle, setQuickTitle] = useState('');
+  const [saving, setSaving] = useState(false);
   const StatusIcon = statusIcons[status];
+
+  async function submitQuickCreate(event: React.FormEvent) {
+    event.preventDefault();
+    const titleValue = quickTitle.trim();
+    if (!titleValue) return;
+
+    setSaving(true);
+    try {
+      await onQuickCreate(status, titleValue);
+      setQuickTitle('');
+      setInlineOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div ref={setNodeRef} className={cx('board-column', `tone-${tone}`, isOver && 'column-over')}>
+    <div ref={setNodeRef} className={cx('board-column', `tone-${tone}`, mobileActive && 'mobile-active-column', isOver && 'column-over')}>
       <div className="column-header">
         <div>
           <h2>
@@ -863,10 +1082,36 @@ function BoardColumn({
         </div>
       </SortableContext>
 
-      <button className="column-add" onClick={onCreate} type="button">
-        <Plus size={16} />
-        Add task
-      </button>
+      {inlineOpen ? (
+        <form className="inline-task-create" onSubmit={(event) => void submitQuickCreate(event)}>
+          <input
+            value={quickTitle}
+            onChange={(event) => setQuickTitle(event.target.value)}
+            placeholder={`Add ${title.toLowerCase()} task`}
+            aria-label={`Add task to ${title}`}
+            autoFocus
+          />
+          <div>
+            <button className="ghost-button" onClick={() => setInlineOpen(false)} type="button" disabled={saving}>
+              Cancel
+            </button>
+            <button className="primary-button" type="submit" disabled={saving || !quickTitle.trim()}>
+              {saving ? <Loader2 className="spin" size={15} /> : <Plus size={15} />}
+              Add
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="column-actions">
+          <button className="column-add" onClick={() => setInlineOpen(true)} type="button">
+            <Plus size={16} />
+            Add task
+          </button>
+          <button className="column-details-add" onClick={onCreate} type="button">
+            Details
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -945,6 +1190,7 @@ function TaskCard({
           {...listeners}
         >
           <MoreHorizontal size={15} />
+          <span className="sr-only">Drag task. Keyboard users can press Space or Enter to pick up, use arrow keys to move, and press Space or Enter to drop.</span>
         </button>
       </div>
       <h3>{task.title}</h3>
@@ -969,20 +1215,35 @@ function TaskCard({
         <AvatarStack members={task.assignees} />
       </div>
       {onMove ? (
-        <label className="mobile-move-row" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-          <span>Move</span>
-          <select
-            aria-label={`Move ${task.title}`}
-            value={task.status}
-            onChange={(event) => onMove(task.id, event.target.value as TaskStatus)}
-          >
+        <div className="mobile-move-row" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+          <label>
+            <span>Move</span>
+            <select
+              aria-label={`Move ${task.title}`}
+              value={task.status}
+              onChange={(event) => onMove(task.id, event.target.value as TaskStatus)}
+            >
+              {STATUSES.map((status) => (
+                <option value={status.id} key={status.id}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="mobile-status-buttons" aria-label={`Quick move ${task.title}`}>
             {STATUSES.map((status) => (
-              <option value={status.id} key={status.id}>
-                {status.label}
-              </option>
+              <button
+                className={cx('mobile-status-button', task.status === status.id && 'mobile-status-button-active')}
+                key={status.id}
+                onClick={() => onMove(task.id, status.id)}
+                type="button"
+                disabled={task.status === status.id}
+              >
+                {status.shortLabel}
+              </button>
             ))}
-          </select>
-        </label>
+          </div>
+        </div>
       ) : null}
     </motion.article>
   );
@@ -1017,6 +1278,9 @@ function TaskDrawer({
   const commentsQuery = useComments(userId, task?.id ?? null);
   const activityQuery = useActivity(userId, task?.id ?? null);
   const mutations = useTaskMutations();
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+
+  useDialogFocus(open, onClose, titleInputRef);
 
   useEffect(() => {
     let active = true;
@@ -1096,6 +1360,9 @@ function TaskDrawer({
           <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.aside
             className="task-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="task-drawer-title"
             initial={{ opacity: 0, x: 36 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 36 }}
@@ -1104,7 +1371,7 @@ function TaskDrawer({
             <div className="drawer-header">
               <div>
                 <span className="drawer-kicker">{mode === 'create' ? 'New task' : 'Task details'}</span>
-                <h2>{mode === 'create' ? 'Create work item' : 'Refine the task'}</h2>
+                <h2 id="task-drawer-title">{mode === 'create' ? 'Create work item' : 'Refine the task'}</h2>
               </div>
               <button className="icon-button" onClick={onClose} type="button" aria-label="Close drawer">
                 <X size={18} />
@@ -1114,7 +1381,12 @@ function TaskDrawer({
             <div className="drawer-body">
               <label className="field">
                 <span>Title</span>
-                <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Add task title" />
+                <input
+                  ref={titleInputRef}
+                  value={draft.title}
+                  onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+                  placeholder="Add task title"
+                />
               </label>
               <label className="field">
                 <span>Description</span>
@@ -1326,11 +1598,25 @@ function ActivityTimeline({ events, loading }: { events: ActivityEvent[]; loadin
             <div>
               <strong>{event.message}</strong>
               <span>{relativeTime(event.created_at)}</span>
+              <ActivityMeta event={event} />
             </div>
           </motion.div>
         ))}
       </div>
     </section>
+  );
+}
+
+function ActivityMeta({ event }: { event: ActivityEvent }) {
+  const details = describeActivityMetadata(event);
+  if (!details.length) return null;
+
+  return (
+    <div className="activity-meta">
+      {details.map((detail) => (
+        <span key={detail}>{detail}</span>
+      ))}
+    </div>
   );
 }
 
@@ -1349,7 +1635,14 @@ function TeamLabelManager({
 }) {
   const [memberName, setMemberName] = useState('');
   const [labelName, setLabelName] = useState('');
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [memberEdits, setMemberEdits] = useState<Record<string, { name: string; color: string }>>({});
+  const [labelEdits, setLabelEdits] = useState<Record<string, { name: string; color: string }>>({});
   const mutations = useTaskMutations();
+  const memberInputRef = useRef<HTMLInputElement | null>(null);
+
+  useDialogFocus(open, onClose, memberInputRef);
 
   async function addMember() {
     if (!memberName.trim()) return;
@@ -1405,16 +1698,58 @@ function TeamLabelManager({
     }
   }
 
+  function startMemberEdit(member: TeamMember) {
+    setEditingMemberId(member.id);
+    setMemberEdits((current) => ({ ...current, [member.id]: { name: member.name, color: member.color } }));
+  }
+
+  function startLabelEdit(label: Label) {
+    setEditingLabelId(label.id);
+    setLabelEdits((current) => ({ ...current, [label.id]: { name: label.name, color: label.color } }));
+  }
+
+  async function saveMember(member: TeamMember) {
+    const edit = memberEdits[member.id];
+    if (!edit?.name.trim()) return;
+    try {
+      await mutations.updateTeamMember.mutateAsync({ id: member.id, input: { name: edit.name.trim(), color: edit.color } });
+      setEditingMemberId(null);
+      notify('success', 'Team member saved');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
+  async function saveLabel(label: Label) {
+    const edit = labelEdits[label.id];
+    if (!edit?.name.trim()) return;
+    try {
+      await mutations.updateLabel.mutateAsync({ id: label.id, input: { name: edit.name.trim(), color: edit.color } });
+      setEditingLabelId(null);
+      notify('success', 'Label saved');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
   return (
     <AnimatePresence>
       {open ? (
         <>
           <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.aside className="manager-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.aside
+            className="manager-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manager-panel-title"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <div className="drawer-header">
               <div>
                 <span className="drawer-kicker">Workspace setup</span>
-                <h2>Team & labels</h2>
+                <h2 id="manager-panel-title">Team & labels</h2>
               </div>
               <button className="icon-button" onClick={onClose} type="button" aria-label="Close team and labels">
                 <X size={18} />
@@ -1427,7 +1762,7 @@ function TeamLabelManager({
                   Team members
                 </h3>
                 <div className="inline-create">
-                  <input value={memberName} onChange={(event) => setMemberName(event.target.value)} placeholder="Add member" />
+                  <input ref={memberInputRef} value={memberName} onChange={(event) => setMemberName(event.target.value)} placeholder="Add member" />
                   <button className="icon-button" onClick={() => void addMember()} type="button" aria-label="Add team member">
                     <Plus size={15} />
                   </button>
@@ -1436,7 +1771,42 @@ function TeamLabelManager({
                   {(board?.teamMembers ?? []).map((member) => (
                     <div className="manager-row" key={member.id}>
                       <Avatar member={member} />
-                      <span>{member.name}</span>
+                      {editingMemberId === member.id ? (
+                        <div className="manager-edit-fields">
+                          <input
+                            value={memberEdits[member.id]?.name ?? member.name}
+                            onChange={(event) =>
+                              setMemberEdits((current) => ({
+                                ...current,
+                                [member.id]: { name: event.target.value, color: current[member.id]?.color ?? member.color },
+                              }))
+                            }
+                            aria-label={`Edit ${member.name} name`}
+                          />
+                          <input
+                            type="color"
+                            value={memberEdits[member.id]?.color ?? member.color}
+                            onChange={(event) =>
+                              setMemberEdits((current) => ({
+                                ...current,
+                                [member.id]: { name: current[member.id]?.name ?? member.name, color: event.target.value },
+                              }))
+                            }
+                            aria-label={`Edit ${member.name} color`}
+                          />
+                        </div>
+                      ) : (
+                        <span>{member.name}</span>
+                      )}
+                      {editingMemberId === member.id ? (
+                        <button className="mini-button" onClick={() => void saveMember(member)} type="button" aria-label={`Save ${member.name}`}>
+                          <Save size={13} />
+                        </button>
+                      ) : (
+                        <button className="mini-button" onClick={() => startMemberEdit(member)} type="button" aria-label={`Edit ${member.name}`}>
+                          <Pencil size={13} />
+                        </button>
+                      )}
                       <button className="mini-button" onClick={() => void removeMember(member)} type="button" aria-label={`Delete ${member.name}`}>
                         <Trash2 size={13} />
                       </button>
@@ -1459,7 +1829,42 @@ function TeamLabelManager({
                   {(board?.labels ?? []).map((label) => (
                     <div className="manager-row" key={label.id}>
                       <span className="picker-color" style={{ background: label.color }} />
-                      <span>{label.name}</span>
+                      {editingLabelId === label.id ? (
+                        <div className="manager-edit-fields">
+                          <input
+                            value={labelEdits[label.id]?.name ?? label.name}
+                            onChange={(event) =>
+                              setLabelEdits((current) => ({
+                                ...current,
+                                [label.id]: { name: event.target.value, color: current[label.id]?.color ?? label.color },
+                              }))
+                            }
+                            aria-label={`Edit ${label.name} name`}
+                          />
+                          <input
+                            type="color"
+                            value={labelEdits[label.id]?.color ?? label.color}
+                            onChange={(event) =>
+                              setLabelEdits((current) => ({
+                                ...current,
+                                [label.id]: { name: current[label.id]?.name ?? label.name, color: event.target.value },
+                              }))
+                            }
+                            aria-label={`Edit ${label.name} color`}
+                          />
+                        </div>
+                      ) : (
+                        <span>{label.name}</span>
+                      )}
+                      {editingLabelId === label.id ? (
+                        <button className="mini-button" onClick={() => void saveLabel(label)} type="button" aria-label={`Save ${label.name}`}>
+                          <Save size={13} />
+                        </button>
+                      ) : (
+                        <button className="mini-button" onClick={() => startLabelEdit(label)} type="button" aria-label={`Edit ${label.name}`}>
+                          <Pencil size={13} />
+                        </button>
+                      )}
                       <button className="mini-button" onClick={() => void removeLabel(label)} type="button" aria-label={`Delete ${label.name}`}>
                         <Trash2 size={13} />
                       </button>
@@ -1582,6 +1987,74 @@ function EmptyBoard({
   );
 }
 
+function AppFooter({ version, onOpenChangelog }: { version: string; onOpenChangelog: () => void }) {
+  return (
+    <footer className="app-footer">
+      <button className="version-button" onClick={onOpenChangelog} type="button" aria-haspopup="dialog">
+        v{version}
+      </button>
+    </footer>
+  );
+}
+
+function ChangelogDialog({
+  open,
+  entries,
+  onClose,
+}: {
+  open: boolean;
+  entries: ChangelogEntry[];
+  onClose: () => void;
+}) {
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  useDialogFocus(open, onClose, closeRef);
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <>
+          <motion.div className="confirm-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.section
+            className="changelog-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="changelog-title"
+            initial={{ opacity: 0, x: '-50%', y: 'calc(-50% + 14px)', scale: 0.98 }}
+            animate={{ opacity: 1, x: '-50%', y: '-50%', scale: 1 }}
+            exit={{ opacity: 0, x: '-50%', y: 'calc(-50% + 12px)', scale: 0.98 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+          >
+            <div className="changelog-header">
+              <div>
+                <span className="drawer-kicker">Changelog</span>
+                <h2 id="changelog-title">Next Task updates</h2>
+              </div>
+              <button ref={closeRef} className="icon-button" onClick={onClose} type="button" aria-label="Close changelog">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="changelog-list">
+              {entries.map((entry) => (
+                <article className="changelog-entry" key={entry.version}>
+                  <div>
+                    <strong>v{entry.version}</strong>
+                    <span>{entry.date}</span>
+                  </div>
+                  <ul>
+                    {entry.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          </motion.section>
+        </>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 function LoadingExperience() {
   return (
     <div className="app-shell">
@@ -1604,12 +2077,18 @@ function LoadingExperience() {
   );
 }
 
-function FatalState({ title, message }: { title: string; message: string }) {
+function FatalState({ title, message, onRetry }: { title: string; message: string; onRetry?: () => void }) {
   return (
     <section className="fatal-state">
       <AlertCircle size={28} />
       <h2>{title}</h2>
       <p>{message}</p>
+      {onRetry ? (
+        <button className="primary-button" onClick={onRetry} type="button">
+          <RefreshCw size={16} />
+          Retry
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -1670,6 +2149,32 @@ function Avatar({ member }: { member: TeamMember }) {
   );
 }
 
+function useDialogFocus<T extends HTMLElement>(
+  open: boolean,
+  onClose: () => void,
+  initialFocusRef: React.RefObject<T | null>,
+) {
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusTimer = window.setTimeout(() => initialFocusRef.current?.focus(), 0);
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', onKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [open, onClose, initialFocusRef]);
+}
+
 function groupTasks(tasks: Task[]) {
   return STATUSES.reduce(
     (acc, status) => {
@@ -1713,6 +2218,58 @@ function reorderForDrop(tasks: Task[], active: Task, targetStatus: TaskStatus, o
 
 function hasActiveFilters(filters: BoardFilters) {
   return Boolean(filters.search || (filters.status && filters.status !== 'all') || (filters.priority && filters.priority !== 'all') || filters.label_id || filters.assignee_id || (filters.due && filters.due !== 'all'));
+}
+
+function activeFilterChips(filters: BoardFilters, labels: Label[], members: TeamMember[]) {
+  const chips: Array<{ key: keyof BoardFilters; label: string; emptyValue: string }> = [];
+  if (filters.search) chips.push({ key: 'search', label: `Search: ${filters.search}`, emptyValue: '' });
+  if (filters.status && filters.status !== 'all') {
+    chips.push({
+      key: 'status',
+      label: `Status: ${STATUSES.find((status) => status.id === filters.status)?.label ?? filters.status}`,
+      emptyValue: 'all',
+    });
+  }
+  if (filters.priority && filters.priority !== 'all') {
+    chips.push({
+      key: 'priority',
+      label: `Priority: ${PRIORITIES.find((priority) => priority.id === filters.priority)?.label ?? filters.priority}`,
+      emptyValue: 'all',
+    });
+  }
+  if (filters.due && filters.due !== 'all') {
+    const dueLabels: Record<string, string> = { overdue: 'Overdue', soon: 'Due soon', none: 'No due date' };
+    chips.push({ key: 'due', label: `Due: ${dueLabels[filters.due] ?? filters.due}`, emptyValue: 'all' });
+  }
+  if (filters.label_id) {
+    chips.push({ key: 'label_id', label: `Label: ${labels.find((label) => label.id === filters.label_id)?.name ?? 'Selected'}`, emptyValue: '' });
+  }
+  if (filters.assignee_id) {
+    chips.push({ key: 'assignee_id', label: `Assignee: ${members.find((member) => member.id === filters.assignee_id)?.name ?? 'Selected'}`, emptyValue: '' });
+  }
+  return chips;
+}
+
+function describeActivityMetadata(event: ActivityEvent) {
+  const metadata = event.metadata ?? {};
+  const details: string[] = [];
+
+  if (typeof metadata.from === 'string' && typeof metadata.to === 'string') {
+    details.push(`${statusLabel(metadata.from as TaskStatus)} -> ${statusLabel(metadata.to as TaskStatus)}`);
+  }
+  if (Array.isArray(metadata.fields) && metadata.fields.length) {
+    details.push(`Fields: ${metadata.fields.join(', ')}`);
+  }
+  if (metadata.assigneesChanged) details.push('Assignees changed');
+  if (metadata.labelsChanged) details.push('Labels changed');
+  if (typeof metadata.title === 'string') details.push(`Task: ${metadata.title}`);
+  if (typeof metadata.comment_id === 'string') details.push('Comment event');
+
+  return details;
+}
+
+function statusLabel(status: TaskStatus) {
+  return STATUSES.find((item) => item.id === status)?.label ?? status;
 }
 
 function randomColor(index: number) {
