@@ -35,7 +35,6 @@ import {
   Save,
   Search,
   ShieldCheck,
-  Sparkles,
   Sun,
   Tag,
   Trash2,
@@ -327,6 +326,15 @@ export function App() {
     }
   }
 
+  async function loadSampleBoard() {
+    try {
+      await mutations.bootstrapDemo.mutateAsync();
+      notify('success', 'Sample board loaded');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
   async function applyReorder(updates: Array<{ id: string; status: TaskStatus; position: number }>) {
     const previous = board;
     if (previous) {
@@ -410,22 +418,6 @@ export function App() {
           </DndContext>
         )}
 
-        {board && tasks.length === 0 && !boardQuery.isLoading ? (
-          <EmptyBoard
-            hasFilters={hasActiveFilters(filters)}
-            onClear={() => setFilters(defaultFilters)}
-            onCreate={() => openCreate('todo')}
-            onDemo={async () => {
-              try {
-                await mutations.bootstrapDemo.mutateAsync();
-                notify('success', 'Sample board loaded');
-              } catch (error) {
-                notify('error', readableError(error));
-              }
-            }}
-            loading={mutations.bootstrapDemo.isPending}
-          />
-        ) : null}
       </main>
 
       <AppFooter
@@ -434,6 +426,11 @@ export function App() {
         canClear={canClear}
         clearing={mutations.resetBoard.isPending}
         onClear={() => void clearBoard()}
+        showSampleAction={Boolean(board && tasks.length === 0 && !boardQuery.isLoading && !hasActiveFilters(filters))}
+        loadingSample={mutations.bootstrapDemo.isPending}
+        onLoadSample={() => void loadSampleBoard()}
+        showClearFilters={Boolean(board && tasks.length === 0 && !boardQuery.isLoading && hasActiveFilters(filters))}
+        onClearFilters={() => setFilters(defaultFilters)}
       />
 
       <TaskDrawer
@@ -1393,64 +1390,28 @@ function ConfirmDialog({
   );
 }
 
-function EmptyBoard({
-  hasFilters,
-  onClear,
-  onCreate,
-  onDemo,
-  loading,
-}: {
-  hasFilters: boolean;
-  onClear: () => void;
-  onCreate: () => void;
-  onDemo: () => void;
-  loading: boolean;
-}) {
-  return (
-    <motion.section className="empty-board" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="empty-orbit">
-        <Sparkles size={24} />
-      </div>
-      <h2>{hasFilters ? 'No matching tasks' : 'Shape the next play'}</h2>
-      <p>
-        {hasFilters
-          ? 'Clear filters or adjust the search to bring work back into view.'
-          : 'Start with a focused task or load a rich sample board to inspect the full product experience.'}
-      </p>
-      <div className="empty-actions">
-        {hasFilters ? (
-          <button className="primary-button" onClick={onClear} type="button">
-            Clear filters
-          </button>
-        ) : (
-          <>
-            <button className="primary-button" onClick={onCreate} type="button">
-              <Plus size={16} />
-              Create task
-            </button>
-            <button className="ghost-button" onClick={onDemo} type="button" disabled={loading}>
-              {loading ? <Loader2 className="spin" size={16} /> : <Sparkles size={16} />}
-              Load sample board
-            </button>
-          </>
-        )}
-      </div>
-    </motion.section>
-  );
-}
-
 function AppFooter({
   version,
   onOpenChangelog,
   canClear,
   clearing,
   onClear,
+  showSampleAction,
+  loadingSample,
+  onLoadSample,
+  showClearFilters,
+  onClearFilters,
 }: {
   version: string;
   onOpenChangelog: () => void;
   canClear: boolean;
   clearing: boolean;
   onClear: () => void;
+  showSampleAction: boolean;
+  loadingSample: boolean;
+  onLoadSample: () => void;
+  showClearFilters: boolean;
+  onClearFilters: () => void;
 }) {
   return (
     <footer className="app-footer">
@@ -1458,6 +1419,16 @@ function AppFooter({
         <button className="footer-clear" onClick={onClear} type="button" disabled={clearing}>
           {clearing ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
           Clear board
+        </button>
+      ) : null}
+      {showSampleAction ? (
+        <button className="footer-text-button" onClick={onLoadSample} type="button" disabled={loadingSample}>
+          {loadingSample ? 'Loading sample...' : 'Load sample board'}
+        </button>
+      ) : null}
+      {showClearFilters ? (
+        <button className="footer-text-button" onClick={onClearFilters} type="button">
+          Clear filters
         </button>
       ) : null}
       <button className="version-button" onClick={onOpenChangelog} type="button" aria-haspopup="dialog">

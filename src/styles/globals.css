@@ -1673,7 +1673,6 @@ textarea:focus-visible,
   padding: 3px;
 }
 
-.empty-board,
 .fatal-state,
 .loading-stage {
   display: grid;
@@ -1682,39 +1681,6 @@ textarea:focus-visible,
   text-align: center;
 }
 
-.empty-board {
-  width: min(560px, 100%);
-  margin: 20px auto 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: var(--shadow-3);
-}
-
-.empty-orbit {
-  display: grid;
-  width: 72px;
-  height: 72px;
-  place-items: center;
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  background: var(--gradient-accent);
-  color: #ffffff;
-  box-shadow: 0 16px 36px rgba(99, 102, 241, 0.35);
-  animation: float-orbit 4s var(--ease-out) infinite;
-}
-
-@keyframes float-orbit {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-6px) rotate(-3deg);
-  }
-}
-
-.empty-board h2,
 .fatal-state h2,
 .loading-stage h1 {
   margin: 18px 0 8px;
@@ -1723,18 +1689,11 @@ textarea:focus-visible,
   letter-spacing: -0.01em;
 }
 
-.empty-board p,
 .fatal-state p,
 .loading-stage p {
   max-width: 520px;
   margin: 0;
   color: var(--muted);
-}
-
-.empty-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
 }
 
 .loading-board {
@@ -1848,6 +1807,27 @@ textarea:focus-visible,
 .footer-clear:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+
+.footer-text-button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.footer-text-button:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.footer-text-button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+  text-decoration: none;
 }
 
 .version-button {
@@ -2239,7 +2219,6 @@ textarea:focus-visible,
     width: auto;
   }
 
-  .empty-actions,
   .drawer-footer {
     flex-wrap: wrap;
   }

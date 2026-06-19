@@ -301,7 +301,7 @@ async function clearBoard(page) {
   await page.waitForSelector('.confirm-dialog', { timeout: 10_000 });
   await page.locator('.confirm-dialog .danger-button').click();
   await page.waitForSelector('.task-card', { state: 'detached', timeout: 30_000 });
-  await page.waitForSelector('.empty-board:has-text("Shape the next play")', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Load sample board' }).waitFor({ state: 'visible', timeout: 30_000 });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('.board-column', { timeout: 45_000 });
   assertEqual(await page.locator('.task-card').count(), 0, 'clear board should persist after reload');
