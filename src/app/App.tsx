@@ -463,6 +463,8 @@ export function App() {
         {toast ? (
           <motion.div
             className={cx('toast', toast.tone === 'error' ? 'toast-error' : 'toast-success')}
+            role="status"
+            aria-live="polite"
             initial={{ opacity: 0, y: 18, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}

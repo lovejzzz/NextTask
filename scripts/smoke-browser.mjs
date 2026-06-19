@@ -83,6 +83,7 @@ async function runSmoke() {
     await page.waitForSelector('.task-card', { timeout: 45_000 });
   }
 
+  await verifyRefreshToast(page);
   await page.screenshot({ path: 'verification-smoke-desktop.png', fullPage: true });
 
   // Accessibility scan: fail on serious/critical WCAG 2 A/AA violations.
@@ -183,7 +184,7 @@ async function runSmoke() {
         ok: true,
         baseUrl,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['sample board', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
+        checked: ['sample board', 'refresh toast contrast', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,
@@ -222,6 +223,80 @@ async function clearSearch(page) {
   if (await clearButton.isVisible().catch(() => false)) {
     await clearButton.click();
     await page.waitForTimeout(400);
+  }
+}
+
+async function verifyRefreshToast(page) {
+  if ((await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) !== 'dark') {
+    await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+    await page.waitForFunction(() => document.documentElement.getAttribute('data-theme') === 'dark');
+  }
+
+  await page.getByRole('button', { name: 'Refresh board' }).click();
+  const toast = page.getByRole('status').filter({ hasText: 'Board refreshed' }).first();
+  await toast.waitFor({ state: 'visible', timeout: 10_000 });
+  const metrics = await toast.evaluate((element) => {
+    const styles = getComputedStyle(element);
+
+    function parseRgbChannel(value) {
+      if (value.endsWith('%')) return (Number(value.slice(0, -1)) / 100) * 255;
+      return Number(value);
+    }
+
+    function parseSrgbChannel(value) {
+      if (value.endsWith('%')) return (Number(value.slice(0, -1)) / 100) * 255;
+      const numeric = Number(value);
+      return numeric <= 1 ? numeric * 255 : numeric;
+    }
+
+    function splitChannels(value) {
+      return value.replace(/\//g, ' ').split(/[,\s]+/).filter(Boolean);
+    }
+
+    function parseCssColor(value) {
+      const rgb = value.trim().match(/^rgba?\((.+)\)$/i);
+      if (rgb) return splitChannels(rgb[1]).slice(0, 3).map(parseRgbChannel);
+
+      const srgb = value.trim().match(/^color\(srgb\s+(.+)\)$/i);
+      if (srgb) return splitChannels(srgb[1]).slice(0, 3).map(parseSrgbChannel);
+
+      return null;
+    }
+
+    function relativeLuminance(rgb) {
+      const channels = rgb.map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    }
+
+    function contrastRatio(foreground, background) {
+      const fg = relativeLuminance(foreground);
+      const bg = relativeLuminance(background);
+      const lighter = Math.max(fg, bg);
+      const darker = Math.min(fg, bg);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    const foreground = parseCssColor(styles.color);
+    const background = parseCssColor(styles.backgroundColor);
+    return {
+      text: element.textContent?.trim() ?? '',
+      color: styles.color,
+      backgroundColor: styles.backgroundColor,
+      borderColor: styles.borderColor,
+      contrast: foreground && background ? contrastRatio(foreground, background) : 0,
+    };
+  });
+
+  if (!metrics.text.includes('Board refreshed')) {
+    throw new Error(`refresh toast should include readable message text, got ${JSON.stringify(metrics.text)}`);
+  }
+  if (metrics.contrast < 4.5) {
+    throw new Error(
+      `refresh toast contrast is too low (${metrics.contrast.toFixed(2)}). color=${metrics.color}, background=${metrics.backgroundColor}, border=${metrics.borderColor}`,
+    );
   }
 }
 

@@ -1758,14 +1758,30 @@ textarea:focus-visible,
   gap: 8px;
   max-width: min(420px, calc(100vw - 44px));
   padding: 13px 15px;
-  border: 1px solid rgba(196, 207, 222, 0.9);
+  border: 1px solid var(--toast-border, var(--border-strong));
   border-radius: var(--radius);
-  background: rgba(255, 253, 250, 0.94);
+  background: var(--toast-bg, var(--surface));
   box-shadow: var(--shadow-lift);
-  color: var(--text);
+  color: var(--toast-text, var(--text));
   font-size: 13px;
   font-weight: 800;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.toast-success {
+  --toast-bg: color-mix(in srgb, var(--emerald) 14%, var(--surface));
+  --toast-border: color-mix(in srgb, var(--emerald) 38%, var(--border));
+  --toast-text: var(--text);
+}
+
+.toast-error {
+  --toast-bg: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  --toast-border: color-mix(in srgb, var(--danger) 40%, var(--border));
+  --toast-text: var(--text);
+}
+
+.toast svg {
+  flex: 0 0 auto;
 }
 
 .toast-success svg {
