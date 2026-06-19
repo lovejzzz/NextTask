@@ -1,14 +1,18 @@
 import {
   closestCorners,
+  type CollisionDetection,
+  defaultDropAnimationSideEffects,
   DndContext,
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type DropAnimation,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -102,6 +106,26 @@ const defaultDraft = {
 };
 
 const EMPTY_TASKS: Task[] = [];
+const CARD_LONG_PRESS_MS = 2500;
+const SORTABLE_TRANSITION = {
+  duration: 185,
+  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+};
+const DROP_ANIMATION: DropAnimation = {
+  duration: 190,
+  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0',
+      },
+    },
+  }),
+};
+const BOARD_COLLISION_DETECTION: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args);
+};
 const statusIcons = {
   todo: CircleDotDashed,
   in_progress: Workflow,
@@ -137,7 +161,12 @@ export function App() {
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: CARD_LONG_PRESS_MS, tolerance: 8 },
+      bypassActivationConstraint({ event }) {
+        return isImmediateDragTarget(event);
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -270,7 +299,7 @@ export function App() {
         {boardQuery.isError ? (
           <FatalState title="Board could not load" message={readableError(boardQuery.error)} />
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={BOARD_COLLISION_DETECTION} onDragStart={onDragStart} onDragEnd={onDragEnd}>
             <section className="board-scroll" aria-label="Task board">
               {STATUSES.map((status) => (
                 <BoardColumn
@@ -286,7 +315,9 @@ export function App() {
                 />
               ))}
             </section>
-            <DragOverlay>{activeTask ? <TaskCard task={activeTask} overlay onOpen={() => undefined} /> : null}</DragOverlay>
+            <DragOverlay adjustScale={false} dropAnimation={DROP_ANIMATION}>
+              {activeTask ? <TaskCard task={activeTask} overlay onOpen={() => undefined} /> : null}
+            </DragOverlay>
           </DndContext>
         )}
 
@@ -801,7 +832,6 @@ function BoardColumn({
     <div ref={setNodeRef} className={cx('board-column', `tone-${tone}`, isOver && 'column-over')}>
       <div className="column-header">
         <div>
-          <span className="column-kicker">Status</span>
           <h2>
             <span className="status-icon">
               <StatusIcon size={15} />
@@ -842,7 +872,10 @@ function BoardColumn({
 }
 
 function SortableTaskCard({ task, onOpen, onMove }: { task: Task; onOpen: (id: string) => void; onMove: (id: string, status: TaskStatus) => void }) {
-  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    transition: SORTABLE_TRANSITION,
+  });
   return (
     <TaskCard
       refCallback={setNodeRef}
@@ -887,10 +920,11 @@ function TaskCard({
       ref={refCallback}
       className={cx('task-card', isDragging && 'task-card-dragging', overlay && 'task-card-overlay')}
       style={style}
-      layout
+      layout={overlay ? false : 'position'}
       initial={false}
-      whileHover={{ y: -2 }}
+      whileHover={overlay ? undefined : { y: -2 }}
       onClick={() => onOpen(task.id)}
+      {...listeners}
     >
       <div className="task-topline">
         <span className={cx('priority-dot', `priority-${task.priority}`)} />
@@ -905,6 +939,7 @@ function TaskCard({
           className="drag-handle"
           type="button"
           aria-label={`Drag ${task.title}`}
+          data-drag-immediate="true"
           onClick={(event) => event.stopPropagation()}
           {...attributes}
           {...listeners}
@@ -934,7 +969,7 @@ function TaskCard({
         <AvatarStack members={task.assignees} />
       </div>
       {onMove ? (
-        <label className="mobile-move-row" onClick={(event) => event.stopPropagation()}>
+        <label className="mobile-move-row" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
           <span>Move</span>
           <select
             aria-label={`Move ${task.title}`}
@@ -951,6 +986,10 @@ function TaskCard({
       ) : null}
     </motion.article>
   );
+}
+
+function isImmediateDragTarget(event: Event) {
+  return event.target instanceof Element && Boolean(event.target.closest('[data-drag-immediate="true"]'));
 }
 
 function TaskDrawer({
