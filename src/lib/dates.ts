@@ -27,7 +27,13 @@ export function relativeTime(value: string | null | undefined) {
 }
 
 export function formatDateInput(date: Date) {
-  return date.toISOString().slice(0, 10);
+  // Use local calendar components, not toISOString (UTC), so the value matches
+  // the user's local "today" — otherwise users behind UTC get an off-by-one date
+  // near midnight, and it would disagree with dueTone/dueLabel which parse locally.
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function startOfToday() {

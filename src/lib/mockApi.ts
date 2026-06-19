@@ -49,6 +49,13 @@ export const mockApi = {
     return hydrate(state.tasks);
   },
 
+  async resetBoard() {
+    const state: MockState = { userId, tasks: [], teamMembers: [], labels: [], comments: [], activity: [] };
+    writeState(state);
+    await delay(160);
+    return hydrate(state.tasks);
+  },
+
   async createTask(input: TaskCreateInput) {
     const state = readState();
     const status = input.status ?? 'todo';

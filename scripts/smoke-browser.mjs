@@ -1,15 +1,17 @@
 /* global document, getComputedStyle, window */
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
 
 const port = Number(process.env.SMOKE_PORT ?? 5175);
 const baseUrl = process.env.SMOKE_BASE_URL ?? `http://127.0.0.1:${port}`;
 const shouldStartServer = !process.env.SMOKE_BASE_URL;
 const now = Date.now();
-const longPressTitle = `Smoke long press ${now}`;
+const dragTitle = `Smoke drag ${now}`;
+const dragTitleTwo = `Smoke long press ${now}`;
 const handleTitle = `Smoke handle ${now}`;
-const editedTitle = `${longPressTitle} edited`;
+const editedTitle = `${dragTitle} edited`;
 
 let server;
 
@@ -83,13 +85,29 @@ async function runSmoke() {
 
   await page.screenshot({ path: 'verification-smoke-desktop.png', fullPage: true });
 
-  await createTask(page, longPressTitle, 'Created by smoke-browser.mjs');
-  await searchFor(page, longPressTitle);
-  assertEqual(await page.locator(`.task-card:has-text("${longPressTitle}")`).count(), 1, 'search should isolate created task');
+  // Accessibility scan: fail on serious/critical WCAG 2 A/AA violations.
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  const blockingA11y = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  if (blockingA11y.length) {
+    const summary = blockingA11y
+      .map((v) => {
+        const nodes = v.nodes
+          .slice(0, 5)
+          .map((node) => `  - ${node.target.join(' ')}: ${node.failureSummary?.replace(/\s+/g, ' ').trim()}`)
+          .join('\n');
+        return `${v.id} (${v.impact}) x${v.nodes.length}: ${v.help}\n${nodes}`;
+      })
+      .join('\n');
+    throw new Error(`Accessibility violations found:\n${summary}`);
+  }
+
+  await createTask(page, dragTitle, 'Created by smoke-browser.mjs');
+  await searchFor(page, dragTitle);
+  assertEqual(await page.locator(`.task-card:has-text("${dragTitle}")`).count(), 1, 'search should isolate created task');
   assertEqual(await page.locator('.task-card').count(), 1, 'search should show one card');
   await clearSearch(page);
 
-  await openTask(page, longPressTitle);
+  await openTask(page, dragTitle);
   await page.getByPlaceholder('Add task title').fill(editedTitle);
   await page.getByPlaceholder('Describe what needs to happen').fill('Edited by smoke-browser.mjs');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -104,12 +122,16 @@ async function runSmoke() {
   await page.getByRole('button', { name: 'Close drawer' }).click();
   await waitForDrawerClosed(page);
 
-  await dragCardByLongPress(page, editedTitle, 1);
-  assertEqual(await columnForTask(page, editedTitle), 'In Progress', 'long-press drag should move task into In Progress');
+  await dragCard(page, editedTitle, 1);
+  assertEqual(await columnForTask(page, editedTitle), 'In Progress', 'dragging a card should move it into In Progress');
 
-  await createTask(page, handleTitle, 'Created to verify immediate drag handle activation.');
-  await dragCardByHandle(page, handleTitle, 2);
-  assertEqual(await columnForTask(page, handleTitle), 'In Review', 'handle drag should move task into In Review');
+  await createTask(page, dragTitleTwo, 'Created to verify long-press drag activation.');
+  await longPressDragCard(page, dragTitleTwo, 2);
+  assertEqual(await columnForTask(page, dragTitleTwo), 'In Review', 'long-press dragging a card should move it into In Review');
+
+  await createTask(page, handleTitle, 'Created to verify immediate drag-handle activation.');
+  await dragCardByHandle(page, handleTitle, 3);
+  assertEqual(await columnForTask(page, handleTitle), 'Done', 'drag handle should move a task into Done');
 
   await page.getByRole('button', { name: /Filters/ }).click();
   await page.locator('#board-filters label:has-text("Status") select').selectOption('in_progress');
@@ -123,8 +145,8 @@ async function runSmoke() {
   assertEqual(await page.evaluate(() => document.activeElement?.getAttribute('placeholder')), 'Add member', 'manager dialog should focus add member input');
   await page.getByRole('button', { name: 'Close team and labels' }).click();
 
-  await page.getByRole('button', { name: `v0.0.1` }).click();
-  await page.waitForSelector('[role="dialog"] >> text=v0.0.1', { timeout: 10_000 });
+  await page.getByRole('button', { name: `v0.0.3` }).click();
+  await page.waitForSelector('[role="dialog"] >> text=v0.0.3', { timeout: 10_000 });
   await page.getByRole('button', { name: 'Close changelog' }).click();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -148,8 +170,7 @@ async function runSmoke() {
   await page.setViewportSize({ width: 1440, height: 900 });
   await clearSearch(page);
   cleanupStarted = true;
-  await deleteTask(page, editedTitle);
-  await deleteTask(page, handleTitle);
+  await clearBoard(page);
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined);
 
   if (consoleMessages.length || httpFailures.length || failedRequests.length) {
@@ -162,7 +183,7 @@ async function runSmoke() {
         ok: true,
         baseUrl,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['sample board', 'create', 'edit', 'comment', 'filter', 'long-press drag', 'handle drag', 'manager dialog focus', 'changelog', 'mobile status/stats'],
+        checked: ['sample board', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,
@@ -182,7 +203,7 @@ async function createTask(page, title, description) {
 }
 
 async function openTask(page, title) {
-  await page.locator(`.task-card:has-text("${title}")`).first().click();
+  await page.locator(`.task-card:has-text("${title}") .card-edit`).first().click();
   await page.waitForSelector('.task-drawer', { timeout: 10_000 });
 }
 
@@ -204,18 +225,43 @@ async function clearSearch(page) {
   }
 }
 
-async function dragCardByLongPress(page, title, targetColumnIndex) {
+async function dragCard(page, title, targetColumnIndex) {
   const card = page.locator(`.task-card:has-text("${title}")`).first();
   const targetColumn = page.locator('.board-column').nth(targetColumnIndex);
   const cardBox = await card.boundingBox();
   const targetBox = await targetColumn.boundingBox();
   if (!cardBox || !targetBox) throw new Error(`Cannot find drag geometry for ${title}`);
   const targetPoint = dropPoint(targetBox);
+  const startX = cardBox.x + cardBox.width / 2;
+  const startY = cardBox.y + cardBox.height / 2;
 
-  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+  await page.mouse.move(startX, startY);
   await page.mouse.down();
-  await page.waitForTimeout(2650);
-  assertEqual(await page.locator('.task-card-overlay').count(), 1, 'long press should activate drag overlay');
+  // The mouse sensor activates after a small movement (distance: 6), so a drag
+  // begins from anywhere on the card body without a long press or a handle.
+  await page.mouse.move(startX + 12, startY + 12, { steps: 6 });
+  await page.waitForTimeout(150);
+  assertEqual(await page.locator('.task-card-overlay').count(), 1, 'dragging a card should activate the drag overlay');
+  await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 24 });
+  await page.waitForTimeout(250);
+  await page.mouse.up();
+  await page.waitForTimeout(1200);
+}
+
+async function longPressDragCard(page, title, targetColumnIndex) {
+  const card = page.locator(`.task-card:has-text("${title}")`).first();
+  const targetColumn = page.locator('.board-column').nth(targetColumnIndex);
+  const cardBox = await card.boundingBox();
+  const targetBox = await targetColumn.boundingBox();
+  if (!cardBox || !targetBox) throw new Error(`Cannot find long-press drag geometry for ${title}`);
+  const targetPoint = dropPoint(targetBox);
+  const startX = cardBox.x + cardBox.width / 2;
+  const startY = cardBox.y + cardBox.height / 2;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.waitForTimeout(2600);
+  assertEqual(await page.locator('.task-card-overlay').count(), 1, 'long-pressing a card should activate the drag overlay');
   await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 24 });
   await page.waitForTimeout(250);
   await page.mouse.up();
@@ -232,7 +278,7 @@ async function dragCardByHandle(page, title, targetColumnIndex) {
 
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(150);
   assertEqual(await page.locator('.task-card-overlay').count(), 1, 'drag handle should activate immediately');
   await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 18 });
   await page.waitForTimeout(250);
@@ -250,14 +296,20 @@ async function columnForTask(page, title) {
   }, title);
 }
 
-async function deleteTask(page, title) {
-  await searchFor(page, title);
-  if ((await page.locator(`.task-card:has-text("${title}")`).count()) === 0) return;
-  await openTask(page, title);
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await page.getByRole('button', { name: 'Delete task' }).click();
-  await page.waitForSelector(`.task-card:has-text("${title}")`, { state: 'detached', timeout: 30_000 });
-  await clearSearch(page);
+async function clearBoard(page) {
+  await page.getByRole('button', { name: 'Clear board' }).first().click();
+  await page.waitForSelector('.confirm-dialog', { timeout: 10_000 });
+  await page.locator('.confirm-dialog .danger-button').click();
+  await page.waitForSelector('.task-card', { state: 'detached', timeout: 30_000 });
+  await page.waitForSelector('.empty-board:has-text("Shape the next play")', { timeout: 30_000 });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('.board-column', { timeout: 45_000 });
+  assertEqual(await page.locator('.task-card').count(), 0, 'clear board should persist after reload');
+  assertEqual(
+    await page.getByRole('button', { name: 'Load sample board' }).isVisible().catch(() => false),
+    true,
+    'clear board should return to the empty sample-board state after reload',
+  );
 }
 
 async function waitForServer(url) {

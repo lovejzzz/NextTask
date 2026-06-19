@@ -22,6 +22,7 @@ export function useTaskMutations() {
 
   return {
     bootstrapDemo: useMutation({ mutationFn: () => api.bootstrapDemo(), onSuccess: invalidate }),
+    resetBoard: useMutation({ mutationFn: () => api.resetBoard(), onSuccess: invalidate }),
     createTask: useMutation({ mutationFn: (input: TaskCreateInput) => api.createTask(input), onSuccess: invalidate }),
     updateTask: useMutation({
       mutationFn: ({ id, input }: { id: string; input: TaskUpdateInput }) => api.updateTask(id, input),

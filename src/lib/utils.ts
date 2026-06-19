@@ -15,3 +15,10 @@ export function readableError(error: unknown) {
   if (error instanceof Error) return error.message;
   return 'Something went wrong.';
 }
+
+const PALETTE = ['#7A5AF8', '#2E90FA', '#12B76A', '#F79009', '#E9354A'];
+
+/** Deterministic palette color for a given index (wraps around the palette). */
+export function randomColor(index: number) {
+  return PALETTE[index % PALETTE.length];
+}

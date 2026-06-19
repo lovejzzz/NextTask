@@ -1,0 +1,39 @@
+// @vitest-environment jsdom
+import { render, screen } from '@testing-library/react';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import { ErrorBoundary } from './ErrorBoundary';
+
+function Boom(): never {
+  throw new Error('kaboom');
+}
+
+describe('ErrorBoundary', () => {
+  let spy: ReturnType<typeof vi.spyOn>;
+  beforeAll(() => {
+    // React logs the caught error; silence it for clean test output.
+    spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterAll(() => spy.mockRestore());
+
+  it('renders children when nothing throws', () => {
+    render(
+      <ErrorBoundary>
+        <p>all good</p>
+      </ErrorBoundary>,
+    );
+    expect(screen.getByText('all good')).toBeInTheDocument();
+  });
+
+  it('shows a recoverable fallback when a child throws', () => {
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>,
+    );
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Something broke on screen')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload app' })).toBeInTheDocument();
+    expect(screen.getByText('kaboom')).toBeInTheDocument();
+  });
+});

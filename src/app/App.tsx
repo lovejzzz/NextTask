@@ -5,37 +5,30 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   pointerWithin,
-  useDroppable,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
   type DropAnimation,
 } from '@dnd-kit/core';
-import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
-  BadgeCheck,
-  Calendar,
   Check,
   ChevronDown,
-  CircleDotDashed,
   Clock3,
   Command,
   Filter,
-  Flame,
-  Gauge,
   Github,
   KanbanSquare,
   LogOut,
   Loader2,
   Mail,
-  MessageSquare,
-  MoreHorizontal,
+  Moon,
   Pencil,
   Plus,
   RefreshCw,
@@ -43,10 +36,10 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Sun,
   Tag,
   Trash2,
   Users,
-  Workflow,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -58,64 +51,64 @@ import {
   type OAuthProvider,
   type SessionRecovery,
 } from '../hooks/useAnonymousSession';
-import { boardQueryKey, useActivity, useBoardData, useBoardStats, useComments } from '../hooks/useBoardData';
+import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
 import { useTaskMutations } from '../hooks/useTaskMutations';
+import { useTheme } from '../hooks/useTheme';
+import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
-import { dueLabel, dueTone, relativeTime } from '../lib/dates';
+import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
+import { BoardColumn } from '../components/board/BoardColumn';
+import { TaskCard } from '../components/board/TaskCard';
+import { TaskDrawer } from '../components/drawer/TaskDrawer';
+import { Avatar } from '../components/shared/Avatar';
+import { Select } from '../components/shared/Select';
+import { TaskSkeleton } from '../components/shared/Skeletons';
+import { statusIcons } from '../components/shared/statusIcons';
+import { useDialogFocus } from '../components/shared/useDialogFocus';
+import type { ConfirmOptions, ConfirmRequest, DrawerMode, Toast } from '../lib/uiTypes';
 import type {
-  ActivityEvent,
   BoardFilters,
   BoardPayload,
   BoardStats,
   Label,
   Task,
-  TaskPriority,
   TaskStatus,
   TeamMember,
 } from '../lib/types';
-import { cx, initials, readableError } from '../lib/utils';
+import { cx, randomColor, readableError } from '../lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
-type DrawerMode = 'create' | 'edit';
-type Toast = { id: number; tone: 'success' | 'error'; message: string };
-type ConfirmOptions = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-};
-type ConfirmRequest = ConfirmOptions & {
-  id: number;
-  resolve: (confirmed: boolean) => void;
-};
 type ChangelogEntry = {
   version: string;
   date: string;
   items: string[];
 };
 
-const defaultFilters: BoardFilters = {
-  search: '',
-  status: 'all',
-  priority: 'all',
-  due: 'all',
-  label_id: '',
-  assignee_id: '',
-};
-
-const defaultDraft = {
-  title: '',
-  description: '',
-  status: 'todo' as TaskStatus,
-  priority: 'normal' as TaskPriority,
-  due_date: '',
-  assignee_ids: [] as string[],
-  label_ids: [] as string[],
-};
-
 const EMPTY_TASKS: Task[] = [];
-const APP_VERSION = '0.0.1';
+const APP_VERSION = __APP_VERSION__;
 const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.0.3',
+    date: '2026-06-18',
+    items: [
+      'Premium design pass: a full design-token system (spacing, radius, type, elevation, motion).',
+      'Refreshed surfaces with softer radii, layered depth, a signature accent, and a glass header.',
+      'Elevated stats with animated count-up, refined cards, and a more inviting empty state.',
+      'Added a dark mode with a one-tap theme toggle.',
+      'Tactile micro-interactions (press feedback) and AA-contrast, 44px touch targets throughout.',
+    ],
+  },
+  {
+    version: '0.0.2',
+    date: '2026-06-18',
+    items: [
+      'Drag a card from anywhere on its body; a dedicated edit icon opens the detail drawer.',
+      'Added a Clear board action to reset the board to an empty state.',
+      'Atomic, transactional task reorder plus faster single-task hydration on the API.',
+      'Granular activity events for assignee and label changes.',
+      'Unit + component tests, two-user RLS isolation checks, CI, and a root error boundary.',
+    ],
+  },
   {
     version: '0.0.1',
     date: '2026-06-18',
@@ -129,13 +122,8 @@ const CHANGELOG: ChangelogEntry[] = [
     ],
   },
 ];
-const CARD_LONG_PRESS_MS = 2500;
-const SORTABLE_TRANSITION = {
-  duration: 185,
-  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-};
 const DROP_ANIMATION: DropAnimation = {
-  duration: 190,
+  duration: 230,
   easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
   sideEffects: defaultDropAnimationSideEffects({
     styles: {
@@ -145,21 +133,23 @@ const DROP_ANIMATION: DropAnimation = {
     },
   }),
 };
+const CARD_BODY_DRAG_DISTANCE_PX = 6;
+const CARD_LONG_PRESS_DELAY_MS = 2500;
+const MOUSE_LONG_PRESS_TOLERANCE_PX = 24;
+const TOUCH_LONG_PRESS_TOLERANCE_PX = 8;
 const BOARD_COLLISION_DETECTION: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   return pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args);
 };
-const statusIcons = {
-  todo: CircleDotDashed,
-  in_progress: Workflow,
-  in_review: Gauge,
-  done: BadgeCheck,
-} satisfies Record<TaskStatus, typeof CircleDotDashed>;
 const socialProviders = [
   { id: 'google', label: 'Google' },
   { id: 'github', label: 'GitHub' },
 ] satisfies Array<{ id: OAuthProvider; label: string }>;
 type AuthBusy = 'save' | 'link' | 'signout' | `signin-${OAuthProvider}`;
+
+function isDragHandleEvent({ event }: { event: Event }) {
+  return event.target instanceof Element && Boolean(event.target.closest('[data-drag-handle="true"]'));
+}
 
 export function App() {
   const session = useAnonymousSession();
@@ -186,13 +176,22 @@ export function App() {
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const syncing = boardQuery.isFetching || statsQuery.isFetching || mutations.reorderTasks.isPending;
   const lastSyncedAt = Math.max(boardQuery.dataUpdatedAt || 0, statsQuery.dataUpdatedAt || 0);
+  const canClear = tasks.length > 0 || (board?.teamMembers.length ?? 0) > 0 || (board?.labels.length ?? 0) > 0;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { delay: CARD_LONG_PRESS_MS, tolerance: 8 },
-      bypassActivationConstraint({ event }) {
-        return isImmediateDragTarget(event);
+    // Mouse: drag from the body on movement, or hold still for long-press activation.
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: CARD_BODY_DRAG_DISTANCE_PX,
+        delay: CARD_LONG_PRESS_DELAY_MS,
+        tolerance: MOUSE_LONG_PRESS_TOLERANCE_PX,
       },
+      bypassActivationConstraint: isDragHandleEvent,
+    }),
+    // Touch: require an intentional long press so taps and vertical scrolling remain stable.
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: CARD_LONG_PRESS_DELAY_MS, tolerance: TOUCH_LONG_PRESS_TOLERANCE_PX },
+      bypassActivationConstraint: isDragHandleEvent,
     }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
@@ -307,6 +306,27 @@ export function App() {
     }
   }
 
+  async function clearBoard() {
+    const confirmed = await confirmAction({
+      title: 'Clear the board?',
+      message:
+        'This permanently removes all tasks, comments, activity, team members, and labels, returning you to an empty board. This cannot be undone.',
+      confirmLabel: 'Clear board',
+    });
+    if (!confirmed) return;
+
+    try {
+      await mutations.resetBoard.mutateAsync();
+      setFilters(defaultFilters);
+      setSelectedTaskId(null);
+      setManagerOpen(false);
+      setMobileStatus('todo');
+      notify('success', 'Board cleared');
+    } catch (error) {
+      notify('error', readableError(error));
+    }
+  }
+
   async function applyReorder(updates: Array<{ id: string; status: TaskStatus; position: number }>) {
     const previous = board;
     if (previous) {
@@ -408,7 +428,13 @@ export function App() {
         ) : null}
       </main>
 
-      <AppFooter version={APP_VERSION} onOpenChangelog={() => setChangelogOpen(true)} />
+      <AppFooter
+        version={APP_VERSION}
+        onOpenChangelog={() => setChangelogOpen(true)}
+        canClear={canClear}
+        clearing={mutations.resetBoard.isPending}
+        onClear={() => void clearBoard()}
+      />
 
       <TaskDrawer
         open={drawerMode === 'create' || Boolean(selectedTask)}
@@ -481,6 +507,7 @@ function AppHeader({
   lastSyncedAt: number;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const { theme, toggle: toggleTheme } = useTheme();
   const [authRedirectError] = useState(() => readAuthRedirectError());
   const [accountOpen, setAccountOpen] = useState(Boolean(authRedirectError));
   const [emailInput, setEmailInput] = useState(session.email ?? '');
@@ -620,6 +647,15 @@ function AppHeader({
         >
           <ShieldCheck size={16} />
           {session.isAnonymous ? 'Save board' : 'Saved'}
+        </button>
+        <button
+          className="icon-button sync-button"
+          onClick={toggleTheme}
+          type="button"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
         <button
           className="icon-button sync-button"
@@ -922,12 +958,45 @@ function StatsStrip({ stats, loading }: { stats?: BoardStats; loading: boolean }
           <motion.div className="stat-card" key={item.label} layout>
             <Icon size={17} />
             <span>{item.label}</span>
-            {loading ? <span className="stat-skeleton" /> : <motion.strong key={item.value}>{item.value}</motion.strong>}
+            {loading ? (
+              <span className="stat-skeleton" />
+            ) : (
+              <strong>
+                <CountUp value={item.value} />
+              </strong>
+            )}
           </motion.div>
         );
       })}
     </section>
   );
+}
+
+function CountUp({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value);
+  const previous = useRef(value);
+
+  useEffect(() => {
+    const from = previous.current;
+    const to = value;
+    previous.current = value;
+    if (from === to) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0;
+    const start = performance.now();
+    const duration = 480;
+    const tick = (now: number) => {
+      const t = reduce ? 1 : Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+
+  return <>{display}</>;
 }
 
 function ActiveFilterBar({
@@ -1000,623 +1069,6 @@ function MobileStatusNav({
         );
       })}
     </nav>
-  );
-}
-
-function BoardColumn({
-  status,
-  title,
-  tone,
-  tasks,
-  loading,
-  onCreate,
-  onQuickCreate,
-  onOpen,
-  onMove,
-  mobileActive,
-}: {
-  status: TaskStatus;
-  title: string;
-  tone: string;
-  tasks: Task[];
-  loading: boolean;
-  onCreate: () => void;
-  onQuickCreate: (status: TaskStatus, title: string) => Promise<void>;
-  onOpen: (id: string) => void;
-  onMove: (id: string, status: TaskStatus) => void;
-  mobileActive: boolean;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
-  const [inlineOpen, setInlineOpen] = useState(false);
-  const [quickTitle, setQuickTitle] = useState('');
-  const [saving, setSaving] = useState(false);
-  const StatusIcon = statusIcons[status];
-
-  async function submitQuickCreate(event: React.FormEvent) {
-    event.preventDefault();
-    const titleValue = quickTitle.trim();
-    if (!titleValue) return;
-
-    setSaving(true);
-    try {
-      await onQuickCreate(status, titleValue);
-      setQuickTitle('');
-      setInlineOpen(false);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div ref={setNodeRef} className={cx('board-column', `tone-${tone}`, mobileActive && 'mobile-active-column', isOver && 'column-over')}>
-      <div className="column-header">
-        <div>
-          <h2>
-            <span className="status-icon">
-              <StatusIcon size={15} />
-            </span>
-            {title}
-          </h2>
-        </div>
-        <motion.span className="count-pill" key={tasks.length} initial={{ scale: 0.9 }} animate={{ scale: 1 }}>
-          {tasks.length}
-        </motion.span>
-      </div>
-
-      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-        <div className="card-stack">
-          {loading ? (
-            <>
-              <TaskSkeleton />
-              <TaskSkeleton />
-              <TaskSkeleton />
-            </>
-          ) : tasks.length ? (
-            tasks.map((task) => <SortableTaskCard key={task.id} task={task} onOpen={onOpen} onMove={onMove} />)
-          ) : (
-            <div className="empty-column">
-              <Sparkles size={17} />
-              <span>No tasks here</span>
-            </div>
-          )}
-        </div>
-      </SortableContext>
-
-      {inlineOpen ? (
-        <form className="inline-task-create" onSubmit={(event) => void submitQuickCreate(event)}>
-          <input
-            value={quickTitle}
-            onChange={(event) => setQuickTitle(event.target.value)}
-            placeholder={`Add ${title.toLowerCase()} task`}
-            aria-label={`Add task to ${title}`}
-            autoFocus
-          />
-          <div>
-            <button className="ghost-button" onClick={() => setInlineOpen(false)} type="button" disabled={saving}>
-              Cancel
-            </button>
-            <button className="primary-button" type="submit" disabled={saving || !quickTitle.trim()}>
-              {saving ? <Loader2 className="spin" size={15} /> : <Plus size={15} />}
-              Add
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="column-actions">
-          <button className="column-add" onClick={() => setInlineOpen(true)} type="button">
-            <Plus size={16} />
-            Add task
-          </button>
-          <button className="column-details-add" onClick={onCreate} type="button">
-            Details
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SortableTaskCard({ task, onOpen, onMove }: { task: Task; onOpen: (id: string) => void; onMove: (id: string, status: TaskStatus) => void }) {
-  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id,
-    transition: SORTABLE_TRANSITION,
-  });
-  return (
-    <TaskCard
-      refCallback={setNodeRef}
-      activatorRef={setActivatorNodeRef}
-      task={task}
-      onOpen={onOpen}
-      onMove={onMove}
-      attributes={attributes}
-      listeners={listeners}
-      isDragging={isDragging}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-    />
-  );
-}
-
-function TaskCard({
-  task,
-  onOpen,
-  onMove,
-  refCallback,
-  activatorRef,
-  attributes,
-  listeners,
-  isDragging,
-  overlay,
-  style,
-}: {
-  task: Task;
-  onOpen: (id: string) => void;
-  onMove?: (id: string, status: TaskStatus) => void;
-  refCallback?: (element: HTMLElement | null) => void;
-  activatorRef?: (element: HTMLElement | null) => void;
-  attributes?: Record<string, unknown> | any;
-  listeners?: Record<string, unknown> | any;
-  isDragging?: boolean;
-  overlay?: boolean;
-  style?: React.CSSProperties;
-}) {
-  const tone = dueTone(task);
-  return (
-    <motion.article
-      ref={refCallback}
-      className={cx('task-card', isDragging && 'task-card-dragging', overlay && 'task-card-overlay')}
-      style={style}
-      layout={overlay ? false : 'position'}
-      initial={false}
-      whileHover={overlay ? undefined : { y: -2 }}
-      onClick={() => onOpen(task.id)}
-      {...listeners}
-    >
-      <div className="task-topline">
-        <span className={cx('priority-dot', `priority-${task.priority}`)} />
-        <span className="priority-label">{task.priority}</span>
-        {task.priority === 'high' ? (
-          <span className="priority-signal" aria-label="High priority">
-            <Flame size={12} />
-          </span>
-        ) : null}
-        <button
-          ref={activatorRef}
-          className="drag-handle"
-          type="button"
-          aria-label={`Drag ${task.title}`}
-          data-drag-immediate="true"
-          onClick={(event) => event.stopPropagation()}
-          {...attributes}
-          {...listeners}
-        >
-          <MoreHorizontal size={15} />
-          <span className="sr-only">Drag task. Keyboard users can press Space or Enter to pick up, use arrow keys to move, and press Space or Enter to drop.</span>
-        </button>
-      </div>
-      <h3>{task.title}</h3>
-      {task.description ? <p>{task.description}</p> : null}
-      <div className="label-row">
-        {task.labels.slice(0, 3).map((label) => (
-          <span className="label-chip" style={{ '--chip': label.color } as React.CSSProperties} key={label.id}>
-            <span />
-            {label.name}
-          </span>
-        ))}
-      </div>
-      <div className="task-footer">
-        <span className={cx('due-pill', `due-${tone}`)}>
-          <Calendar size={13} />
-          {dueLabel(task)}
-        </span>
-        <span className="comment-pill">
-          <MessageSquare size={13} />
-          {task.comment_count}
-        </span>
-        <AvatarStack members={task.assignees} />
-      </div>
-      {onMove ? (
-        <div className="mobile-move-row" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-          <label>
-            <span>Move</span>
-            <select
-              aria-label={`Move ${task.title}`}
-              value={task.status}
-              onChange={(event) => onMove(task.id, event.target.value as TaskStatus)}
-            >
-              {STATUSES.map((status) => (
-                <option value={status.id} key={status.id}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="mobile-status-buttons" aria-label={`Quick move ${task.title}`}>
-            {STATUSES.map((status) => (
-              <button
-                className={cx('mobile-status-button', task.status === status.id && 'mobile-status-button-active')}
-                key={status.id}
-                onClick={() => onMove(task.id, status.id)}
-                type="button"
-                disabled={task.status === status.id}
-              >
-                {status.shortLabel}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </motion.article>
-  );
-}
-
-function isImmediateDragTarget(event: Event) {
-  return event.target instanceof Element && Boolean(event.target.closest('[data-drag-immediate="true"]'));
-}
-
-function TaskDrawer({
-  open,
-  mode,
-  userId,
-  task,
-  board,
-  initialStatus,
-  onClose,
-  notify,
-  confirm,
-}: {
-  open: boolean;
-  mode: DrawerMode;
-  userId: string | null;
-  task: Task | null;
-  board?: BoardPayload;
-  initialStatus: TaskStatus;
-  onClose: () => void;
-  notify: (tone: Toast['tone'], message: string) => void;
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
-}) {
-  const [draft, setDraft] = useState(defaultDraft);
-  const commentsQuery = useComments(userId, task?.id ?? null);
-  const activityQuery = useActivity(userId, task?.id ?? null);
-  const mutations = useTaskMutations();
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
-
-  useDialogFocus(open, onClose, titleInputRef);
-
-  useEffect(() => {
-    let active = true;
-    const nextDraft =
-      mode === 'edit' && task
-        ? {
-            title: task.title,
-            description: task.description,
-            status: task.status,
-            priority: task.priority,
-            due_date: task.due_date ?? '',
-            assignee_ids: task.assignees.map((member) => member.id),
-            label_ids: task.labels.map((label) => label.id),
-          }
-        : { ...defaultDraft, status: initialStatus };
-
-    queueMicrotask(() => {
-      if (active) setDraft(nextDraft);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [mode, task, initialStatus]);
-
-  async function save() {
-    if (!draft.title.trim()) {
-      notify('error', 'Task title is required');
-      return;
-    }
-
-    try {
-      if (mode === 'create') {
-        await mutations.createTask.mutateAsync({
-          ...draft,
-          due_date: draft.due_date || null,
-        });
-        notify('success', 'Task created');
-      } else if (task) {
-        await mutations.updateTask.mutateAsync({
-          id: task.id,
-          input: {
-            ...draft,
-            due_date: draft.due_date || null,
-          },
-        });
-        notify('success', 'Task saved');
-      }
-      onClose();
-    } catch (error) {
-      notify('error', readableError(error));
-    }
-  }
-
-  async function remove() {
-    if (!task) return;
-    const confirmed = await confirm({
-      title: 'Delete task?',
-      message: `"${task.title}" and its comments/activity will be permanently removed.`,
-      confirmLabel: 'Delete task',
-    });
-    if (!confirmed) return;
-
-    try {
-      await mutations.deleteTask.mutateAsync(task.id);
-      notify('success', 'Task deleted');
-      onClose();
-    } catch (error) {
-      notify('error', readableError(error));
-    }
-  }
-
-  return (
-    <AnimatePresence>
-      {open ? (
-        <>
-          <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.aside
-            className="task-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="task-drawer-title"
-            initial={{ opacity: 0, x: 36 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 36 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-          >
-            <div className="drawer-header">
-              <div>
-                <span className="drawer-kicker">{mode === 'create' ? 'New task' : 'Task details'}</span>
-                <h2 id="task-drawer-title">{mode === 'create' ? 'Create work item' : 'Refine the task'}</h2>
-              </div>
-              <button className="icon-button" onClick={onClose} type="button" aria-label="Close drawer">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="drawer-body">
-              <label className="field">
-                <span>Title</span>
-                <input
-                  ref={titleInputRef}
-                  value={draft.title}
-                  onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-                  placeholder="Add task title"
-                />
-              </label>
-              <label className="field">
-                <span>Description</span>
-                <textarea
-                  value={draft.description}
-                  onChange={(event) => setDraft({ ...draft, description: event.target.value })}
-                  placeholder="Describe what needs to happen"
-                  rows={4}
-                />
-              </label>
-              <div className="field-grid">
-                <Select
-                  label="Status"
-                  value={draft.status}
-                  onChange={(value) => setDraft({ ...draft, status: value as TaskStatus })}
-                  options={STATUSES.map((status) => ({ value: status.id, label: status.label }))}
-                />
-                <Select
-                  label="Priority"
-                  value={draft.priority}
-                  onChange={(value) => setDraft({ ...draft, priority: value as TaskPriority })}
-                  options={PRIORITIES.map((priority) => ({ value: priority.id, label: priority.label }))}
-                />
-              </div>
-              <label className="field">
-                <span>Due date</span>
-                <input type="date" value={draft.due_date} onChange={(event) => setDraft({ ...draft, due_date: event.target.value })} />
-              </label>
-
-              <MultiPicker
-                title="Assignees"
-                icon={<Users size={15} />}
-                items={board?.teamMembers ?? []}
-                selected={draft.assignee_ids}
-                onChange={(assignee_ids) => setDraft({ ...draft, assignee_ids })}
-              />
-              <MultiPicker
-                title="Labels"
-                icon={<Tag size={15} />}
-                items={board?.labels ?? []}
-                selected={draft.label_ids}
-                onChange={(label_ids) => setDraft({ ...draft, label_ids })}
-              />
-
-              {mode === 'edit' && task ? (
-                <>
-                  <CommentPanel
-                    taskId={task.id}
-                    comments={commentsQuery.data ?? []}
-                    loading={commentsQuery.isLoading}
-                    onCreate={async (body) => {
-                      try {
-                        await mutations.createComment.mutateAsync({ taskId: task.id, body });
-                        notify('success', 'Comment added');
-                      } catch (error) {
-                        notify('error', readableError(error));
-                      }
-                    }}
-                    onDelete={async (commentId) => {
-                      const confirmed = await confirm({
-                        title: 'Delete comment?',
-                        message: 'This comment will be permanently removed from the task.',
-                        confirmLabel: 'Delete comment',
-                      });
-                      if (!confirmed) return;
-
-                      try {
-                        await mutations.deleteComment.mutateAsync({ taskId: task.id, commentId });
-                        notify('success', 'Comment deleted');
-                      } catch (error) {
-                        notify('error', readableError(error));
-                      }
-                    }}
-                  />
-                  <ActivityTimeline events={activityQuery.data ?? []} loading={activityQuery.isLoading} />
-                </>
-              ) : null}
-            </div>
-
-            <div className="drawer-footer">
-              {mode === 'edit' ? (
-                <button className="danger-button" onClick={remove} type="button">
-                  <Trash2 size={16} />
-                  Delete
-                </button>
-              ) : (
-                <span />
-              )}
-              <button className="ghost-button" onClick={onClose} type="button">
-                Cancel
-              </button>
-              <button className="primary-button" onClick={save} type="button" disabled={mutations.createTask.isPending || mutations.updateTask.isPending}>
-                {mutations.createTask.isPending || mutations.updateTask.isPending ? <Loader2 className="spin" size={16} /> : <Check size={16} />}
-                Save
-              </button>
-            </div>
-          </motion.aside>
-        </>
-      ) : null}
-    </AnimatePresence>
-  );
-}
-
-function MultiPicker({
-  title,
-  icon,
-  items,
-  selected,
-  onChange,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  items: Array<TeamMember | Label>;
-  selected: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  return (
-    <div className="picker-block">
-      <div className="picker-title">
-        {icon}
-        {title}
-      </div>
-      <div className="picker-grid">
-        {items.length ? (
-          items.map((item) => {
-            const active = selected.includes(item.id);
-            return (
-              <button
-                className={cx('picker-chip', active && 'picker-chip-active')}
-                onClick={() => onChange(active ? selected.filter((id) => id !== item.id) : [...selected, item.id])}
-                type="button"
-                key={item.id}
-              >
-                <span className="picker-color" style={{ background: item.color }} />
-                {item.name}
-              </button>
-            );
-          })
-        ) : (
-          <span className="muted-small">Create {title.toLowerCase()} first.</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CommentPanel({
-  comments,
-  loading,
-  onCreate,
-  onDelete,
-}: {
-  taskId: string;
-  comments: Array<{ id: string; body: string; created_at: string }>;
-  loading: boolean;
-  onCreate: (body: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-}) {
-  const [body, setBody] = useState('');
-  return (
-    <section className="detail-section">
-      <div className="section-title">
-        <MessageSquare size={15} />
-        Comments
-      </div>
-      <div className="comment-list">
-        {loading ? <span className="muted-small">Loading comments...</span> : null}
-        {comments.map((comment) => (
-          <motion.div className="comment-item" key={comment.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-            <div>
-              <p>{comment.body}</p>
-              <span>{relativeTime(comment.created_at)}</span>
-            </div>
-            <button className="mini-button" onClick={() => void onDelete(comment.id)} type="button" aria-label="Delete comment">
-              <Trash2 size={13} />
-            </button>
-          </motion.div>
-        ))}
-      </div>
-      <div className="comment-composer">
-        <input value={body} onChange={(event) => setBody(event.target.value)} placeholder="Write a comment..." />
-        <button
-          className="icon-button"
-          onClick={() => {
-            if (!body.trim()) return;
-            void onCreate(body).then(() => setBody(''));
-          }}
-          type="button"
-        >
-          <Plus size={15} />
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function ActivityTimeline({ events, loading }: { events: ActivityEvent[]; loading: boolean }) {
-  return (
-    <section className="detail-section">
-      <div className="section-title">
-        <Clock3 size={15} />
-        Activity
-      </div>
-      <div className="activity-list">
-        {loading ? <span className="muted-small">Loading activity...</span> : null}
-        {events.map((event) => (
-          <motion.div className="activity-item" key={event.id} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }}>
-            <span className="activity-dot" />
-            <div>
-              <strong>{event.message}</strong>
-              <span>{relativeTime(event.created_at)}</span>
-              <ActivityMeta event={event} />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ActivityMeta({ event }: { event: ActivityEvent }) {
-  const details = describeActivityMetadata(event);
-  if (!details.length) return null;
-
-  return (
-    <div className="activity-meta">
-      {details.map((detail) => (
-        <span key={detail}>{detail}</span>
-      ))}
-    </div>
   );
 }
 
@@ -1987,9 +1439,27 @@ function EmptyBoard({
   );
 }
 
-function AppFooter({ version, onOpenChangelog }: { version: string; onOpenChangelog: () => void }) {
+function AppFooter({
+  version,
+  onOpenChangelog,
+  canClear,
+  clearing,
+  onClear,
+}: {
+  version: string;
+  onOpenChangelog: () => void;
+  canClear: boolean;
+  clearing: boolean;
+  onClear: () => void;
+}) {
   return (
     <footer className="app-footer">
+      {canClear ? (
+        <button className="footer-clear" onClick={onClear} type="button" disabled={clearing}>
+          {clearing ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
+          Clear board
+        </button>
+      ) : null}
       <button className="version-button" onClick={onOpenChangelog} type="button" aria-haspopup="dialog">
         v{version}
       </button>
@@ -2091,187 +1561,4 @@ function FatalState({ title, message, onRetry }: { title: string; message: strin
       ) : null}
     </section>
   );
-}
-
-function TaskSkeleton() {
-  return (
-    <div className="task-skeleton">
-      <span />
-      <strong />
-      <p />
-      <p />
-    </div>
-  );
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <label className="field compact-field">
-      <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option value={option.value} key={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function AvatarStack({ members }: { members: TeamMember[] }) {
-  if (!members.length) return <span className="unassigned">Unassigned</span>;
-  return (
-    <div className="avatar-stack">
-      {members.slice(0, 3).map((member) => (
-        <Avatar member={member} key={member.id} />
-      ))}
-      {members.length > 3 ? <span className="avatar-overflow">+{members.length - 3}</span> : null}
-    </div>
-  );
-}
-
-function Avatar({ member }: { member: TeamMember }) {
-  return (
-    <span className="avatar" style={{ background: member.color }} title={member.name}>
-      {member.avatar_url ? <img src={member.avatar_url} alt="" /> : initials(member.name)}
-    </span>
-  );
-}
-
-function useDialogFocus<T extends HTMLElement>(
-  open: boolean,
-  onClose: () => void,
-  initialFocusRef: React.RefObject<T | null>,
-) {
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusTimer = window.setTimeout(() => initialFocusRef.current?.focus(), 0);
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.clearTimeout(focusTimer);
-      window.removeEventListener('keydown', onKeyDown);
-      previousFocusRef.current?.focus();
-    };
-  }, [open, onClose, initialFocusRef]);
-}
-
-function groupTasks(tasks: Task[]) {
-  return STATUSES.reduce(
-    (acc, status) => {
-      acc[status.id] = tasks.filter((task) => task.status === status.id).sort((a, b) => a.position - b.position);
-      return acc;
-    },
-    {} as Record<TaskStatus, Task[]>,
-  );
-}
-
-function reorderForDrop(tasks: Task[], active: Task, targetStatus: TaskStatus, overTaskId?: string) {
-  const sourceStatus = active.status;
-  const updates: Array<{ id: string; status: TaskStatus; position: number }> = [];
-  const targetTasks = tasks
-    .filter((task) => task.status === targetStatus && task.id !== active.id)
-    .sort((a, b) => a.position - b.position);
-  const moved = { ...active, status: targetStatus };
-  const overIndex = overTaskId ? targetTasks.findIndex((task) => task.id === overTaskId) : -1;
-  targetTasks.splice(overIndex >= 0 ? overIndex : targetTasks.length, 0, moved);
-
-  targetTasks.forEach((task, index) => {
-    const position = (index + 1) * 1000;
-    const original = tasks.find((item) => item.id === task.id);
-    if (original?.position !== position || original?.status !== targetStatus) {
-      updates.push({ id: task.id, status: targetStatus, position });
-    }
-  });
-
-  if (sourceStatus !== targetStatus) {
-    tasks
-      .filter((task) => task.status === sourceStatus && task.id !== active.id)
-      .sort((a, b) => a.position - b.position)
-      .forEach((task, index) => {
-        const position = (index + 1) * 1000;
-        if (task.position !== position) updates.push({ id: task.id, status: sourceStatus, position });
-      });
-  }
-
-  return updates;
-}
-
-function hasActiveFilters(filters: BoardFilters) {
-  return Boolean(filters.search || (filters.status && filters.status !== 'all') || (filters.priority && filters.priority !== 'all') || filters.label_id || filters.assignee_id || (filters.due && filters.due !== 'all'));
-}
-
-function activeFilterChips(filters: BoardFilters, labels: Label[], members: TeamMember[]) {
-  const chips: Array<{ key: keyof BoardFilters; label: string; emptyValue: string }> = [];
-  if (filters.search) chips.push({ key: 'search', label: `Search: ${filters.search}`, emptyValue: '' });
-  if (filters.status && filters.status !== 'all') {
-    chips.push({
-      key: 'status',
-      label: `Status: ${STATUSES.find((status) => status.id === filters.status)?.label ?? filters.status}`,
-      emptyValue: 'all',
-    });
-  }
-  if (filters.priority && filters.priority !== 'all') {
-    chips.push({
-      key: 'priority',
-      label: `Priority: ${PRIORITIES.find((priority) => priority.id === filters.priority)?.label ?? filters.priority}`,
-      emptyValue: 'all',
-    });
-  }
-  if (filters.due && filters.due !== 'all') {
-    const dueLabels: Record<string, string> = { overdue: 'Overdue', soon: 'Due soon', none: 'No due date' };
-    chips.push({ key: 'due', label: `Due: ${dueLabels[filters.due] ?? filters.due}`, emptyValue: 'all' });
-  }
-  if (filters.label_id) {
-    chips.push({ key: 'label_id', label: `Label: ${labels.find((label) => label.id === filters.label_id)?.name ?? 'Selected'}`, emptyValue: '' });
-  }
-  if (filters.assignee_id) {
-    chips.push({ key: 'assignee_id', label: `Assignee: ${members.find((member) => member.id === filters.assignee_id)?.name ?? 'Selected'}`, emptyValue: '' });
-  }
-  return chips;
-}
-
-function describeActivityMetadata(event: ActivityEvent) {
-  const metadata = event.metadata ?? {};
-  const details: string[] = [];
-
-  if (typeof metadata.from === 'string' && typeof metadata.to === 'string') {
-    details.push(`${statusLabel(metadata.from as TaskStatus)} -> ${statusLabel(metadata.to as TaskStatus)}`);
-  }
-  if (Array.isArray(metadata.fields) && metadata.fields.length) {
-    details.push(`Fields: ${metadata.fields.join(', ')}`);
-  }
-  if (metadata.assigneesChanged) details.push('Assignees changed');
-  if (metadata.labelsChanged) details.push('Labels changed');
-  if (typeof metadata.title === 'string') details.push(`Task: ${metadata.title}`);
-  if (typeof metadata.comment_id === 'string') details.push('Comment event');
-
-  return details;
-}
-
-function statusLabel(status: TaskStatus) {
-  return STATUSES.find((item) => item.id === status)?.label ?? status;
-}
-
-function randomColor(index: number) {
-  return ['#7A5AF8', '#2E90FA', '#12B76A', '#F79009', '#E9354A'][index % 5];
 }

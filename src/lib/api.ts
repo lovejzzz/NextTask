@@ -1,3 +1,4 @@
+import { buildQuery } from './apiQuery';
 import { LOCAL_DEMO_ENABLED } from './constants';
 import { mockApi } from './mockApi';
 import { supabase } from './supabaseClient';
@@ -23,7 +24,7 @@ type ApiErrorEnvelope = { error?: { message?: string } };
 export const api = {
   getBoard(filters: BoardFilters = {}) {
     if (LOCAL_DEMO_ENABLED) return mockApi.getBoard(filters);
-    return apiFetch<BoardPayload>(`/api/tasks${query(filters)}`);
+    return apiFetch<BoardPayload>(`/api/tasks${buildQuery(filters)}`);
   },
 
   getStats() {
@@ -34,6 +35,11 @@ export const api = {
   bootstrapDemo() {
     if (LOCAL_DEMO_ENABLED) return mockApi.bootstrapDemo();
     return apiFetch<BoardPayload>('/api/bootstrap/demo', { method: 'POST' });
+  },
+
+  resetBoard() {
+    if (LOCAL_DEMO_ENABLED) return mockApi.resetBoard();
+    return apiFetch<BoardPayload>('/api/bootstrap/reset', { method: 'POST' });
   },
 
   createTask(input: TaskCreateInput) {
@@ -131,14 +137,4 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(json.error?.message ?? 'Request failed');
   }
   return json.data;
-}
-
-function query(filters: BoardFilters) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) {
-    if (!value || value === 'all') continue;
-    params.set(key, value);
-  }
-  const value = params.toString();
-  return value ? `?${value}` : '';
 }

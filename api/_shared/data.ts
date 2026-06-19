@@ -230,6 +230,82 @@ export async function replaceLabels(supabase: SupabaseClient, userId: string, ta
   if (error) throw new ApiHttpError('bad_request', error.message, 400);
 }
 
+export async function getAssigneeIds(supabase: SupabaseClient, userId: string, taskId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('task_assignees')
+    .select('member_id')
+    .eq('user_id', userId)
+    .eq('task_id', taskId);
+  if (error) throw new ApiHttpError('server_error', error.message, 500);
+  return ((data as { member_id: string }[] | null) ?? []).map((row) => row.member_id);
+}
+
+export async function getLabelIds(supabase: SupabaseClient, userId: string, taskId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('task_labels')
+    .select('label_id')
+    .eq('user_id', userId)
+    .eq('task_id', taskId);
+  if (error) throw new ApiHttpError('server_error', error.message, 500);
+  return ((data as { label_id: string }[] | null) ?? []).map((row) => row.label_id);
+}
+
+/** Record one assignee_added / assignee_removed event per changed member, named where possible. */
+export async function recordAssigneeChanges(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+  prevIds: string[],
+  nextIds: string[],
+) {
+  const added = nextIds.filter((id) => !prevIds.includes(id));
+  const removed = prevIds.filter((id) => !nextIds.includes(id));
+  if (!added.length && !removed.length) return;
+
+  const ids = [...new Set([...added, ...removed])];
+  const { data } = await supabase.from('team_members').select('id,name').eq('user_id', userId).in('id', ids);
+  const nameById = new Map(((data as { id: string; name: string }[] | null) ?? []).map((m) => [m.id, m.name]));
+
+  for (const id of added) {
+    await recordActivity(supabase, userId, taskId, 'assignee_added', `Added ${nameById.get(id) ?? 'a member'}`, {
+      member_id: id,
+    });
+  }
+  for (const id of removed) {
+    await recordActivity(supabase, userId, taskId, 'assignee_removed', `Removed ${nameById.get(id) ?? 'a member'}`, {
+      member_id: id,
+    });
+  }
+}
+
+/** Record one label_added / label_removed event per changed label, named where possible. */
+export async function recordLabelChanges(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+  prevIds: string[],
+  nextIds: string[],
+) {
+  const added = nextIds.filter((id) => !prevIds.includes(id));
+  const removed = prevIds.filter((id) => !nextIds.includes(id));
+  if (!added.length && !removed.length) return;
+
+  const ids = [...new Set([...added, ...removed])];
+  const { data } = await supabase.from('labels').select('id,name').eq('user_id', userId).in('id', ids);
+  const nameById = new Map(((data as { id: string; name: string }[] | null) ?? []).map((l) => [l.id, l.name]));
+
+  for (const id of added) {
+    await recordActivity(supabase, userId, taskId, 'label_added', `Added label ${nameById.get(id) ?? ''}`.trim(), {
+      label_id: id,
+    });
+  }
+  for (const id of removed) {
+    await recordActivity(supabase, userId, taskId, 'label_removed', `Removed label ${nameById.get(id) ?? ''}`.trim(), {
+      label_id: id,
+    });
+  }
+}
+
 export async function recordActivity(
   supabase: SupabaseClient,
   userId: string,
@@ -249,11 +325,70 @@ export async function recordActivity(
   if (error) throw new ApiHttpError('server_error', error.message, 500);
 }
 
-export async function hydrateTask(supabase: SupabaseClient, userId: string, taskId: string) {
-  const payload = await hydrateBoard(supabase, userId);
-  const task = payload.tasks.find((item) => item.id === taskId);
-  if (!task) throw new ApiHttpError('not_found', 'Task not found', 404);
-  return task;
+/**
+ * Hydrate a single task with only its own joins — assignees, labels, comment
+ * count, and latest activity. Used by create/update so a single-task mutation
+ * never re-reads the entire board (no hydrateBoard call here). Returns the same
+ * HydratedTask shape the board produces, so the client cache stays consistent.
+ */
+export async function hydrateTask(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+): Promise<HydratedTask> {
+  const { data: task, error: taskError } = await supabase
+    .from('tasks')
+    .select(selectTaskFields)
+    .eq('user_id', userId)
+    .eq('id', taskId)
+    .single();
+
+  if (taskError || !task) throw new ApiHttpError('not_found', 'Task not found', 404);
+
+  const [
+    { data: assigneeLinks, error: assigneesError },
+    { data: labelLinks, error: labelsError },
+    { count: commentCount, error: commentsError },
+    { data: latestActivity, error: activityError },
+  ] = await Promise.all([
+    supabase.from('task_assignees').select('member_id').eq('user_id', userId).eq('task_id', taskId),
+    supabase.from('task_labels').select('label_id').eq('user_id', userId).eq('task_id', taskId),
+    supabase.from('comments').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('task_id', taskId),
+    supabase
+      .from('activity_events')
+      .select('created_at')
+      .eq('user_id', userId)
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: false })
+      .limit(1),
+  ]);
+
+  const linkError = assigneesError || labelsError || commentsError || activityError;
+  if (linkError) throw new ApiHttpError('server_error', linkError.message, 500);
+
+  const memberIds = ((assigneeLinks as { member_id: string }[] | null) ?? []).map((row) => row.member_id);
+  const labelIds = ((labelLinks as { label_id: string }[] | null) ?? []).map((row) => row.label_id);
+
+  const [{ data: members, error: membersError }, { data: labels, error: labelRowsError }] = await Promise.all([
+    memberIds.length
+      ? supabase.from('team_members').select('*').eq('user_id', userId).in('id', memberIds).order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as TeamMemberRow[], error: null }),
+    labelIds.length
+      ? supabase.from('labels').select('*').eq('user_id', userId).in('id', labelIds).order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as LabelRow[], error: null }),
+  ]);
+
+  if (membersError || labelRowsError) {
+    throw new ApiHttpError('server_error', (membersError || labelRowsError)!.message, 500);
+  }
+
+  return {
+    ...(task as TaskRow),
+    assignees: (members as TeamMemberRow[] | null) ?? [],
+    labels: (labels as LabelRow[] | null) ?? [],
+    comment_count: commentCount ?? 0,
+    latest_activity_at: (latestActivity as { created_at: string }[] | null)?.[0]?.created_at ?? null,
+  };
 }
 
 export function taskMoveMessage(from: TaskStatus, to: TaskStatus) {

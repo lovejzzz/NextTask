@@ -2,13 +2,14 @@
 
 Next Task is a polished full-stack Kanban board built for the NP SDE assessment. It uses React, TypeScript, Vite, Vercel Serverless Functions, Supabase anonymous auth with email recovery, and Supabase Row Level Security.
 
-Current app version: `0.0.1`.
+Current app version: `0.0.3` (derived from `package.json`; v0.0.3.1 public-readiness fixes included).
 
 ## Features
 
 - Four-column Kanban board: To Do, In Progress, In Review, Done
 - Smooth drag-and-drop task movement and ordering
-- 2.5 second card long-press drag activation plus immediate drag-handle activation
+- Drag a card from anywhere on its body by moving the pointer, long-press for 2.5 seconds to activate a drag, or use the dedicated drag handle
+- A dedicated edit icon opens the task detail drawer without making single-click card behavior ambiguous
 - Mobile status navigation with one visible lane at a time and direct status move controls
 - Automatic guest session via Supabase anonymous auth
 - Email recovery links so users can save and reopen a board across devices
@@ -23,7 +24,7 @@ Current app version: `0.0.1`.
 - Active filter chips with result counts
 - Board summary stats
 - Inline column task capture plus full task drawer editing
-- In-app changelog behind the bottom `v0.0.1` version link
+- Light/dark theme toggle and an in-app changelog behind the bottom version link
 - High-end responsive UI with motion, skeleton states, empty states, retry states, and error states
 
 ## Stack
@@ -90,7 +91,7 @@ For automated browser verification against the local API-backed app:
 npm run smoke:browser
 ```
 
-The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BASE_URL` is provided. It covers sample data, task create/edit, comments, filters, long-press drag, drag-handle drag, manager dialog focus, changelog access, and 390px mobile status/stat rendering. Screenshots are written to ignored `verification-smoke-*.png` files.
+The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BASE_URL` is provided. It covers sample data, task create/edit (via the card edit icon), comments, filters, card-body drag, 2.5 second long-press drag, immediate handle drag, Clear board persistence after reload, manager dialog focus, changelog access, axe accessibility, and 390px mobile status/stat rendering. Screenshots are written to ignored `verification-smoke-*.png` files.
 
 ## Supabase setup
 
@@ -106,7 +107,8 @@ The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BAS
    - the custom domain, if used
 7. Open the SQL Editor.
 8. Run `supabase/migrations/001_init.sql`.
-9. Confirm RLS is enabled on:
+9. Run `supabase/migrations/002_reorder_rpc.sql`.
+10. Confirm RLS is enabled on:
    - `tasks`
    - `team_members`
    - `task_assignees`
@@ -115,9 +117,20 @@ The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BAS
    - `comments`
    - `activity_events`
 
+`002_reorder_rpc.sql` is required for public deployment. It installs the transactional `reorder_tasks(updates jsonb)` RPC used by task drag/drop. `npm run verify:supabase` must report `reorderRpc.ok: true` without `skipped`; a missing RPC fails release verification.
+
 Do not use or expose the Supabase service role key. This project only needs the public anon/publishable key.
 
 For public deployments, keep anonymous sign-ins protected with Supabase CAPTCHA/rate-limit settings where available. The API also enforces a configurable per-user write limit through `API_WRITE_LIMIT_PER_MINUTE`.
+
+Local-only escape hatches exist for unfinished development databases:
+
+```bash
+ALLOW_MISSING_REORDER_RPC=true npm run verify:supabase
+ALLOW_REORDER_RPC_FALLBACK=true npm run dev:full
+```
+
+Do not use either flag for public release or production deployment.
 
 ## API routes
 
@@ -145,6 +158,7 @@ Additional product endpoints:
 - `DELETE /api/labels/:id`
 - `GET /api/stats`
 - `POST /api/bootstrap/demo`
+- `POST /api/bootstrap/reset`
 
 Every API request must include:
 
@@ -184,12 +198,16 @@ Write APIs enforce both per-user and per-IP minute buckets to reduce anonymous-s
 Run:
 
 ```bash
-npm run typecheck
-npm run lint
-npm run build
-npm run verify:supabase
+npm run verify:ci
 npm run verify:production-env
+npm run verify:supabase
 npm run smoke:browser
+```
+
+For the full local release gate, run:
+
+```bash
+npm run verify:release
 ```
 
 After deployment, run:
@@ -206,7 +224,8 @@ Manual checks:
 - Demo board can be loaded
 - Task create/edit/delete works
 - Drag-and-drop persists
-- Long-press drag and drag-handle drag both work
+- A card can be dragged from anywhere on its body; 2.5 second long-press activates drag; the edit icon opens the detail drawer
+- Clear board removes tasks, comments, activity, team members, and labels, then stays empty after refresh
 - Team members can be created and assigned
 - Team members and labels can be edited
 - Labels can be created, assigned, and filtered
@@ -218,16 +237,19 @@ Manual checks:
 - Empty/loading/error states are visible
 - Mobile layout exposes all statuses and stats at 390px width
 - The bottom grey version number opens the changelog
-- Two browser profiles cannot see each other's data after the migration is applied
+- Two browser profiles cannot see each other's data after the migrations are applied
 
-## v0.0.1 release checklist
+## v0.0.3.1 public release checklist
 
 - Supabase migration `supabase/migrations/001_init.sql` has been applied.
+- Supabase migration `supabase/migrations/002_reorder_rpc.sql` has been applied.
 - Anonymous auth, email auth, and required OAuth redirect URLs are configured.
 - Vercel env vars match the deployment section and `VITE_ENABLE_LOCAL_DEMO=false`.
+- `npm run verify:ci` passes locally and in CI.
 - `npm run verify:production-env` passes before build.
-- `npm run verify:supabase` passes against the target Supabase project.
+- `npm run verify:supabase` passes against the target Supabase project with no skipped `reorderRpc`.
 - `npm run smoke:browser` passes locally against the full API-backed dev server.
+- `npm run verify:release` passes before the public push.
 - After deploy, run `npm run verify:deployment -- https://your-deployment.vercel.app`.
 
 ## Repository hygiene

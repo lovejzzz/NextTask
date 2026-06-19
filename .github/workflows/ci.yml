@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Always-on, secret-free gate. Runs on every PR (including forks) and push.
+  verify-ci:
+    name: verify:ci (typecheck · lint · test · build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:ci
+
+  # Network/secret-backed gate. Runs on main pushes and manual dispatch only,
+  # where Supabase secrets are available — fork PRs can't read secrets.
+  verify-release:
+    name: verify:release (env · supabase · smoke)
+    runs-on: ubuntu-latest
+    needs: verify-ci
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_ENABLE_LOCAL_DEMO: 'false'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - run: npm run verify:production-env
+      - run: npm run verify:supabase
+      - run: npm run smoke:browser

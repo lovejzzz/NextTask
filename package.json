@@ -1,7 +1,7 @@
 {
   "name": "next-task",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,12 +9,15 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "smoke:browser": "node scripts/smoke-browser.mjs",
     "verify:supabase": "node scripts/verify-supabase.mjs",
     "verify:production-env": "node scripts/verify-production-env.mjs",
     "verify:deployment": "node scripts/verify-deployment.mjs",
-    "verify:release": "npm run lint && npm run build && npm run verify:supabase && npm run verify:production-env"
+    "verify:ci": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "verify:release": "npm run verify:ci && npm run verify:production-env && npm run verify:supabase && npm run smoke:browser"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -31,7 +34,11 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@eslint/js": "^9.39.2",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -41,11 +48,13 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^29.1.1",
     "playwright": "^1.61.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0",
-    "vite": "^7.3.0"
+    "vite": "^7.3.0",
+    "vitest": "^3.2.6"
   }
 }

@@ -1,9 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireUser } from '../_shared/auth.js';
 import {
+  getAssigneeIds,
+  getLabelIds,
   getTaskOrThrow,
   hydrateTask,
   recordActivity,
+  recordAssigneeChanges,
+  recordLabelChanges,
   replaceAssignees,
   replaceLabels,
   taskMoveMessage,
@@ -33,6 +37,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...(input.position !== undefined ? { position: input.position } : {}),
       };
 
+      // Capture previous assignee/label sets before replacing, so we can emit
+      // one granular activity event per added/removed member or label.
+      const prevAssignees = input.assignee_ids ? await getAssigneeIds(supabase, user.id, id) : null;
+      const prevLabels = input.label_ids ? await getLabelIds(supabase, user.id, id) : null;
+
       if (Object.keys(patch).length) {
         const { error } = await supabase.from('tasks').update(patch).eq('user_id', user.id).eq('id', id);
         if (error) throw error;
@@ -53,12 +62,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           from: previous.status,
           to: nextStatus,
         });
-      } else if (Object.keys(patch).length || input.assignee_ids || input.label_ids) {
-        await recordActivity(supabase, user.id, id, 'task_updated', 'Updated task', {
-          fields: Object.keys(patch),
-          assigneesChanged: Boolean(input.assignee_ids),
-          labelsChanged: Boolean(input.label_ids),
-        });
+      }
+
+      // Field edits other than the status move get a single "Updated task" event.
+      const editedFields = Object.keys(patch).filter((field) => field !== 'status' || !didMove);
+      if (editedFields.length) {
+        await recordActivity(supabase, user.id, id, 'task_updated', 'Updated task', { fields: editedFields });
+      }
+
+      if (input.assignee_ids) {
+        await recordAssigneeChanges(supabase, user.id, id, prevAssignees ?? [], input.assignee_ids);
+      }
+      if (input.label_ids) {
+        await recordLabelChanges(supabase, user.id, id, prevLabels ?? [], input.label_ids);
       }
 
       const task = await hydrateTask(supabase, user.id, id);
