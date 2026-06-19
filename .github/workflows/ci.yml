@@ -32,11 +32,11 @@ jobs:
     needs: verify-ci
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://volqeerbqugpwbedsbch.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd' }}
       VITE_ENABLE_LOCAL_DEMO: 'false'
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://volqeerbqugpwbedsbch.supabase.co' }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
