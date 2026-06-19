@@ -84,6 +84,7 @@ async function runSmoke() {
   }
 
   await verifyRefreshToast(page);
+  await verifyCreateDrawerTheme(page);
   await page.screenshot({ path: 'verification-smoke-desktop.png', fullPage: true });
 
   // Accessibility scan: fail on serious/critical WCAG 2 A/AA violations.
@@ -184,7 +185,7 @@ async function runSmoke() {
         ok: true,
         baseUrl,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['sample board', 'refresh toast contrast', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
+        checked: ['sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,
@@ -298,6 +299,59 @@ async function verifyRefreshToast(page) {
       `refresh toast contrast is too low (${metrics.contrast.toFixed(2)}). color=${metrics.color}, background=${metrics.backgroundColor}, border=${metrics.borderColor}`,
     );
   }
+}
+
+async function verifyCreateDrawerTheme(page) {
+  await page.getByRole('button', { name: 'New task' }).click();
+  await page.waitForSelector('.task-drawer', { timeout: 10_000 });
+
+  const surfaces = await page.evaluate(() => {
+    function splitChannels(value) {
+      return value.replace(/\//g, ' ').split(/[,\s]+/).filter(Boolean);
+    }
+
+    function parseChannel(value) {
+      if (value.endsWith('%')) return (Number(value.slice(0, -1)) / 100) * 255;
+      const numeric = Number(value);
+      return numeric <= 1 ? numeric * 255 : numeric;
+    }
+
+    function parseCssColor(value) {
+      const rgb = value.trim().match(/^rgba?\((.+)\)$/i);
+      if (rgb) return splitChannels(rgb[1]).slice(0, 3).map(parseChannel);
+
+      const srgb = value.trim().match(/^color\(srgb\s+(.+)\)$/i);
+      if (srgb) return splitChannels(srgb[1]).slice(0, 3).map(parseChannel);
+
+      return null;
+    }
+
+    function relativeLuminance(rgb) {
+      const channels = rgb.map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    }
+
+    return ['.drawer-footer', '.picker-block'].map((selector) => {
+      const element = document.querySelector(selector);
+      const backgroundColor = element ? getComputedStyle(element).backgroundColor : '';
+      const rgb = parseCssColor(backgroundColor);
+      return { selector, backgroundColor, luminance: rgb ? relativeLuminance(rgb) : 1 };
+    });
+  });
+
+  for (const surface of surfaces) {
+    if (surface.luminance > 0.22) {
+      throw new Error(
+        `${surface.selector} is too light for the dark drawer theme: ${surface.backgroundColor} (luminance ${surface.luminance.toFixed(3)})`,
+      );
+    }
+  }
+
+  await page.getByRole('button', { name: 'Close drawer' }).click();
+  await waitForDrawerClosed(page);
 }
 
 async function dragCard(page, title, targetColumnIndex) {

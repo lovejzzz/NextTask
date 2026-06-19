@@ -1,7 +1,6 @@
 import { buildQuery } from './apiQuery';
 import { LOCAL_DEMO_ENABLED } from './constants';
 import { mockApi } from './mockApi';
-import { supabase } from './supabaseClient';
 import type {
   ActivityEvent,
   BoardFilters,
@@ -114,6 +113,7 @@ export const api = {
 };
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const { supabase } = await import('./supabaseClient');
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
 
