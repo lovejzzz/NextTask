@@ -87,7 +87,7 @@ function routeFor(pathname) {
     [['PATCH', 'DELETE'], /^\/api\/labels\/([^/]+)$/, 'api/labels/[id].ts', ['id']],
     [['GET'], /^\/api\/stats$/, 'api/stats.ts', []],
     [['POST'], /^\/api\/bootstrap\/demo$/, 'api/bootstrap/demo.ts', []],
-    [['POST'], /^\/api\/bootstrap\/reset$/, 'api/bootstrap/reset.ts', []],
+    [['POST'], /^\/api\/bootstrap\/reset$/, 'api/bootstrap/demo.ts', []],
   ];
 
   for (const [methods, pattern, file, names] of routes) {

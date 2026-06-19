@@ -21,6 +21,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return methodNotAllowed(res, req.method);
 
     const { supabase, user } = await requireUser(req);
+    if (isResetRequest(req)) {
+      // Deleting tasks cascades to assignees, label links, comments, and activity.
+      // Removing team members and labels returns the board to the initial empty state.
+      const tasksDelete = await supabase.from('tasks').delete().eq('user_id', user.id);
+      if (tasksDelete.error) throw tasksDelete.error;
+
+      const membersDelete = await supabase.from('team_members').delete().eq('user_id', user.id);
+      if (membersDelete.error) throw membersDelete.error;
+
+      const labelsDelete = await supabase.from('labels').delete().eq('user_id', user.id);
+      if (labelsDelete.error) throw labelsDelete.error;
+
+      const payload = await hydrateBoard(supabase, user.id);
+      return sendData(res, payload);
+    }
+
     const existing = await hydrateBoard(supabase, user.id);
     if (existing.tasks.length) return sendData(res, existing);
 
@@ -169,4 +185,8 @@ function addDays(date: Date, days: number) {
 
 function formatDate(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function isResetRequest(req: VercelRequest) {
+  return req.query.mode === 'reset' || req.url?.startsWith('/api/bootstrap/reset');
 }
