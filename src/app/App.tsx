@@ -72,8 +72,10 @@ import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
+import { parseIntent } from '../lib/companionActions';
 import { summarizeMemory } from '../lib/companionMemory';
-import { nextStatusFor, rankFocusTasks } from '../lib/experimental';
+import { dueTone } from '../lib/dates';
+import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { computeInsights } from '../lib/insights';
@@ -272,14 +274,63 @@ export function App() {
     (mood: Mood) => brainRun(buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText })),
     [brainRun, companionContext, memorySummary, personaText],
   );
-  const chatWithBoard = useCallback(
-    (history: ChatTurn[], onToken: (chunk: string) => void) =>
-      brainRun(
-        buildChatMessages({ mood: companion.mood, context: companionContext, memory: memorySummary, persona: personaText, history }),
-        onToken,
-      ),
-    [brainRun, companion.mood, companionContext, memorySummary, personaText],
-  );
+  // Chat handler: deterministic actions/answers first (reliable, no model needed),
+  // then fall through to the LLM for open conversation.
+  async function chatWithBoard(history: ChatTurn[], onToken: (chunk: string) => void): Promise<string | null> {
+    const text = history[history.length - 1]?.content ?? '';
+    const intent = parseIntent(text);
+
+    if (intent?.kind === 'create_task') {
+      try {
+        await mutations.createTask.mutateAsync({
+          title: intent.title,
+          description: '',
+          status: 'todo',
+          priority: intent.priority,
+          due_date: intent.due_date,
+          assignee_ids: [],
+          label_ids: [],
+        });
+        companion.registerActivity();
+        const extras = [
+          intent.priority === 'high' ? 'high priority' : intent.priority === 'low' ? 'low priority' : null,
+          intent.due_date ? `due ${intent.due_date}` : null,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        return `Done — added "${intent.title}"${extras ? ` (${extras})` : ''}. Now go do it before it becomes another overdue regret.`;
+      } catch {
+        return 'I reached for that one and dropped it. Try again?';
+      }
+    }
+
+    if (intent?.kind === 'whats_next') {
+      const top = rankFocusTasks(tasks)[0];
+      return top
+        ? `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`
+        : "Your board's empty. I'm bored. Give me something.";
+    }
+
+    if (intent?.kind === 'overdue') {
+      const late = tasks.filter((task) => dueTone(task) === 'overdue');
+      if (!late.length) return 'Nothing overdue. Look at you, being responsible.';
+      const list = late
+        .slice(0, 4)
+        .map((task) => `"${task.title}"`)
+        .join(', ');
+      return `${late.length} overdue: ${list}${late.length > 4 ? '…' : ''}. They're not aging like wine.`;
+    }
+
+    if (intent?.kind === 'status') {
+      const mem = memory.memory;
+      return `Today: ${momentum.shippedToday} shipped. All-time: ${mem.totalShipped}. Streak: ${mem.currentStreak} day(s) (best ${mem.bestStreak}). ${momentum.shippedToday > 0 ? 'Keep it rolling.' : 'The day is young.'}`;
+    }
+
+    return brainRun(
+      buildChatMessages({ mood: companion.mood, context: companionContext, memory: memorySummary, persona: personaText, history }),
+      onToken,
+    );
+  }
 
   function cyclePersona() {
     const next = nextRoast(roast);

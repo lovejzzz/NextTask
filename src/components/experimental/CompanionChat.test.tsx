@@ -7,7 +7,7 @@ import { CompanionChat } from './CompanionChat';
 describe('CompanionChat', () => {
   it('opens with the board greeting', () => {
     render(<CompanionChat chat={vi.fn()} onClose={() => {}} />);
-    expect(screen.getByText(/It's me\. The board\./)).toBeInTheDocument();
+    expect(screen.getByText(/It's me — the board/)).toBeInTheDocument();
   });
 
   it('sends a message and streams the board’s reply', async () => {

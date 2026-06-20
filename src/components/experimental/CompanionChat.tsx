@@ -7,7 +7,7 @@ import { cx } from '../../lib/utils';
 
 const OPENER: ChatTurn = {
   role: 'assistant',
-  content: "It's me. The board. Ask me what to do next, or just vent — I'm listening either way.",
+  content: "It's me — the board. Tell me to \"add a task to…\", ask what's next or what's overdue, or just vent.",
 };
 
 /**

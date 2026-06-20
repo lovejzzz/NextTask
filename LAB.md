@@ -66,8 +66,8 @@ Every tick: `typecheck` + `lint` + `test` + `build` must stay green before push.
 
 **The Board Has Feelings — deepen the headline**
 - Model picker: 0.5B (default) ↔ Llama-3.2-1B for sharper output
-- Let chat *do* things: "add a high-priority task to email Sam Friday"
 - Proactive lines: the board speaks up on real events (a ship, an overdue flip)
+- ~~Chat-driven actions: "add a high-priority task to email Sam Friday"~~ ✅ (deterministic intent parser — `companionActions.ts`)
 - More moods & a wider quip pool; reduce repetition with better seeding
 - Count DnD-to-Done ships toward memory/momentum (not just spotlight advances)
 - ~~Cross-session memory~~ ✅ · ~~chat~~ ✅ · ~~personality/warmth~~ ✅
