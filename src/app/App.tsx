@@ -295,7 +295,7 @@ export function App() {
 
     if (intent?.kind === 'create_task') {
       try {
-        await mutations.createTask.mutateAsync({
+        const created = await mutations.createTask.mutateAsync({
           title: intent.title,
           description: '',
           status: 'todo',
@@ -306,6 +306,7 @@ export function App() {
         });
         companion.registerActivity();
         fireCompanionEvent('created');
+        setUndo(`add "${intent.title}"`, () => mutations.deleteTask.mutateAsync(created.id).then(() => undefined));
         const extras = [
           intent.priority === 'high' ? 'high priority' : intent.priority === 'low' ? 'low priority' : null,
           intent.due_date ? `due ${intent.due_date}` : null,
@@ -322,8 +323,12 @@ export function App() {
       const task = matchTask(tasks, intent.query);
       if (!task) return `I can't find a task like "${intent.query}". Be more specific?`;
       if (task.status === 'done') return `"${task.title}" is already done. We did that. Together.`;
+      const prevStatus = task.status;
       companion.registerActivity();
       void moveTask(task.id, 'done'); // celebrates + tallies via registerShipIfDone
+      setUndo(`complete "${task.title}"`, () =>
+        mutations.updateTask.mutateAsync({ id: task.id, input: { status: prevStatus } }).then(() => undefined),
+      );
       return `Marking "${task.title}" done. Chef's kiss.`;
     }
 
@@ -333,7 +338,20 @@ export function App() {
       try {
         await mutations.deleteTask.mutateAsync(task.id);
         companion.registerActivity();
-        return `Deleted "${task.title}". Gone. Poof.`;
+        setUndo(`delete "${task.title}"`, () =>
+          mutations.createTask
+            .mutateAsync({
+              title: task.title,
+              description: task.description,
+              status: task.status,
+              priority: task.priority,
+              due_date: task.due_date,
+              assignee_ids: task.assignees.map((member) => member.id),
+              label_ids: task.labels.map((label) => label.id),
+            })
+            .then(() => undefined),
+        );
+        return `Deleted "${task.title}". Gone. Poof. (Say "undo" if that was a mistake.)`;
       } catch {
         return 'I tried to delete it and the universe said no.';
       }
@@ -342,9 +360,13 @@ export function App() {
     if (intent?.kind === 'set_priority') {
       const task = matchTask(tasks, intent.query);
       if (!task) return `Can't find "${intent.query}".`;
+      const prevPriority = task.priority;
       try {
         await mutations.updateTask.mutateAsync({ id: task.id, input: { priority: intent.priority } });
         companion.registerActivity();
+        setUndo(`reprioritize "${task.title}"`, () =>
+          mutations.updateTask.mutateAsync({ id: task.id, input: { priority: prevPriority } }).then(() => undefined),
+        );
         return `"${task.title}" is now ${intent.priority} priority.`;
       } catch {
         return 'Could not change that. Try again?';
@@ -354,12 +376,55 @@ export function App() {
     if (intent?.kind === 'reschedule') {
       const task = matchTask(tasks, intent.query);
       if (!task) return `Can't find "${intent.query}".`;
+      const prevDue = task.due_date;
       try {
         await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: intent.due_date } });
         companion.registerActivity();
+        setUndo(`reschedule "${task.title}"`, () =>
+          mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: prevDue } }).then(() => undefined),
+        );
         return `Moved "${task.title}" to ${intent.due_date}. Don't blow it this time.`;
       } catch {
         return 'Reschedule failed. Rude, I know.';
+      }
+    }
+
+    if (intent?.kind === 'complete_overdue') {
+      const overdueTasks = tasks.filter((task) => dueTone(task) === 'overdue');
+      if (!overdueTasks.length) return 'No overdue tasks. Nothing to clear. Smug, but earned.';
+      const snapshot = overdueTasks.map((task) => ({ id: task.id, status: task.status }));
+      try {
+        await Promise.all(
+          overdueTasks.map((task) => mutations.updateTask.mutateAsync({ id: task.id, input: { status: 'done' } })),
+        );
+        companion.registerActivity();
+        overdueTasks.forEach(() => {
+          momentum.recordShip();
+          memory.recordShip();
+        });
+        setConfettiBurst(Date.now());
+        fireCompanionEvent('milestone');
+        setUndo(`clear ${overdueTasks.length} overdue`, () =>
+          Promise.all(
+            snapshot.map((entry) => mutations.updateTask.mutateAsync({ id: entry.id, input: { status: entry.status } })),
+          ).then(() => undefined),
+        );
+        return `Cleared ${overdueTasks.length} overdue task${overdueTasks.length === 1 ? '' : 's'}. Bulldozer mode.`;
+      } catch {
+        return 'I choked on the overdue pile. Try again?';
+      }
+    }
+
+    if (intent?.kind === 'undo') {
+      const undo = undoRef.current;
+      if (!undo) return 'Nothing to undo. Clean conscience.';
+      undoRef.current = null;
+      try {
+        await undo.run();
+        companion.registerActivity();
+        return `Undone: ${undo.label}.`;
+      } catch {
+        return "Undo failed — some things can't be taken back.";
       }
     }
 
@@ -400,6 +465,11 @@ export function App() {
 
   function flashCompanion(text: string) {
     setCompanionFlash((prev) => ({ text, nonce: prev.nonce + 1 }));
+  }
+
+  // One-level undo for chat actions: each action records how to reverse itself.
+  function setUndo(label: string, run: () => Promise<void>) {
+    undoRef.current = { label, run };
   }
 
   function fireCompanionEvent(kind: CompanionEvent) {
@@ -479,6 +549,8 @@ export function App() {
       notify('error', 'Couldn’t load the board’s brain (needs a modern browser) — keeping its sharp tongue.');
     }
   }, [brain.status]);
+
+  const undoRef = useRef<{ label: string; run: () => Promise<void> } | null>(null);
 
   // Welcome the user back when they return to the lab after time away.
   const welcomedRef = useRef(false);

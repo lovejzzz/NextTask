@@ -17,7 +17,16 @@ describe('companion comprehension standard', () => {
 
   it('covers every actionable intent kind at least once', () => {
     const kinds = new Set(EVAL_CORPUS.map((entry) => entry.expect));
-    for (const kind of ['create_task', 'complete_task', 'delete_task', 'set_priority', 'reschedule', 'plan']) {
+    for (const kind of [
+      'create_task',
+      'complete_task',
+      'delete_task',
+      'set_priority',
+      'reschedule',
+      'complete_overdue',
+      'undo',
+      'plan',
+    ]) {
       expect(kinds.has(kind as never)).toBe(true);
     }
   });

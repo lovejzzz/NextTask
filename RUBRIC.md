@@ -32,7 +32,7 @@ generative conversation is the remaining frontier (gated by model size + unprove
 on real hardware).
 
 **The standard:** comprehension is now pinned by a CI-enforced eval
-(`companionEval.ts`): a 34-utterance corpus across every intent, currently
+(`companionEval.ts`): a 40-utterance corpus across every intent, currently
 **100% (bar: ≥90%)**. Raising the bar means broadening the parser, not vibes.
 
 ## Dimensions (score 0–5)
@@ -43,7 +43,7 @@ on real hardware).
 | 2 | **Context awareness** | 4 | Real signals → mood; board counts + sample titles + memory fed to every prompt and to deterministic answers. Doesn't read task *content* deeply. |
 | 3 | **Memory & continuity** | 4 | Genuine cross-session memory (days known, ships, streaks, away) + in-session chat history. Doesn't recall past *conversations* across sessions. |
 | 4 | **Reasoning & planning** | 3 | "Plan my day" synthesizes the focus ranking into an ordered, justified shortlist. Still single-step; no adaptive/multi-turn planning. |
-| 5 | **Agency** (does things) | 4 | From chat it creates, completes, deletes, reprioritizes, and reschedules real tasks via fuzzy matching. Missing: bulk ops, labels/assignees, undo. |
+| 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. Remaining gap: setting labels/assignees. |
 | 6 | **Conversation quality** | 2? | Streaming chat is wired and in-character by construction, but **unmeasured** — bounded by a tiny model. Could be incoherent. |
 | 7 | **Personality & voice** | 4 | Distinct, consistent, tunable (gentle↔savage) with earned warmth; strong even with the model off. |
 | 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 153 tests; normal mode untouched. |
@@ -51,7 +51,7 @@ on real hardware).
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 3.8/5**, but the *shape* matters more than the average: strong on
+**Mean ≈ 3.9/5**, but the *shape* matters more than the average: strong on
 comprehension / agency / reliability / personality / context / memory /
 proactivity; the open frontier is conversation quality (needs real-hardware
 measurement) and deeper multi-step reasoning.
@@ -78,10 +78,10 @@ scoring each 0–2 (wrong / ok / great):
 - ~~Reasoning → 3~~ ✅ "plan my day" shortlist.
 - ~~Agency → 4~~ ✅ complete / delete / reprioritize / reschedule via chat.
 - ~~Comprehension → 4~~ ✅ 9 intents + fuzzy matching, CI-graded.
+- ~~Agency → 5~~ ✅ bulk-clear overdue + one-level undo (labels/assignees still TODO).
 - **Conversation → measured:** run the browser eval set; record a real score.
-- **Reasoning → 4:** multi-step / adaptive ("clear my overdue", "what if I only
-  have an hour?") composed from board state.
-- **Agency → 5:** bulk ops, labels/assignees, and an undo for chat actions.
+- **Reasoning → 4:** adaptive plans ("what if I only have an hour?", "what
+  should I drop?") composed from board state.
 - **Comprehension → 5:** LLM fallback for intent classification when rules miss,
   graded by the same corpus; grow the corpus toward 100+ cases.
 - **Memory → 5:** remember salient conversation facts across sessions.

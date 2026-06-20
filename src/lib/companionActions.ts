@@ -16,6 +16,8 @@ export type CompanionIntent =
   | { kind: 'delete_task'; query: string }
   | { kind: 'set_priority'; query: string; priority: TaskPriority }
   | { kind: 'reschedule'; query: string; due_date: string | null }
+  | { kind: 'complete_overdue' }
+  | { kind: 'undo' }
   | { kind: 'plan' }
   | { kind: 'whats_next' }
   | { kind: 'overdue' }
@@ -76,6 +78,15 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   if (!raw) return null;
   const lower = raw.toLowerCase();
 
+  if (/^(?:undo|revert|nevermind|never mind|take that back|oops|undo that)\b/.test(lower)) {
+    return { kind: 'undo' };
+  }
+  if (
+    /\b(?:clear|knock out|wipe)\b[^.]*\boverdue(?:\s+(?:ones|tasks|items|stuff))?\s*[?.!]*$/i.test(raw) ||
+    /\b(?:complete|finish|close)\s+(?:all\s+|my\s+|the\s+|every\s+)?overdue(?:\s+(?:ones|tasks|items|stuff))?\s*[?.!]*$/i.test(raw)
+  ) {
+    return { kind: 'complete_overdue' };
+  }
   if (/\b(plan (?:my )?day|what'?s the plan|game ?plan|plan for (?:today|the day))\b/.test(lower)) {
     return { kind: 'plan' };
   }

@@ -38,6 +38,13 @@ export const EVAL_CORPUS: EvalCase[] = [
   { text: 'move the deck to friday', expect: 'reschedule' },
   { text: 'reschedule the audit to tomorrow', expect: 'reschedule' },
   { text: 'the report is due monday', expect: 'reschedule' },
+  // bulk + undo
+  { text: 'clear my overdue', expect: 'complete_overdue' },
+  { text: 'complete all overdue', expect: 'complete_overdue' },
+  { text: 'knock out the overdue ones', expect: 'complete_overdue' },
+  { text: 'undo', expect: 'undo' },
+  { text: 'undo that', expect: 'undo' },
+  { text: 'nevermind', expect: 'undo' },
   // questions
   { text: "what's next?", expect: 'whats_next' },
   { text: 'next', expect: 'whats_next' },
