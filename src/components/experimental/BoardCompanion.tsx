@@ -1,10 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import type { Mood } from '../../lib/companion';
-import type { BrainContext } from '../../lib/companionBrain';
+import type { ChatTurn } from '../../lib/companionBrain';
 import { cx } from '../../lib/utils';
 import type { BrainStatus } from '../../hooks/useBoardBrain';
+import { CompanionChat } from './CompanionChat';
 
 type MouthShape = 'flat' | 'smile' | 'frown' | 'open' | 'wavy';
 type Face = { eyes: string; mouth: MouthShape };
@@ -24,9 +26,9 @@ const MOOD_FACE: Record<Mood, Face> = {
 
 /**
  * The board's face. A small CSS creature that emotes per mood and speaks its
- * mind. When the optional in-browser brain is loaded, its lines become
- * generative; otherwise it speaks the deterministic `quip`. Poking it asks for
- * a fresh line.
+ * mind. When the optional in-browser brain is loaded its lines become
+ * generative (`generate`) and you can open a chat with it (`chat`); otherwise it
+ * speaks the deterministic `quip`. Poking it asks for a fresh line.
  */
 export function BoardCompanion({
   mood,
@@ -36,7 +38,7 @@ export function BoardCompanion({
   brainStatus = 'off',
   brainProgress = 0,
   generate,
-  context,
+  chat,
 }: {
   mood: Mood;
   quip: string;
@@ -44,18 +46,15 @@ export function BoardCompanion({
   pokeNonce?: number;
   brainStatus?: BrainStatus;
   brainProgress?: number;
-  generate?: (mood: Mood, context: BrainContext) => Promise<string | null>;
-  context?: BrainContext;
+  generate?: (mood: Mood) => Promise<string | null>;
+  chat?: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<string | null>;
 }) {
   const face = MOOD_FACE[mood];
   const asleep = mood === 'neglected';
 
   const [aiLine, setAiLine] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
-  const contextRef = useRef(context);
-  useEffect(() => {
-    contextRef.current = context;
-  });
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Ask the brain for a fresh line whenever the mood shifts or it's poked.
   useEffect(() => {
@@ -63,10 +62,9 @@ export function BoardCompanion({
     let cancelled = false;
     const run = async () => {
       setThinking(true);
-      const ctx = contextRef.current;
-      const line = ctx ? await generate(mood, ctx) : null;
+      const out = await generate(mood);
       if (cancelled) return;
-      if (line) setAiLine(line);
+      if (out) setAiLine(out);
       setThinking(false);
     };
     void run();
@@ -76,6 +74,7 @@ export function BoardCompanion({
   }, [mood, pokeNonce, brainStatus, generate]);
 
   const line = brainStatus === 'ready' ? aiLine ?? quip : quip;
+  const canChat = brainStatus === 'ready' && Boolean(chat);
 
   return (
     <motion.div
@@ -86,6 +85,8 @@ export function BoardCompanion({
       exit={{ opacity: 0, y: 20, scale: 0.9 }}
       transition={{ type: 'spring', stiffness: 300, damping: 24 }}
     >
+      <AnimatePresence>{chatOpen && chat ? <CompanionChat chat={chat} onClose={() => setChatOpen(false)} /> : null}</AnimatePresence>
+
       <AnimatePresence mode="wait">
         <motion.div
           key={line}
@@ -116,17 +117,31 @@ export function BoardCompanion({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className={cx('companion-creature', asleep && 'is-asleep')}
-        onClick={onPoke}
-        aria-label={`The board feels ${mood}. Poke it.`}
-        title="Poke the board"
-      >
-        <span className="companion-eyes">{face.eyes}</span>
-        <span className={cx('companion-mouth', `is-${face.mouth}`)} />
-        {asleep ? <span className="companion-zzz">z</span> : null}
-      </button>
+      <div className="companion-row">
+        <button
+          type="button"
+          className={cx('companion-creature', asleep && 'is-asleep')}
+          onClick={onPoke}
+          aria-label={`The board feels ${mood}. Poke it.`}
+          title="Poke the board"
+        >
+          <span className="companion-eyes">{face.eyes}</span>
+          <span className={cx('companion-mouth', `is-${face.mouth}`)} />
+          {asleep ? <span className="companion-zzz">z</span> : null}
+        </button>
+
+        {canChat ? (
+          <button
+            type="button"
+            className={cx('companion-talk', chatOpen && 'is-open')}
+            onClick={() => setChatOpen((value) => !value)}
+            aria-label="Talk to the board"
+            title="Talk to the board"
+          >
+            <MessageCircle size={15} />
+          </button>
+        ) : null}
+      </div>
     </motion.div>
   );
 }

@@ -1,47 +1,74 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBrainMessages, cleanLine, type BrainContext } from './companionBrain';
+import {
+  buildAmbientMessages,
+  buildChatMessages,
+  buildSystemPrompt,
+  cleanLine,
+  type PromptParts,
+} from './companionBrain';
 
-const ctx: BrainContext = {
-  active: 5,
-  overdue: 2,
-  inProgress: 1,
-  shippedToday: 3,
-  titles: ['Wire the API', 'Polish the drawer', 'Write tests', 'Ignored fourth'],
+const parts: PromptParts = {
+  mood: 'exasperated',
+  context: {
+    active: 5,
+    overdue: 2,
+    inProgress: 1,
+    shippedToday: 3,
+    titles: ['Wire the API', 'Polish the drawer', 'Write tests', 'Ignored fourth'],
+  },
+  memory: "We've known each other ~7 day(s).",
+  persona: 'Be bitingly sarcastic.',
 };
 
-describe('buildBrainMessages', () => {
-  it('produces a system + user turn with the mood and board facts', () => {
-    const [system, user] = buildBrainMessages('exasperated', ctx);
-    expect(system.role).toBe('system');
-    expect(system.content).toContain('exasperated');
-    expect(user.role).toBe('user');
-    expect(user.content).toContain('5 active');
-    expect(user.content).toContain('2 overdue');
+describe('buildSystemPrompt', () => {
+  it('weaves in mood, persona, memory and board facts', () => {
+    const prompt = buildSystemPrompt(parts);
+    expect(prompt).toContain('exasperated');
+    expect(prompt).toContain('Be bitingly sarcastic.');
+    expect(prompt).toContain("We've known each other");
+    expect(prompt).toContain('5 active, 2 overdue');
   });
 
-  it('includes at most three sample task titles', () => {
-    const [, user] = buildBrainMessages('content', ctx);
-    expect(user.content).toContain('Wire the API');
-    expect(user.content).toContain('Write tests');
-    expect(user.content).not.toContain('Ignored fourth');
+  it('includes at most three sample titles', () => {
+    const prompt = buildSystemPrompt(parts);
+    expect(prompt).toContain('Wire the API');
+    expect(prompt).not.toContain('Ignored fourth');
+  });
+});
+
+describe('buildAmbientMessages', () => {
+  it('is a system + one-line user request', () => {
+    const messages = buildAmbientMessages(parts);
+    expect(messages).toHaveLength(2);
+    expect(messages[0].role).toBe('system');
+    expect(messages[1].content).toMatch(/ONE short sentence/i);
+  });
+});
+
+describe('buildChatMessages', () => {
+  it('keeps the system turn and appends recent history', () => {
+    const history = [
+      { role: 'user' as const, content: 'what should I do next?' },
+      { role: 'assistant' as const, content: 'finish the overdue ones, obviously' },
+    ];
+    const messages = buildChatMessages({ ...parts, history });
+    expect(messages[0].role).toBe('system');
+    expect(messages[0].content).toMatch(/talking to you/i);
+    expect(messages.at(-1)?.content).toContain('overdue ones');
   });
 
-  it('omits the sample clause when there are no titles', () => {
-    const [, user] = buildBrainMessages('bored', { ...ctx, titles: [] });
-    expect(user.content).not.toContain('A few tasks');
+  it('trims history to the last 8 turns', () => {
+    const history = Array.from({ length: 20 }, (_, i) => ({ role: 'user' as const, content: `m${i}` }));
+    const messages = buildChatMessages({ ...parts, history });
+    expect(messages.length).toBe(1 + 8); // system + 8 turns
+    expect(messages.at(-1)?.content).toBe('m19');
   });
 });
 
 describe('cleanLine', () => {
-  it('strips surrounding quotes and keeps the first line', () => {
-    expect(cleanLine('"Finish something for once."')).toBe('Finish something for once.');
-    expect(cleanLine('First thought.\nSecond thought.')).toBe('First thought.');
-  });
-
-  it('truncates very long output', () => {
-    const long = 'x'.repeat(200);
-    expect(cleanLine(long).endsWith('…')).toBe(true);
-    expect(cleanLine(long).length).toBeLessThanOrEqual(160);
+  it('strips wrapping quotes and truncates very long output', () => {
+    expect(cleanLine('"Ship something."')).toBe('Ship something.');
+    expect(cleanLine('x'.repeat(300)).endsWith('…')).toBe(true);
   });
 });

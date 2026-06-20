@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { buildBrainMessages, loadBrain, type BrainContext, type GenerateFn } from '../lib/companionBrain';
-import type { Mood } from '../lib/companion';
+import { loadBrain, type BrainMessage, type GenerateFn, type OnToken } from '../lib/companionBrain';
 
 const STORAGE_KEY = 'next-task:brain';
 
@@ -10,8 +9,8 @@ export type BrainStatus = 'off' | 'loading' | 'ready' | 'error';
 /**
  * Manages the optional in-browser LLM behind "give the board a brain". Loads on
  * explicit opt-in (and auto-resumes if previously enabled), tracks download
- * progress, and exposes a guarded `generate` that never throws — callers fall
- * back to the rule-based voice on null.
+ * progress, and exposes a guarded `run` that never throws — callers fall back to
+ * the rule-based voice on null. `run` streams tokens when given an `onToken`.
  */
 export function useBoardBrain(enabled: boolean) {
   const [status, setStatus] = useState<BrainStatus>('off');
@@ -62,7 +61,6 @@ export function useBoardBrain(enabled: boolean) {
       opted = false;
     }
     if (!opted) return;
-    // Defer out of the effect body so the load (and its setState) isn't synchronous.
     let cancelled = false;
     queueMicrotask(() => {
       if (!cancelled) void enable();
@@ -72,15 +70,15 @@ export function useBoardBrain(enabled: boolean) {
     };
   }, [enabled, enable]);
 
-  const generate = useCallback(async (mood: Mood, context: BrainContext): Promise<string | null> => {
+  const run = useCallback(async (messages: BrainMessage[], onToken?: OnToken): Promise<string | null> => {
     if (!generateRef.current) return null;
     try {
-      const line = await generateRef.current(buildBrainMessages(mood, context));
-      return line || null;
+      const output = await generateRef.current(messages, onToken);
+      return output || null;
     } catch {
       return null;
     }
   }, []);
 
-  return { status, progress, enable, disable, generate };
+  return { status, progress, enable, disable, run };
 }

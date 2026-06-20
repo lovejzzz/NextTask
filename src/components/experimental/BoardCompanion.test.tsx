@@ -3,9 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BoardCompanion } from './BoardCompanion';
-import type { BrainContext } from '../../lib/companionBrain';
-
-const ctx: BrainContext = { active: 3, overdue: 1, inProgress: 1, shippedToday: 0, titles: ['Ship it'] };
 
 describe('BoardCompanion', () => {
   it('shows the current mood and its rule-based line when the brain is off', () => {
@@ -28,32 +25,35 @@ describe('BoardCompanion', () => {
 
   it('speaks the generated line (and a brain badge) once the brain is ready', async () => {
     const generate = vi.fn().mockResolvedValue('I see you, procrastinator.');
-    render(
-      <BoardCompanion mood="anxious" quip="canned line" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} />,
-    );
+    render(<BoardCompanion mood="anxious" quip="canned line" onPoke={() => {}} brainStatus="ready" generate={generate} />);
     expect(await screen.findByText('I see you, procrastinator.')).toBeInTheDocument();
     expect(screen.getByText('🧠')).toBeInTheDocument();
-    expect(generate).toHaveBeenCalledWith('anxious', ctx);
+    expect(generate).toHaveBeenCalledWith('anxious');
   });
 
   it('regenerates when poked', async () => {
     const generate = vi.fn().mockResolvedValue('a line');
     const { rerender } = render(
-      <BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} pokeNonce={0} />,
+      <BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={generate} pokeNonce={0} />,
     );
     await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
-    rerender(
-      <BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} pokeNonce={1} />,
-    );
+    rerender(<BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={generate} pokeNonce={1} />);
     await waitFor(() => expect(generate).toHaveBeenCalledTimes(2));
   });
 
   it('falls back to the rule-based line when generation yields nothing', async () => {
     const generate = vi.fn().mockResolvedValue(null);
-    render(
-      <BoardCompanion mood="bored" quip="add a task already" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} />,
-    );
+    render(<BoardCompanion mood="bored" quip="add a task already" onPoke={() => {}} brainStatus="ready" generate={generate} />);
     await waitFor(() => expect(generate).toHaveBeenCalled());
     expect(screen.getByText('add a task already')).toBeInTheDocument();
+  });
+
+  it('offers a talk affordance only when the brain is ready and chat is wired', () => {
+    const { rerender } = render(<BoardCompanion mood="content" quip="q" onPoke={() => {}} />);
+    expect(screen.queryByLabelText('Talk to the board')).not.toBeInTheDocument();
+    rerender(
+      <BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={vi.fn()} chat={vi.fn()} />,
+    );
+    expect(screen.getByLabelText('Talk to the board')).toBeInTheDocument();
   });
 });

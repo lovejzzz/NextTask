@@ -37,6 +37,15 @@ downloads only after the user opts in (cached after). If WebGPU is missing it
 falls back to WASM/CPU; if anything fails it silently reverts to the
 deterministic quips. Persona + prompt live in `companionBrain.ts` (tested).
 
+**Deepened (it's a real companion now):**
+- **Memory** — it remembers you across sessions: days known, visits, all-time
+  ships, best/current streak, days away. Fed into every prompt. (`companionMemory.ts`, `useCompanionMemory.ts`)
+- **Chat** — actually talk to your board (💬). Replies stream token-by-token and
+  are aware of your tasks, history, and mood. (`CompanionChat.tsx`)
+- **Personality dial** — palette "Board personality": gentle ↔ balanced ↔
+  savage, and a *warmth* that grows ~1 level per 5 ships and cools if you vanish.
+  (`persona.ts`)
+
 ---
 
 ## Loop protocol
@@ -56,11 +65,12 @@ Every tick: `typecheck` + `lint` + `test` + `build` must stay green before push.
 ## Backlog (pull from here)
 
 **The Board Has Feelings — deepen the headline**
+- Model picker: 0.5B (default) ↔ Llama-3.2-1B for sharper output
+- Let chat *do* things: "add a high-priority task to email Sam Friday"
+- Proactive lines: the board speaks up on real events (a ship, an overdue flip)
 - More moods & a wider quip pool; reduce repetition with better seeding
-- It remembers across sessions (mood history; "you ghosted me yesterday")
-- Reacts in real time to specific events (a celebratory pop when you ship)
-- Milestones/relationship level — the board warms up the more you finish
-- Personality settings (gentle ↔ savage roast intensity)
+- Count DnD-to-Done ships toward memory/momentum (not just spotlight advances)
+- ~~Cross-session memory~~ ✅ · ~~chat~~ ✅ · ~~personality/warmth~~ ✅
 
 **On-theme features**
 - Daily ship goal with a progress ring + bigger celebration on hit

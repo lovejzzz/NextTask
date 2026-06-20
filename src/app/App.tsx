@@ -28,6 +28,7 @@ import {
   Command,
   Filter,
   FlaskConical,
+  Drama,
   Github,
   KanbanSquare,
   Keyboard,
@@ -49,7 +50,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   pendingOAuthFlowKey,
@@ -62,13 +63,18 @@ import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardDat
 import { useAccent } from '../hooks/useAccent';
 import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
+import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useMomentum } from '../hooks/useMomentum';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
+import type { Mood } from '../lib/companion';
+import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
+import { summarizeMemory } from '../lib/companionMemory';
 import { nextStatusFor, rankFocusTasks } from '../lib/experimental';
+import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { computeInsights } from '../lib/insights';
 import { buildStandup } from '../lib/standup';
@@ -192,6 +198,14 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [roast, setRoast] = useState<RoastLevel>(() => {
+    try {
+      const stored = window.localStorage.getItem('next-task:roast');
+      return stored === 'gentle' || stored === 'savage' || stored === 'balanced' ? stored : 'balanced';
+    } catch {
+      return 'balanced';
+    }
+  });
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
@@ -237,6 +251,7 @@ export function App() {
     experimental.enabled,
   );
   const brain = useBoardBrain(experimental.enabled);
+  const memory = useCompanionMemory(experimental.enabled);
   const companionContext = useMemo(
     () => ({
       active: insights.active,
@@ -250,6 +265,32 @@ export function App() {
     }),
     [insights, momentum.shippedToday, tasks],
   );
+  const { run: brainRun } = brain;
+  const memorySummary = useMemo(() => summarizeMemory(memory.memory), [memory.memory]);
+  const personaText = useMemo(() => personaInstruction(roast, warmthFromMemory(memory.memory)), [roast, memory.memory]);
+  const generateAmbient = useCallback(
+    (mood: Mood) => brainRun(buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText })),
+    [brainRun, companionContext, memorySummary, personaText],
+  );
+  const chatWithBoard = useCallback(
+    (history: ChatTurn[], onToken: (chunk: string) => void) =>
+      brainRun(
+        buildChatMessages({ mood: companion.mood, context: companionContext, memory: memorySummary, persona: personaText, history }),
+        onToken,
+      ),
+    [brainRun, companion.mood, companionContext, memorySummary, personaText],
+  );
+
+  function cyclePersona() {
+    const next = nextRoast(roast);
+    setRoast(next);
+    try {
+      window.localStorage.setItem('next-task:roast', next);
+    } catch {
+      // ignore storage failures
+    }
+    notify('success', `Board personality: ${next}.`);
+  }
 
   useEffect(() => {
     let active = true;
@@ -372,6 +413,7 @@ export function App() {
   function advanceFromSpotlight(taskId: string, targetStatus: TaskStatus) {
     if (targetStatus === 'done') {
       momentum.recordShip();
+      memory.recordShip();
       setConfettiBurst(Date.now());
     }
     void moveTask(taskId, targetStatus);
@@ -497,6 +539,7 @@ export function App() {
     { id: 'accent', label: 'Cycle accent theme', keywords: 'color palette skin', icon: Palette, run: () => { companion.registerFidget(); notify('success', `Accent → ${accent.cycle()}`); } },
     { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: () => { companion.registerFidget(); toggleTheme(); } },
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
+    { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
     brain.status === 'ready' || brain.status === 'loading'
       ? {
           id: 'brain-off',
@@ -670,8 +713,8 @@ export function App() {
             pokeNonce={companion.nonce}
             brainStatus={brain.status}
             brainProgress={brain.progress}
-            generate={brain.generate}
-            context={companionContext}
+            generate={generateAmbient}
+            chat={brain.status === 'ready' ? chatWithBoard : undefined}
           />
         </>
       ) : null}
