@@ -2535,3 +2535,80 @@ textarea:focus-visible,
   display: block;
   box-shadow: 0 1px 2px rgba(18, 24, 38, 0.18);
 }
+
+/* Experimental: Focus Timer (Pomodoro) ---------------------------------- */
+.focus-timer {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.focus-timer.is-active {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.focus-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.focus-timer-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.focus-timer-controls {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.focus-timer-controls button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text, inherit);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.focus-timer-controls button:hover:not(:disabled) {
+  background: var(--surface-strong);
+  transform: translateY(-1px);
+}
+
+.focus-timer-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.focus-timer-track {
+  margin-top: 9px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  overflow: hidden;
+}
+
+.focus-timer-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gradient-accent);
+  transition: width 1s linear;
+}

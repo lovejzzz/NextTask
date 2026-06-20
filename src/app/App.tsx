@@ -498,6 +498,11 @@ export function App() {
             shippedToday={momentum.shippedToday}
             onOpen={openEdit}
             onAdvance={advanceFromSpotlight}
+            onFocusComplete={(taskId) => {
+              setConfettiBurst(Date.now());
+              const task = tasks.find((item) => item.id === taskId);
+              notify('success', task ? `Focus session done: “${task.title}”. Nice deep work.` : 'Focus session complete!');
+            }}
           />
         ) : null}
       </AnimatePresence>

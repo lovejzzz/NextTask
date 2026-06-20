@@ -1,10 +1,24 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, ChevronDown, FlaskConical, Flame, PartyPopper, SkipForward, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronDown,
+  FlaskConical,
+  Flame,
+  PartyPopper,
+  Pause,
+  Play,
+  RotateCcw,
+  SkipForward,
+  Sparkles,
+  Timer,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { useFocusTimer } from '../../hooks/useFocusTimer';
+import { formatClock } from '../../lib/clock';
 import { STATUSES } from '../../lib/constants';
 import { dueLabel, dueTone } from '../../lib/dates';
-import { nextStatusFor, rankFocusTasks } from '../../lib/experimental';
+import { focusReason, nextStatusFor, rankFocusTasks } from '../../lib/experimental';
 import type { Task, TaskStatus } from '../../lib/types';
 import { cx } from '../../lib/utils';
 
@@ -12,18 +26,22 @@ const STATUS_LABEL: Record<TaskStatus, string> = Object.fromEntries(
   STATUSES.map((status) => [status.id, status.label]),
 ) as Record<TaskStatus, string>;
 
+const FOCUS_SECONDS = 25 * 60;
+
 export function FocusSpotlight({
   tasks,
   loading,
   shippedToday,
   onOpen,
   onAdvance,
+  onFocusComplete,
 }: {
   tasks: Task[];
   loading: boolean;
   shippedToday: number;
   onOpen: (taskId: string) => void;
   onAdvance: (taskId: string, target: TaskStatus) => void;
+  onFocusComplete: (taskId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [skips, setSkips] = useState(0);
@@ -31,7 +49,6 @@ export function FocusSpotlight({
   const ranked = useMemo(() => rankFocusTasks(tasks), [tasks]);
   const index = ranked.length ? skips % ranked.length : 0;
   const task = ranked[index] ?? null;
-  const next = task ? nextStatusFor(task.status) : null;
 
   return (
     <motion.aside
@@ -82,45 +99,16 @@ export function FocusSpotlight({
             {loading ? (
               <p className="focus-spotlight-empty">Reading your board…</p>
             ) : task ? (
-              <>
-                <p className="focus-spotlight-lede">Your next move</p>
-                <button type="button" className="focus-spotlight-card" onClick={() => onOpen(task.id)}>
-                  <span className="focus-spotlight-task">{task.title}</span>
-                  <span className="focus-spotlight-meta">
-                    <span className="focus-spotlight-chip">{STATUS_LABEL[task.status]}</span>
-                    {task.priority === 'high' ? <span className="focus-spotlight-chip is-high">High priority</span> : null}
-                    {task.due_date ? (
-                      <span className={cx('focus-spotlight-chip', `due-${dueTone(task)}`)}>{dueLabel(task)}</span>
-                    ) : null}
-                  </span>
-                </button>
-
-                <div className="focus-spotlight-actions">
-                  {next ? (
-                    <button type="button" className="focus-spotlight-advance" onClick={() => onAdvance(task.id, next)}>
-                      Move to {STATUS_LABEL[next]}
-                      <ArrowRight size={15} />
-                    </button>
-                  ) : null}
-                  {ranked.length > 1 ? (
-                    <button
-                      type="button"
-                      className="focus-spotlight-skip"
-                      onClick={() => setSkips((value) => value + 1)}
-                      aria-label="Show another suggestion"
-                    >
-                      <SkipForward size={14} />
-                      Skip
-                    </button>
-                  ) : null}
-                </div>
-
-                {ranked.length > 1 ? (
-                  <p className="focus-spotlight-foot">
-                    {ranked.length - 1} more waiting · suggestion {index + 1} of {ranked.length}
-                  </p>
-                ) : null}
-              </>
+              <SpotlightTask
+                key={task.id}
+                task={task}
+                queueSize={ranked.length}
+                position={index + 1}
+                onOpen={onOpen}
+                onAdvance={onAdvance}
+                onSkip={() => setSkips((value) => value + 1)}
+                onFocusComplete={onFocusComplete}
+              />
             ) : (
               <div className="focus-spotlight-clear">
                 <PartyPopper size={20} />
@@ -131,5 +119,91 @@ export function FocusSpotlight({
         )}
       </AnimatePresence>
     </motion.aside>
+  );
+}
+
+function SpotlightTask({
+  task,
+  queueSize,
+  position,
+  onOpen,
+  onAdvance,
+  onSkip,
+  onFocusComplete,
+}: {
+  task: Task;
+  queueSize: number;
+  position: number;
+  onOpen: (taskId: string) => void;
+  onAdvance: (taskId: string, target: TaskStatus) => void;
+  onSkip: () => void;
+  onFocusComplete: (taskId: string) => void;
+}) {
+  const next = nextStatusFor(task.status);
+  const reason = focusReason(task);
+  const timer = useFocusTimer(FOCUS_SECONDS, () => onFocusComplete(task.id));
+  const timerActive = timer.running || timer.remaining < FOCUS_SECONDS;
+
+  return (
+    <>
+      <p className="focus-spotlight-lede">Your next move · {reason}</p>
+      <button type="button" className="focus-spotlight-card" onClick={() => onOpen(task.id)}>
+        <span className="focus-spotlight-task">{task.title}</span>
+        <span className="focus-spotlight-meta">
+          <span className="focus-spotlight-chip">{STATUS_LABEL[task.status]}</span>
+          {task.priority === 'high' ? <span className="focus-spotlight-chip is-high">High priority</span> : null}
+          {task.due_date ? (
+            <span className={cx('focus-spotlight-chip', `due-${dueTone(task)}`)}>{dueLabel(task)}</span>
+          ) : null}
+        </span>
+      </button>
+
+      <div className={cx('focus-timer', timerActive && 'is-active')}>
+        <div className="focus-timer-row">
+          <span className="focus-timer-clock">
+            <Timer size={15} />
+            {formatClock(timer.remaining)}
+          </span>
+          <div className="focus-timer-controls">
+            {timer.running ? (
+              <button type="button" onClick={timer.pause} aria-label="Pause focus timer">
+                <Pause size={15} />
+              </button>
+            ) : (
+              <button type="button" onClick={timer.start} aria-label="Start focus timer">
+                <Play size={15} />
+              </button>
+            )}
+            <button type="button" onClick={timer.reset} aria-label="Reset focus timer" disabled={!timerActive}>
+              <RotateCcw size={14} />
+            </button>
+          </div>
+        </div>
+        <div className="focus-timer-track">
+          <div className="focus-timer-fill" style={{ width: `${Math.round(timer.progress * 100)}%` }} />
+        </div>
+      </div>
+
+      <div className="focus-spotlight-actions">
+        {next ? (
+          <button type="button" className="focus-spotlight-advance" onClick={() => onAdvance(task.id, next)}>
+            Move to {STATUS_LABEL[next]}
+            <ArrowRight size={15} />
+          </button>
+        ) : null}
+        {queueSize > 1 ? (
+          <button type="button" className="focus-spotlight-skip" onClick={onSkip} aria-label="Show another suggestion">
+            <SkipForward size={14} />
+            Skip
+          </button>
+        ) : null}
+      </div>
+
+      {queueSize > 1 ? (
+        <p className="focus-spotlight-foot">
+          {queueSize - 1} more waiting · suggestion {position} of {queueSize}
+        </p>
+      ) : null}
+    </>
   );
 }

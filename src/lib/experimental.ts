@@ -62,6 +62,31 @@ export function focusScore(task: Task, now: Date = startOfToday()): number {
 }
 
 /**
+ * A short, human reason explaining why this task earned the spotlight, so the
+ * ranking isn't a black box. Returns the single most compelling signal.
+ */
+export function focusReason(task: Task, now: Date = startOfToday()): string {
+  if (task.status === 'done') return 'Already shipped';
+
+  if (task.due_date) {
+    const due = parseISO(`${task.due_date}T00:00:00`);
+    const daysOut = differenceInCalendarDays(due, now);
+    if (daysOut < 0) {
+      const late = Math.abs(daysOut);
+      return `Overdue by ${late} day${late === 1 ? '' : 's'}`;
+    }
+    if (daysOut === 0) return 'Due today';
+    if (daysOut === 1) return 'Due tomorrow';
+    if (daysOut <= 3) return `Due in ${daysOut} days`;
+  }
+
+  if (task.priority === 'high') return 'High priority';
+  if (task.status === 'in_review') return 'Waiting on review';
+  if (task.status === 'in_progress') return 'Already in motion';
+  return 'Next in your queue';
+}
+
+/**
  * Rank actionable (non-done) tasks from most to least deserving of focus.
  * Ties fall back to board position so the order stays stable.
  */

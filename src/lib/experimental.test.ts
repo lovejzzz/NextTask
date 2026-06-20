@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../test/factories';
-import { focusScore, nextStatusFor, rankFocusTasks } from './experimental';
+import { focusReason, focusScore, nextStatusFor, rankFocusTasks } from './experimental';
 
 const NOW = new Date(2026, 5, 20); // 2026-06-20, matches dueTone's local-midnight basis.
 
@@ -40,6 +40,26 @@ describe('rankFocusTasks', () => {
 describe('focusScore', () => {
   it('scores done tasks as never-focus', () => {
     expect(focusScore(makeTask({ status: 'done' }), NOW)).toBe(Number.NEGATIVE_INFINITY);
+  });
+});
+
+describe('focusReason', () => {
+  it('calls out overdue work with the day count', () => {
+    expect(focusReason(makeTask({ status: 'todo', due_date: '2026-06-19' }), NOW)).toBe('Overdue by 1 day');
+    expect(focusReason(makeTask({ status: 'todo', due_date: '2026-06-17' }), NOW)).toBe('Overdue by 3 days');
+  });
+
+  it('flags imminent due dates', () => {
+    expect(focusReason(makeTask({ status: 'todo', due_date: '2026-06-20' }), NOW)).toBe('Due today');
+    expect(focusReason(makeTask({ status: 'todo', due_date: '2026-06-21' }), NOW)).toBe('Due tomorrow');
+    expect(focusReason(makeTask({ status: 'todo', due_date: '2026-06-23' }), NOW)).toBe('Due in 3 days');
+  });
+
+  it('falls back to priority and status signals', () => {
+    expect(focusReason(makeTask({ status: 'todo', priority: 'high' }), NOW)).toBe('High priority');
+    expect(focusReason(makeTask({ status: 'in_review', priority: 'normal' }), NOW)).toBe('Waiting on review');
+    expect(focusReason(makeTask({ status: 'in_progress', priority: 'normal' }), NOW)).toBe('Already in motion');
+    expect(focusReason(makeTask({ status: 'todo', priority: 'normal' }), NOW)).toBe('Next in your queue');
   });
 });
 
