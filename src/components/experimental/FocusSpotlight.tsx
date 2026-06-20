@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, ChevronDown, FlaskConical, PartyPopper, SkipForward, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronDown, FlaskConical, Flame, PartyPopper, SkipForward, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { STATUSES } from '../../lib/constants';
@@ -15,11 +15,13 @@ const STATUS_LABEL: Record<TaskStatus, string> = Object.fromEntries(
 export function FocusSpotlight({
   tasks,
   loading,
+  shippedToday,
   onOpen,
   onAdvance,
 }: {
   tasks: Task[];
   loading: boolean;
+  shippedToday: number;
   onOpen: (taskId: string) => void;
   onAdvance: (taskId: string, target: TaskStatus) => void;
 }) {
@@ -70,6 +72,13 @@ export function FocusSpotlight({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
+            {shippedToday > 0 ? (
+              <div className="focus-spotlight-streak">
+                <Flame size={14} />
+                {shippedToday} shipped today — keep the streak alive
+              </div>
+            ) : null}
+
             {loading ? (
               <p className="focus-spotlight-empty">Reading your board…</p>
             ) : task ? (

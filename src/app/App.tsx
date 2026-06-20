@@ -53,11 +53,13 @@ import {
 } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
+import { useMomentum } from '../hooks/useMomentum';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
+import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
 import { BoardColumn } from '../components/board/BoardColumn';
 import { TaskCard } from '../components/board/TaskCard';
@@ -166,6 +168,8 @@ export function App() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const experimental = useExperimentalMode();
+  const momentum = useMomentum();
+  const [confettiBurst, setConfettiBurst] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
@@ -291,6 +295,14 @@ export function App() {
     if (!updates.length) return;
 
     await applyReorder(updates);
+  }
+
+  function advanceFromSpotlight(taskId: string, targetStatus: TaskStatus) {
+    if (targetStatus === 'done') {
+      momentum.recordShip();
+      setConfettiBurst(Date.now());
+    }
+    void moveTask(taskId, targetStatus);
   }
 
   async function quickCreateTask(status: TaskStatus, title: string) {
@@ -483,11 +495,14 @@ export function App() {
             key="focus-spotlight"
             tasks={tasks}
             loading={boardQuery.isLoading}
+            shippedToday={momentum.shippedToday}
             onOpen={openEdit}
-            onAdvance={(taskId, target) => void moveTask(taskId, target)}
+            onAdvance={advanceFromSpotlight}
           />
         ) : null}
       </AnimatePresence>
+
+      {confettiBurst ? <Confetti key={confettiBurst} onDone={() => setConfettiBurst(null)} /> : null}
 
       <AnimatePresence>
         {toast ? (
