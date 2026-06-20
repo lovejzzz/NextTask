@@ -39,6 +39,7 @@ export function BoardCompanion({
   brainProgress = 0,
   generate,
   chat,
+  flash,
 }: {
   mood: Mood;
   quip: string;
@@ -48,6 +49,7 @@ export function BoardCompanion({
   brainProgress?: number;
   generate?: (mood: Mood) => Promise<string | null>;
   chat?: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<string | null>;
+  flash?: { text: string; nonce: number };
 }) {
   const face = MOOD_FACE[mood];
   const asleep = mood === 'neglected';
@@ -55,6 +57,23 @@ export function BoardCompanion({
   const [aiLine, setAiLine] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [flashText, setFlashText] = useState<string | null>(null);
+
+  // A proactive reaction (ship, milestone, new task) briefly takes over the bubble.
+  useEffect(() => {
+    if (!flash || !flash.nonce) return;
+    let cancelled = false;
+    let timer = 0;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setFlashText(flash.text);
+      timer = window.setTimeout(() => setFlashText(null), 5000);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [flash]);
 
   // Ask the brain for a fresh line whenever the mood shifts or it's poked.
   useEffect(() => {
@@ -73,7 +92,8 @@ export function BoardCompanion({
     };
   }, [mood, pokeNonce, brainStatus, generate]);
 
-  const line = brainStatus === 'ready' ? aiLine ?? quip : quip;
+  const baseLine = brainStatus === 'ready' ? aiLine ?? quip : quip;
+  const line = flashText ?? baseLine;
   const canChat = brainStatus === 'ready' && Boolean(chat);
 
   return (

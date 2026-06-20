@@ -73,6 +73,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
+import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
@@ -197,6 +198,7 @@ export function App() {
   const { theme, toggle: toggleTheme } = useTheme();
   const momentum = useMomentum();
   const [confettiBurst, setConfettiBurst] = useState<number | null>(null);
+  const [companionFlash, setCompanionFlash] = useState<{ text: string; nonce: number }>({ text: '', nonce: 0 });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -292,6 +294,7 @@ export function App() {
           label_ids: [],
         });
         companion.registerActivity();
+        fireCompanionEvent('created');
         const extras = [
           intent.priority === 'high' ? 'high priority' : intent.priority === 'low' ? 'low priority' : null,
           intent.due_date ? `due ${intent.due_date}` : null,
@@ -330,6 +333,10 @@ export function App() {
       buildChatMessages({ mood: companion.mood, context: companionContext, memory: memorySummary, persona: personaText, history }),
       onToken,
     );
+  }
+
+  function fireCompanionEvent(kind: CompanionEvent) {
+    setCompanionFlash((prev) => ({ text: eventLine(kind, Date.now()), nonce: prev.nonce + 1 }));
   }
 
   function cyclePersona() {
@@ -463,9 +470,11 @@ export function App() {
 
   function advanceFromSpotlight(taskId: string, targetStatus: TaskStatus) {
     if (targetStatus === 'done') {
+      const newCount = momentum.shippedToday + 1;
       momentum.recordShip();
       memory.recordShip();
       setConfettiBurst(Date.now());
+      fireCompanionEvent(newCount === 3 ? 'milestone' : 'shipped');
     }
     void moveTask(taskId, targetStatus);
   }
@@ -493,6 +502,7 @@ export function App() {
         label_ids: [],
       });
       setMobileStatus(status);
+      if (experimental.enabled) fireCompanionEvent('created');
       notify('success', 'Task created');
     } catch (error) {
       notify('error', readableError(error));
@@ -766,6 +776,7 @@ export function App() {
             brainProgress={brain.progress}
             generate={generateAmbient}
             chat={brain.status === 'ready' ? chatWithBoard : undefined}
+            flash={companionFlash}
           />
         </>
       ) : null}
