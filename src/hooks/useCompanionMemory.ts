@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  daysBetween,
   emptyMemory,
   recordShip as applyShip,
   recordVisit,
@@ -36,6 +37,8 @@ function save(memory: CompanionMemory) {
  */
 export function useCompanionMemory(enabled: boolean) {
   const [memory, setMemory] = useState<CompanionMemory>(load);
+  // Captured once at load, before recordVisit overwrites lastSeen.
+  const [awayDaysAtLoad] = useState(() => Math.max(0, daysBetween(load().lastSeen, Date.now())));
   const visited = useRef(false);
 
   useEffect(() => {
@@ -59,5 +62,5 @@ export function useCompanionMemory(enabled: boolean) {
     });
   }, []);
 
-  return { memory, recordShip };
+  return { memory, awayDaysAtLoad, recordShip };
 }

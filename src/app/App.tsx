@@ -335,8 +335,12 @@ export function App() {
     );
   }
 
+  function flashCompanion(text: string) {
+    setCompanionFlash((prev) => ({ text, nonce: prev.nonce + 1 }));
+  }
+
   function fireCompanionEvent(kind: CompanionEvent) {
-    setCompanionFlash((prev) => ({ text: eventLine(kind, Date.now()), nonce: prev.nonce + 1 }));
+    flashCompanion(eventLine(kind, Date.now()));
   }
 
   function cyclePersona() {
@@ -401,6 +405,20 @@ export function App() {
       notify('error', 'Couldn’t load the board’s brain (needs a modern browser) — keeping its sharp tongue.');
     }
   }, [brain.status]);
+
+  // Welcome the user back when they return to the lab after time away.
+  const welcomedRef = useRef(false);
+  useEffect(() => {
+    if (!experimental.enabled || welcomedRef.current) return;
+    welcomedRef.current = true;
+    const days = memory.awayDaysAtLoad;
+    if (days >= 1) {
+      queueMicrotask(() =>
+        flashCompanion(`You're back — it's been ${days} day${days === 1 ? '' : 's'}. I kept your tasks warm.`),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experimental.enabled]);
 
   function openCreate(status: TaskStatus = 'todo') {
     setDrawerMode('create');

@@ -38,12 +38,15 @@ function buildPieces(): Piece[] {
 }
 
 export function Confetti({ onDone }: { onDone: () => void }) {
-  const pieces = useMemo(() => buildPieces(), []);
+  // Respect a user's reduced-motion preference: skip the storm, just clear.
+  const reduced =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  const pieces = useMemo(() => (reduced ? [] : buildPieces()), [reduced]);
 
   useEffect(() => {
-    const timer = window.setTimeout(onDone, DURATION_MS);
+    const timer = window.setTimeout(onDone, reduced ? 150 : DURATION_MS);
     return () => window.clearTimeout(timer);
-  }, [onDone]);
+  }, [onDone, reduced]);
 
   return (
     <div className="confetti-layer" aria-hidden="true">
