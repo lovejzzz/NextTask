@@ -32,7 +32,7 @@ generative conversation is the remaining frontier (gated by model size + unprove
 on real hardware).
 
 **The standard:** comprehension is now pinned by a CI-enforced eval
-(`companionEval.ts`): an 89-utterance corpus across every intent, currently
+(`companionEval.ts`): a 92-utterance corpus across every intent, currently
 **100% (bar: ≥90%)**. Raising the bar means broadening the parser, not vibes.
 
 ## Dimensions (score 0–5)
@@ -40,7 +40,7 @@ on real hardware).
 | # | Dimension | Score | Why |
 |---|-----------|:-----:|-----|
 | 1 | **Comprehension** (understands intent) | 5 | 17 intents with broad synonyms (casual verbs, pleasantry-stripping, critical→high, "next week"/"in N days") + fuzzy task matching, CI-graded **100% on an 89-case corpus**. Truly novel phrasing falls through to the model (intent-fallback is the remaining asterisk). |
-| 2 | **Context awareness** | 4 | Real signals → mood; board counts + sample titles + memory fed to every prompt and to deterministic answers. Doesn't read task *content* deeply. |
+| 2 | **Context awareness** | 5 | Real signals → mood; board counts + sample titles + memory + **blocked/waiting detection** (read from task titles, descriptions, and labels) fed to every prompt and to "what's blocked?". |
 | 3 | **Memory & continuity** | 5 | Cross-session stats (days known, ships, streaks, away) **plus durable notes**: tell it "remember that…" / "I'm focusing on…" and it carries those facts across sessions, weaves them into its prompt, and recalls them on "what do you remember". |
 | 4 | **Reasoning & planning** | 4 | Plans the day, and gives grounded judgment calls — what to **drop** (triage), the fastest **quick win**, and your **biggest risk** — each composed from board state. Not yet multi-turn / constraint-aware ("if I only have an hour"). |
 | 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. Remaining gap: setting labels/assignees. |
@@ -51,7 +51,7 @@ on real hardware).
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 4.2/5**, but the *shape* matters more than the average: strong on
+**Mean ≈ 4.3/5**, but the *shape* matters more than the average: strong on
 comprehension / agency / reliability / personality / context / memory /
 proactivity; the open frontier is conversation quality (needs real-hardware
 measurement) and deeper multi-step reasoning.

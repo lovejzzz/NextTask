@@ -32,3 +32,17 @@ export function pickQuickWin(tasks: Task[]): Task | null {
 export function pickBiggestRisk(tasks: Task[], now?: Date): Task | null {
   return rankFocusTasks(tasks, now)[0] ?? null;
 }
+
+const BLOCKED_RE = /\b(blocked|waiting on|waiting for|on hold|stuck|depends on|blocker)\b/i;
+const BLOCKED_LABEL_RE = /blocked|on.?hold|waiting/i;
+
+/** Active tasks that look blocked — read from the title, description, or labels. */
+export function detectBlocked(tasks: Task[]): Task[] {
+  return tasks.filter(
+    (task) =>
+      task.status !== 'done' &&
+      (BLOCKED_RE.test(task.title) ||
+        BLOCKED_RE.test(task.description ?? '') ||
+        task.labels.some((label) => BLOCKED_LABEL_RE.test(label.name))),
+  );
+}

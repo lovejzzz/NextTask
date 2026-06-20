@@ -38,6 +38,7 @@ export type BrainContext = {
   inProgress: number;
   shippedToday: number;
   titles: string[];
+  blocked?: string[];
 };
 export type PromptParts = {
   mood: Mood;
@@ -62,6 +63,7 @@ export function buildSystemPrompt({ mood, context, memory, persona, notes }: Pro
   const facts = `${context.active} active, ${context.overdue} overdue, ${context.inProgress} in progress, ${context.shippedToday} shipped today`;
   const titles = context.titles.slice(0, 3).filter(Boolean);
   const sample = titles.length ? ` A few tasks: ${titles.map((t) => `"${t}"`).join(', ')}.` : '';
+  const blocked = context.blocked?.length ? ` Blocked/waiting: ${context.blocked.map((t) => `"${t}"`).join(', ')}.` : '';
   const lines = [
     "You ARE this person's kanban task board — alive, speaking in the first person as the board itself.",
     persona,
@@ -69,7 +71,7 @@ export function buildSystemPrompt({ mood, context, memory, persona, notes }: Pro
   ];
   if (notes) lines.push(`They asked you to remember: ${notes}. Reference this naturally when relevant.`);
   lines.push(
-    `Your current mood: ${mood}. The board right now: ${facts}.${sample}`,
+    `Your current mood: ${mood}. The board right now: ${facts}.${sample}${blocked}`,
     'Voice example — if three tasks were overdue you might say: "Three overdue. I\'m not mad, I\'m a board, we don\'t do mad. (We do.)"',
     'Stay in character as the board. Be concise and specific to their tasks. No emoji. Never mention being an AI or a model.',
   );

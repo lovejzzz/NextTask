@@ -85,6 +85,10 @@ export const EVAL_CORPUS: EvalCase[] = [
   { text: 'what should I worry about', expect: 'risk' },
   { text: "what's most urgent", expect: 'risk' },
   { text: "what's my biggest concern", expect: 'risk' },
+  // blocked / context
+  { text: "what's blocked?", expect: 'blocked' },
+  { text: 'what am I waiting on', expect: 'blocked' },
+  { text: 'any blockers?', expect: 'blocked' },
   // long-term notes
   { text: 'remember that the launch is friday', expect: 'remember' },
   { text: "I'm focusing on the redesign", expect: 'remember' },

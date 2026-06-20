@@ -29,6 +29,7 @@ describe('companion comprehension standard', () => {
       'triage',
       'quick_win',
       'risk',
+      'blocked',
       'remember',
       'recall',
     ]) {

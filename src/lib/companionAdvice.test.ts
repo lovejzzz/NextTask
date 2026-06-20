@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { makeTask } from '../test/factories';
-import { pickBiggestRisk, pickDropCandidates, pickQuickWin } from './companionAdvice';
+import { makeLabel, makeTask } from '../test/factories';
+import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin } from './companionAdvice';
 
 const NOW = new Date(2026, 5, 20);
 
@@ -27,6 +27,20 @@ describe('pickBiggestRisk', () => {
       makeTask({ id: 'late', status: 'todo', priority: 'low', due_date: '2026-06-10' }),
     ];
     expect(pickBiggestRisk(tasks, NOW)?.id).toBe('late');
+  });
+});
+
+describe('detectBlocked', () => {
+  it('reads blocked signals from title, description, and labels', () => {
+    const tasks = [
+      makeTask({ id: 'title', title: 'Deploy (blocked on infra)' }),
+      makeTask({ id: 'desc', title: 'Launch', description: 'waiting on legal sign-off' }),
+      makeTask({ id: 'label', title: 'Migrate db', labels: [makeLabel({ name: 'On hold' })] }),
+      makeTask({ id: 'clear', title: 'Write docs' }),
+      makeTask({ id: 'donequiet', title: 'blocked thing', status: 'done' }),
+    ];
+    const ids = detectBlocked(tasks).map((task) => task.id);
+    expect(ids).toEqual(['title', 'desc', 'label']);
   });
 });
 

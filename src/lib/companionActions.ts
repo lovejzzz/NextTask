@@ -25,6 +25,7 @@ export type CompanionIntent =
   | { kind: 'triage' }
   | { kind: 'quick_win' }
   | { kind: 'risk' }
+  | { kind: 'blocked' }
   | { kind: 'whats_next' }
   | { kind: 'overdue' }
   | { kind: 'status' };
@@ -131,6 +132,9 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(biggest risk|what(?:'?s| is)? (?:my )?(?:biggest )?(?:risk|worry|concern)|what should i worry|most (?:urgent|pressing))\b/.test(lower)) {
     return { kind: 'risk' };
+  }
+  if (/\b(what'?s blocked|what am i (?:waiting|blocked) on|any blockers|what'?s stuck|am i blocked|what'?s on hold)\b/.test(lower)) {
+    return { kind: 'blocked' };
   }
   if (/\bwhat'?s next\b/.test(lower) || /^(?:next(?: up| task)?\??|what should i (?:do|work on)\??)$/.test(lower)) {
     return { kind: 'whats_next' };

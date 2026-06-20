@@ -75,7 +75,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { pickBiggestRisk, pickDropCandidates, pickQuickWin } from '../lib/companionAdvice';
+import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin } from '../lib/companionAdvice';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes } from '../lib/companionNotes';
@@ -281,6 +281,9 @@ export function App() {
         .filter((task) => task.status !== 'done')
         .slice(0, 5)
         .map((task) => task.title),
+      blocked: detectBlocked(tasks)
+        .slice(0, 3)
+        .map((task) => task.title),
     }),
     [insights, momentum.shippedToday, tasks],
   );
@@ -474,6 +477,12 @@ export function App() {
       return risk
         ? `Biggest risk: "${risk.title}" — ${focusReason(risk).toLowerCase()}. Handle it before it handles you.`
         : 'No risks on the board. Suspiciously calm.';
+    }
+
+    if (intent?.kind === 'blocked') {
+      const blocked = detectBlocked(tasks);
+      if (!blocked.length) return "Nothing's blocked. So whatever's not moving — that's on you.";
+      return `Blocked or waiting: ${blocked.map((task) => `"${task.title}"`).join(', ')}. Go unstick those.`;
     }
 
     if (intent?.kind === 'whats_next') {
