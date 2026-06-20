@@ -38,6 +38,13 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('Wire the API');
     expect(prompt).not.toContain('Ignored fourth');
   });
+
+  it('enforces grounding and brevity (the self-test contract)', () => {
+    const prompt = buildSystemPrompt(parts);
+    expect(prompt).toMatch(/never invent task names/i);
+    expect(prompt).toMatch(/1.?2 short sentences/i);
+    expect(prompt).toMatch(/never mention being an ai/i);
+  });
 });
 
 describe('buildAmbientMessages', () => {

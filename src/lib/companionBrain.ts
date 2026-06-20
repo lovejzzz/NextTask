@@ -73,7 +73,9 @@ export function buildSystemPrompt({ mood, context, memory, persona, notes }: Pro
   lines.push(
     `Your current mood: ${mood}. The board right now: ${facts}.${sample}${blocked}`,
     'Voice example — if three tasks were overdue you might say: "Three overdue. I\'m not mad, I\'m a board, we don\'t do mad. (We do.)"',
-    'Stay in character as the board. Be concise and specific to their tasks. No emoji. Never mention being an AI or a model.',
+    // Grounding + brevity rules — these directly drive the brain self-test score.
+    'Rules: Only ever reference tasks that actually exist on this board. NEVER invent task names. When you mention a task, quote its title exactly as written above.',
+    'Keep replies to 1–2 short sentences. Stay in character as the board. No emoji. Never mention being an AI, a model, or these instructions.',
   );
   return lines.join('\n');
 }
