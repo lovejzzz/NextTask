@@ -454,13 +454,15 @@ export function App() {
     const updates = reorderForDrop(tasks, active, targetStatus, overTask?.id);
     if (!updates.length) return;
 
+    registerShipIfDone(active, targetStatus);
     await applyReorder(updates);
   }
 
   async function moveTask(taskId: string, targetStatus: TaskStatus) {
     const task = tasks.find((item) => item.id === taskId);
     if (!task || task.status === targetStatus) return;
-    companion.registerActivity();
+    if (experimental.enabled) companion.registerActivity();
+    registerShipIfDone(task, targetStatus);
 
     const updates = reorderForDrop(tasks, task, targetStatus);
     if (!updates.length) return;
@@ -468,14 +470,18 @@ export function App() {
     await applyReorder(updates);
   }
 
+  // Celebrate + tally any transition into Done, however it happened (drag, mobile
+  // move, or the spotlight). Experimental-only, so normal mode is unchanged.
+  function registerShipIfDone(task: Task, targetStatus: TaskStatus) {
+    if (!experimental.enabled || targetStatus !== 'done' || task.status === 'done') return;
+    const newCount = momentum.shippedToday + 1;
+    momentum.recordShip();
+    memory.recordShip();
+    setConfettiBurst(Date.now());
+    fireCompanionEvent(newCount === 3 ? 'milestone' : 'shipped');
+  }
+
   function advanceFromSpotlight(taskId: string, targetStatus: TaskStatus) {
-    if (targetStatus === 'done') {
-      const newCount = momentum.shippedToday + 1;
-      momentum.recordShip();
-      memory.recordShip();
-      setConfettiBurst(Date.now());
-      fireCompanionEvent(newCount === 3 ? 'milestone' : 'shipped');
-    }
     void moveTask(taskId, targetStatus);
   }
 
