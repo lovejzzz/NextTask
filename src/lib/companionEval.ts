@@ -45,6 +45,16 @@ export const EVAL_CORPUS: EvalCase[] = [
   { text: 'undo', expect: 'undo' },
   { text: 'undo that', expect: 'undo' },
   { text: 'nevermind', expect: 'undo' },
+  // adaptive reasoning
+  { text: 'what should I drop?', expect: 'triage' },
+  { text: 'I have too much on my plate', expect: 'triage' },
+  { text: 'what can I cut', expect: 'triage' },
+  { text: "what's a quick win?", expect: 'quick_win' },
+  { text: 'something easy', expect: 'quick_win' },
+  { text: 'what can I knock out fast', expect: 'quick_win' },
+  { text: "what's my biggest risk?", expect: 'risk' },
+  { text: 'what should I worry about', expect: 'risk' },
+  { text: "what's most urgent", expect: 'risk' },
   // questions
   { text: "what's next?", expect: 'whats_next' },
   { text: 'next', expect: 'whats_next' },

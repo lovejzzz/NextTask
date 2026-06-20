@@ -19,6 +19,9 @@ export type CompanionIntent =
   | { kind: 'complete_overdue' }
   | { kind: 'undo' }
   | { kind: 'plan' }
+  | { kind: 'triage' }
+  | { kind: 'quick_win' }
+  | { kind: 'risk' }
   | { kind: 'whats_next' }
   | { kind: 'overdue' }
   | { kind: 'status' };
@@ -89,6 +92,19 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(plan (?:my )?day|what'?s the plan|game ?plan|plan for (?:today|the day))\b/.test(lower)) {
     return { kind: 'plan' };
+  }
+  if (/\b(what should i (?:drop|cut|skip|deprioriti[sz]e|ditch)|what can i (?:drop|cut)|too much on|declutter|trim (?:my|the))\b/.test(lower)) {
+    return { kind: 'triage' };
+  }
+  if (
+    /\b(quick win|easy win|something easy|low.?hanging|what can i (?:knock out|finish|do) (?:fast|quickly|in (?:an hour|a few|five|ten)))\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'quick_win' };
+  }
+  if (/\b(biggest risk|what(?:'?s| is)? (?:my )?(?:biggest )?(?:risk|worry|concern)|what should i worry|most (?:urgent|pressing))\b/.test(lower)) {
+    return { kind: 'risk' };
   }
   if (/\bwhat'?s next\b/.test(lower) || /^(?:next(?: up| task)?\??|what should i (?:do|work on)\??)$/.test(lower)) {
     return { kind: 'whats_next' };

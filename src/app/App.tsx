@@ -74,6 +74,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
+import { pickBiggestRisk, pickDropCandidates, pickQuickWin } from '../lib/companionAdvice';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
@@ -433,6 +434,27 @@ export function App() {
       if (!ranked.length) return "Nothing to plan — your board's empty. Living the dream.";
       const lines = ranked.map((task, index) => `${index + 1}. ${task.title} (${focusReason(task).toLowerCase()})`);
       return `Here's the play, in order:\n${lines.join('\n')}\nStart at #1 — I'll be watching.`;
+    }
+
+    if (intent?.kind === 'triage') {
+      const drops = pickDropCandidates(tasks);
+      if (!drops.length) return "Nothing to drop — your board's already lean. Respect.";
+      const list = drops.map((task) => `"${task.title}"`).join(', ');
+      return `If something has to give, drop or defer: ${list}. They're the least load-bearing.`;
+    }
+
+    if (intent?.kind === 'quick_win') {
+      const win = pickQuickWin(tasks);
+      return win
+        ? `Quick win: "${win.title}" — it's closest to done. Knock it out and feel powerful.`
+        : 'Nothing to knock out. Add something first.';
+    }
+
+    if (intent?.kind === 'risk') {
+      const risk = pickBiggestRisk(tasks);
+      return risk
+        ? `Biggest risk: "${risk.title}" — ${focusReason(risk).toLowerCase()}. Handle it before it handles you.`
+        : 'No risks on the board. Suspiciously calm.';
     }
 
     if (intent?.kind === 'whats_next') {

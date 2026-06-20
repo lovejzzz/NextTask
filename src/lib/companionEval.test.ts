@@ -26,6 +26,9 @@ describe('companion comprehension standard', () => {
       'complete_overdue',
       'undo',
       'plan',
+      'triage',
+      'quick_win',
+      'risk',
     ]) {
       expect(kinds.has(kind as never)).toBe(true);
     }
