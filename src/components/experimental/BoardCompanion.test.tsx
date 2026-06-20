@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BoardCompanion } from './BoardCompanion';
+import type { BrainContext } from '../../lib/companionBrain';
+
+const ctx: BrainContext = { active: 3, overdue: 1, inProgress: 1, shippedToday: 0, titles: ['Ship it'] };
 
 describe('BoardCompanion', () => {
-  it('shows the current mood and its line of dialogue', () => {
+  it('shows the current mood and its rule-based line when the brain is off', () => {
     render(<BoardCompanion mood="exasperated" quip="Three overdue and you're recoloring things?" onPoke={() => {}} />);
     expect(screen.getByText('exasperated')).toBeInTheDocument();
     expect(screen.getByText(/Three overdue/)).toBeInTheDocument();
@@ -14,8 +17,43 @@ describe('BoardCompanion', () => {
   it('exposes the mood to assistive tech and pokes on click', () => {
     const onPoke = vi.fn();
     render(<BoardCompanion mood="proud" quip="Look at you." onPoke={onPoke} />);
-    const creature = screen.getByRole('button', { name: /The board feels proud/i });
-    creature.click();
+    screen.getByRole('button', { name: /The board feels proud/i }).click();
     expect(onPoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a download progress pill while the brain is loading', () => {
+    render(<BoardCompanion mood="content" quip="hi" onPoke={() => {}} brainStatus="loading" brainProgress={0.42} />);
+    expect(screen.getByRole('status')).toHaveTextContent('42%');
+  });
+
+  it('speaks the generated line (and a brain badge) once the brain is ready', async () => {
+    const generate = vi.fn().mockResolvedValue('I see you, procrastinator.');
+    render(
+      <BoardCompanion mood="anxious" quip="canned line" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} />,
+    );
+    expect(await screen.findByText('I see you, procrastinator.')).toBeInTheDocument();
+    expect(screen.getByText('🧠')).toBeInTheDocument();
+    expect(generate).toHaveBeenCalledWith('anxious', ctx);
+  });
+
+  it('regenerates when poked', async () => {
+    const generate = vi.fn().mockResolvedValue('a line');
+    const { rerender } = render(
+      <BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} pokeNonce={0} />,
+    );
+    await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
+    rerender(
+      <BoardCompanion mood="content" quip="q" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} pokeNonce={1} />,
+    );
+    await waitFor(() => expect(generate).toHaveBeenCalledTimes(2));
+  });
+
+  it('falls back to the rule-based line when generation yields nothing', async () => {
+    const generate = vi.fn().mockResolvedValue(null);
+    render(
+      <BoardCompanion mood="bored" quip="add a task already" onPoke={() => {}} brainStatus="ready" generate={generate} context={ctx} />,
+    );
+    await waitFor(() => expect(generate).toHaveBeenCalled());
+    expect(screen.getByText('add a task already')).toBeInTheDocument();
   });
 });

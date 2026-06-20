@@ -3152,6 +3152,11 @@ textarea:focus-visible,
   -webkit-tap-highlight-color: transparent;
 }
 
+.companion-creature:hover {
+  /* Hold still when reached for — easier to click, and it feels like it's listening. */
+  animation-play-state: paused;
+}
+
 .companion-creature:active {
   transform: scale(0.94);
 }

@@ -297,6 +297,12 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [experimental.lastToggle]);
 
+  useEffect(() => {
+    if (brain.status === 'error') {
+      notify('error', 'Couldn’t load the board’s brain (needs a modern browser) — keeping its sharp tongue.');
+    }
+  }, [brain.status]);
+
   function openCreate(status: TaskStatus = 'todo') {
     setDrawerMode('create');
     setInitialStatus(status);
