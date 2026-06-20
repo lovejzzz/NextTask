@@ -59,6 +59,7 @@ import {
 } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
 import { useAccent } from '../hooks/useAccent';
+import { useCompanion } from '../hooks/useCompanion';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useMomentum } from '../hooks/useMomentum';
 import { useTaskMutations } from '../hooks/useTaskMutations';
@@ -69,6 +70,7 @@ import { nextStatusFor, rankFocusTasks } from '../lib/experimental';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { computeInsights } from '../lib/insights';
 import { buildStandup } from '../lib/standup';
+import { BoardCompanion } from '../components/experimental/BoardCompanion';
 import { BoardInsights } from '../components/experimental/BoardInsights';
 import { CommandPalette, type Command as PaletteCommand } from '../components/experimental/CommandPalette';
 import { Confetti } from '../components/experimental/Confetti';
@@ -222,6 +224,16 @@ export function App() {
   );
 
   const grouped = useMemo(() => groupTasks(tasks), [tasks]);
+  const insights = useMemo(() => computeInsights(tasks), [tasks]);
+  const companion = useCompanion(
+    {
+      active: insights.active,
+      overdue: insights.overdue,
+      inProgress: insights.byStatus.in_progress,
+      shippedToday: momentum.shippedToday,
+    },
+    experimental.enabled,
+  );
 
   useEffect(() => {
     let active = true;
@@ -327,6 +339,7 @@ export function App() {
   async function moveTask(taskId: string, targetStatus: TaskStatus) {
     const task = tasks.find((item) => item.id === taskId);
     if (!task || task.status === targetStatus) return;
+    companion.registerActivity();
 
     const updates = reorderForDrop(tasks, task, targetStatus);
     if (!updates.length) return;
@@ -353,6 +366,7 @@ export function App() {
   }
 
   async function quickCreateTask(status: TaskStatus, title: string) {
+    companion.registerActivity();
     try {
       await mutations.createTask.mutateAsync({
         title,
@@ -458,8 +472,8 @@ export function App() {
     { id: 'copy-standup', label: 'Copy standup', keywords: 'clipboard summary', icon: ClipboardList, run: () => void copyStandup() },
     { id: 'insights', label: 'Board insights', keywords: 'stats analytics metrics', icon: BarChart3, run: () => setInsightsOpen(true) },
     { id: 'refresh', label: 'Refresh board', keywords: 'reload sync', icon: RefreshCw, run: () => void refreshBoard() },
-    { id: 'accent', label: 'Cycle accent theme', keywords: 'color palette skin', icon: Palette, run: () => notify('success', `Accent → ${accent.cycle()}`) },
-    { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: toggleTheme },
+    { id: 'accent', label: 'Cycle accent theme', keywords: 'color palette skin', icon: Palette, run: () => { companion.registerFidget(); notify('success', `Accent → ${accent.cycle()}`); } },
+    { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: () => { companion.registerFidget(); toggleTheme(); } },
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
     { id: 'manage', label: 'Manage team & labels', keywords: 'members tags', icon: Users, run: () => setManagerOpen(true) },
     { id: 'changelog', label: "What's new", keywords: 'changelog updates', icon: Command, run: () => setChangelogOpen(true) },
@@ -604,8 +618,9 @@ export function App() {
             onQuickCapture={(title) => void quickCreateTask('todo', title)}
             onClose={() => setPaletteOpen(false)}
           />
-          <BoardInsights open={insightsOpen} insights={computeInsights(tasks)} onClose={() => setInsightsOpen(false)} />
+          <BoardInsights open={insightsOpen} insights={insights} onClose={() => setInsightsOpen(false)} />
           <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+          <BoardCompanion mood={companion.mood} quip={companion.quip} onPoke={companion.poke} />
         </>
       ) : null}
 

@@ -22,6 +22,12 @@ do it, and feel the streak. New ideas should reinforce that, not sprawl.
 | 7 | **Board Insights** — completion ring, status bars, overdue/high-pri/avg-age | `components/experimental/BoardInsights.tsx`, `lib/insights.ts` |
 | 8 | **Accent themes** — cycle 5 palettes, reverts when lab is off | `hooks/useAccent.ts`, `lib/accents.ts` |
 | 9 | **Shortcuts cheat sheet** — `?` | `components/experimental/ShortcutsHelp.tsx` |
+| 10 | **The Board Has Feelings** ⭐ — a deterministic mood engine (no LLM) gives the board a face + raw personality that reacts to how you actually work | `components/experimental/BoardCompanion.tsx`, `hooks/useCompanion.ts`, `lib/companion.ts` |
+
+⭐ = the "revolutionary / raw" headline. The board gloats when you ship, panics
+about overdue piles, calls out fidgeting (recoloring instead of doing), and
+dozes off when neglected. Behavioural signals (idle time, fidgets, pokes) blend
+with board state to pick one of 9 moods, each with its own voice.
 
 ---
 
@@ -40,6 +46,13 @@ Every tick: `typecheck` + `lint` + `test` + `build` must stay green before push.
 ---
 
 ## Backlog (pull from here)
+
+**The Board Has Feelings — deepen the headline**
+- More moods & a wider quip pool; reduce repetition with better seeding
+- It remembers across sessions (mood history; "you ghosted me yesterday")
+- Reacts in real time to specific events (a celebratory pop when you ship)
+- Milestones/relationship level — the board warms up the more you finish
+- Personality settings (gentle ↔ savage roast intensity)
 
 **On-theme features**
 - Daily ship goal with a progress ring + bigger celebration on hit
