@@ -6,6 +6,7 @@ describe('eventLine', () => {
   it('returns a line from the matching event pool', () => {
     expect(typeof eventLine('shipped', 0)).toBe('string');
     expect(eventLine('milestone', 0)).toMatch(/three/i);
+    expect(eventLine('goal', 0)).toMatch(/goal|number/i);
   });
 
   it('wraps the seed deterministically', () => {

@@ -3450,3 +3450,24 @@ textarea:focus-visible,
 .companion-chat-input button:not(:disabled):hover {
   transform: translateY(-1px);
 }
+
+/* Experimental: companion daily-goal ring ------------------------------- */
+.companion-ring {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--accent-2) var(--ring-deg, 0deg),
+    color-mix(in srgb, var(--border) 55%, transparent) 0
+  );
+  transition: box-shadow 0.3s ease;
+}
+
+.companion-ring.is-met {
+  box-shadow: 0 0 0 2px var(--accent-2), 0 0 20px color-mix(in srgb, var(--accent-2) 55%, transparent);
+}
+
+.companion-ring .companion-creature {
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.34), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}

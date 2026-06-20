@@ -40,6 +40,8 @@ export function BoardCompanion({
   generate,
   chat,
   flash,
+  goalProgress = 0,
+  goalMet = false,
 }: {
   mood: Mood;
   quip: string;
@@ -50,6 +52,8 @@ export function BoardCompanion({
   generate?: (mood: Mood) => Promise<string | null>;
   chat?: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<string | null>;
   flash?: { text: string; nonce: number };
+  goalProgress?: number;
+  goalMet?: boolean;
 }) {
   const face = MOOD_FACE[mood];
   const asleep = mood === 'neglected';
@@ -138,17 +142,23 @@ export function BoardCompanion({
       ) : null}
 
       <div className="companion-row">
-        <button
-          type="button"
-          className={cx('companion-creature', asleep && 'is-asleep')}
-          onClick={onPoke}
-          aria-label={`The board feels ${mood}. Poke it.`}
-          title="Poke the board"
+        <div
+          className={cx('companion-ring', goalMet && 'is-met')}
+          style={{ ['--ring-deg' as string]: `${Math.round(goalProgress * 360)}deg` }}
+          title={goalMet ? 'Daily goal met!' : `Daily goal: ${Math.round(goalProgress * 100)}%`}
         >
-          <span className="companion-eyes">{face.eyes}</span>
-          <span className={cx('companion-mouth', `is-${face.mouth}`)} />
-          {asleep ? <span className="companion-zzz">z</span> : null}
-        </button>
+          <button
+            type="button"
+            className={cx('companion-creature', asleep && 'is-asleep')}
+            onClick={onPoke}
+            aria-label={`The board feels ${mood}. Poke it.`}
+            title="Poke the board"
+          >
+            <span className="companion-eyes">{face.eyes}</span>
+            <span className={cx('companion-mouth', `is-${face.mouth}`)} />
+            {asleep ? <span className="companion-zzz">z</span> : null}
+          </button>
+        </div>
 
         {canChat ? (
           <button

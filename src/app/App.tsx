@@ -46,6 +46,7 @@ import {
   ShieldCheck,
   Sun,
   Tag,
+  Target,
   Trash2,
   Users,
   X,
@@ -75,6 +76,7 @@ import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/c
 import { parseIntent } from '../lib/companionActions';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
+import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
@@ -202,6 +204,14 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [goal, setGoal] = useState<number>(() => {
+    try {
+      const value = Number(window.localStorage.getItem('next-task:goal'));
+      return (GOAL_OPTIONS as readonly number[]).includes(value) ? value : DEFAULT_GOAL;
+    } catch {
+      return DEFAULT_GOAL;
+    }
+  });
   const [roast, setRoast] = useState<RoastLevel>(() => {
     try {
       const stored = window.localStorage.getItem('next-task:roast');
@@ -341,6 +351,17 @@ export function App() {
 
   function fireCompanionEvent(kind: CompanionEvent) {
     flashCompanion(eventLine(kind, Date.now()));
+  }
+
+  function cycleGoal() {
+    const next: Goal = nextGoal(goal);
+    setGoal(next);
+    try {
+      window.localStorage.setItem('next-task:goal', String(next));
+    } catch {
+      // ignore storage failures
+    }
+    notify('success', `Daily ship goal: ${next}.`);
   }
 
   function cyclePersona() {
@@ -496,7 +517,8 @@ export function App() {
     momentum.recordShip();
     memory.recordShip();
     setConfettiBurst(Date.now());
-    fireCompanionEvent(newCount === 3 ? 'milestone' : 'shipped');
+    const kind: CompanionEvent = newCount === goal ? 'goal' : newCount === 3 ? 'milestone' : 'shipped';
+    fireCompanionEvent(kind);
   }
 
   function advanceFromSpotlight(taskId: string, targetStatus: TaskStatus) {
@@ -625,6 +647,7 @@ export function App() {
     { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: () => { companion.registerFidget(); toggleTheme(); } },
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
     { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
+    { id: 'goal', label: `Daily ship goal: ${goal}`, keywords: 'goal target daily ships quota', icon: Target, run: cycleGoal },
     ...(brain.status !== 'off'
       ? [
           {
@@ -812,6 +835,8 @@ export function App() {
             generate={generateAmbient}
             chat={brain.status === 'ready' ? chatWithBoard : undefined}
             flash={companionFlash}
+            goalProgress={goalProgress(momentum.shippedToday, goal)}
+            goalMet={momentum.shippedToday >= goal}
           />
         </>
       ) : null}

@@ -4,7 +4,7 @@
  * rule-based (instant, reliable) even when the LLM brain is on, since they need
  * to land immediately on the event.
  */
-export type CompanionEvent = 'shipped' | 'milestone' | 'created' | 'cleared';
+export type CompanionEvent = 'shipped' | 'milestone' | 'goal' | 'created' | 'cleared';
 
 const LINES: Record<CompanionEvent, string[]> = {
   shipped: [
@@ -16,6 +16,11 @@ const LINES: Record<CompanionEvent, string[]> = {
     'Three today?! Who ARE you.',
     "Hat trick. I'm telling the other boards.",
     'Three shipped. Certified Productive™.',
+  ],
+  goal: [
+    "Daily goal: smashed. That's what I'm talking about.",
+    "You hit your number. I'm framing this day.",
+    'Goal met. Touch grass, champion. (Then come back.)',
   ],
   created: [
     "Noted. It's on me now — literally.",
