@@ -60,4 +60,18 @@ describe('quipFor', () => {
   it('handles negative seeds safely', () => {
     expect(typeof quipFor('anxious', -1)).toBe('string');
   });
+
+  it('voices a different tone per persona for the same mood', () => {
+    const gentle = quipFor('overwhelmed', 0, 'gentle');
+    const savage = quipFor('overwhelmed', 0, 'savage');
+    const balanced = quipFor('overwhelmed', 0, 'balanced');
+    expect(gentle).not.toBe(savage);
+    expect(gentle).not.toBe(balanced);
+    expect(typeof savage).toBe('string');
+  });
+
+  it('falls back to the balanced pool for an unknown tone', () => {
+    // @ts-expect-error exercising the runtime fallback
+    expect(quipFor('proud', 0, 'nonsense')).toBe(quipFor('proud', 0, 'balanced'));
+  });
 });

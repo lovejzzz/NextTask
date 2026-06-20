@@ -26,7 +26,7 @@ here). Scores below reflect that honestly.
 - **L4 Agentic** — reliably takes the right actions from intent. ← _yes: 6 action types + bulk + undo_
 - **L5 Reasoning** — plans, infers, adapts; multi-step and self-correcting. ← _emerging (single-step advice)_
 
-**Current overall: L3–L4.** A highly reliable contextual companion that now
+**Current overall: L4, brushing L5.** Eight of nine dimensions are a CI-proven 5/5. A highly reliable contextual companion that now
 takes real, broad actions from natural language and synthesizes a plan; open
 generative conversation is the remaining frontier (gated by model size + unproven
 on real hardware).
@@ -45,13 +45,13 @@ on real hardware).
 | 4 | **Reasoning & planning** | 5 | Plans the day (skipping blocked tasks), adapts to constraints ("I only have an hour" → a tight quick-win plan), and gives grounded judgment calls — what to **drop**, the fastest **win**, your **biggest risk**. Asterisk: true multi-turn self-correction is model-gated. |
 | 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. Remaining gap: setting labels/assignees. |
 | 6 | **Conversation quality** | 2? | Streaming chat is wired and in-character by construction, but **unmeasured** — bounded by a tiny model. Could be incoherent. |
-| 7 | **Personality & voice** | 4 | Distinct, consistent, tunable (gentle↔savage) with earned warmth; strong even with the model off. |
+| 7 | **Personality & voice** | 5 | Tunable gentle↔balanced↔savage with earned warmth — and the tone is now **consistent across both brains**: the rule-based mood quips are persona-tiered too, so the voice doesn't change when the model is off. |
 | 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 153 tests; normal mode untouched. |
 | 9 | **Proactivity** | 5 | Initiates on many signals: mood shifts, ship/milestone/goal reactions, **one-away-from-goal** nudge, **streak-at-risk** nudge on return, welcome-back after time away, and created/cleared lines. |
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 4.6/5**, but the *shape* matters more than the average: strong on
+**Mean ≈ 4.7/5**, but the *shape* matters more than the average: strong on
 comprehension / agency / reliability / personality / context / memory /
 proactivity; the open frontier is conversation quality (needs real-hardware
 measurement) and deeper multi-step reasoning.

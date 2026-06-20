@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { quipFor, readMood, type CompanionSignals } from '../lib/companion';
+import type { RoastLevel } from '../lib/persona';
 
 type BoardSignals = Pick<CompanionSignals, 'active' | 'overdue' | 'inProgress' | 'shippedToday'>;
 
@@ -14,7 +15,7 @@ const HEARTBEAT_MS = 5_000;
  * - `registerFidget` — cosmetic, no-op actions (recoloring, theme flips).
  * - `poke` — the user prodding the creature; coughs up a fresh line.
  */
-export function useCompanion(board: BoardSignals, enabled: boolean) {
+export function useCompanion(board: BoardSignals, enabled: boolean, roast: RoastLevel = 'balanced') {
   const [lastActivityAt, setLastActivityAt] = useState(() => Date.now());
   const [fidgets, setFidgets] = useState(0);
   const [pokes, setPokes] = useState(0);
@@ -32,7 +33,7 @@ export function useCompanion(board: BoardSignals, enabled: boolean) {
   const mood = readMood(signals);
   // Mood selects the pool; pokes index within it — so a mood change alone yields
   // a fresh line, and prodding cycles lines within the current mood.
-  const quip = quipFor(mood, pokes);
+  const quip = quipFor(mood, pokes, roast);
 
   const registerActivity = useCallback(() => {
     setLastActivityAt(Date.now());

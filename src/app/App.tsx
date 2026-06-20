@@ -267,6 +267,7 @@ export function App() {
       shippedToday: momentum.shippedToday,
     },
     experimental.enabled,
+    roast,
   );
   const brain = useBoardBrain(experimental.enabled);
   const memory = useCompanionMemory(experimental.enabled);
