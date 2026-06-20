@@ -20,6 +20,7 @@ import {
   AlertCircle,
   ArrowRight,
   BarChart3,
+  BrainCircuit,
   Check,
   ChevronDown,
   ClipboardList,
@@ -59,6 +60,7 @@ import {
 } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
 import { useAccent } from '../hooks/useAccent';
+import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useMomentum } from '../hooks/useMomentum';
@@ -233,6 +235,20 @@ export function App() {
       shippedToday: momentum.shippedToday,
     },
     experimental.enabled,
+  );
+  const brain = useBoardBrain(experimental.enabled);
+  const companionContext = useMemo(
+    () => ({
+      active: insights.active,
+      overdue: insights.overdue,
+      inProgress: insights.byStatus.in_progress,
+      shippedToday: momentum.shippedToday,
+      titles: tasks
+        .filter((task) => task.status !== 'done')
+        .slice(0, 5)
+        .map((task) => task.title),
+    }),
+    [insights, momentum.shippedToday, tasks],
   );
 
   useEffect(() => {
@@ -475,6 +491,27 @@ export function App() {
     { id: 'accent', label: 'Cycle accent theme', keywords: 'color palette skin', icon: Palette, run: () => { companion.registerFidget(); notify('success', `Accent → ${accent.cycle()}`); } },
     { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: () => { companion.registerFidget(); toggleTheme(); } },
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
+    brain.status === 'ready' || brain.status === 'loading'
+      ? {
+          id: 'brain-off',
+          label: 'Quiet the board’s mind',
+          keywords: 'llm ai brain disable off',
+          icon: BrainCircuit,
+          run: () => {
+            brain.disable();
+            notify('success', 'The board’s brain is off — back to its sharp tongue.');
+          },
+        }
+      : {
+          id: 'brain-on',
+          label: 'Give the board a brain (beta)',
+          keywords: 'llm ai brain on local model download',
+          icon: BrainCircuit,
+          run: () => {
+            notify('success', 'Downloading a tiny LLM (runs on your device, no API). First load takes a bit…');
+            void brain.enable();
+          },
+        },
     { id: 'manage', label: 'Manage team & labels', keywords: 'members tags', icon: Users, run: () => setManagerOpen(true) },
     { id: 'changelog', label: "What's new", keywords: 'changelog updates', icon: Command, run: () => setChangelogOpen(true) },
     { id: 'exit-lab', label: 'Exit experimental mode', keywords: 'disable lab off', icon: FlaskConical, run: experimental.disable },
@@ -620,7 +657,16 @@ export function App() {
           />
           <BoardInsights open={insightsOpen} insights={insights} onClose={() => setInsightsOpen(false)} />
           <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-          <BoardCompanion mood={companion.mood} quip={companion.quip} onPoke={companion.poke} />
+          <BoardCompanion
+            mood={companion.mood}
+            quip={companion.quip}
+            onPoke={companion.poke}
+            pokeNonce={companion.nonce}
+            brainStatus={brain.status}
+            brainProgress={brain.progress}
+            generate={brain.generate}
+            context={companionContext}
+          />
         </>
       ) : null}
 

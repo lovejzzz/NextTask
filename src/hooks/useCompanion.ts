@@ -49,5 +49,5 @@ export function useCompanion(board: BoardSignals, enabled: boolean) {
     setPokes((value) => value + 1);
   }, []);
 
-  return { mood, quip, idleMs, registerActivity, registerFidget, poke };
+  return { mood, quip, nonce: pokes, idleMs, registerActivity, registerFidget, poke };
 }

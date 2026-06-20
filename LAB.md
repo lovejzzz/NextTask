@@ -29,6 +29,14 @@ about overdue piles, calls out fidgeting (recoloring instead of doing), and
 dozes off when neglected. Behavioural signals (idle time, fidgets, pokes) blend
 with board state to pick one of 9 moods, each with its own voice.
 
+| 11 | **Give the board a brain (beta)** 🧠 — an optional **in-browser LLM** (Transformers.js + Qwen2.5-0.5B, WebGPU→WASM) that makes the companion's voice generative. $0: runs on the visitor's device, no API. Rule-based engine stays as fallback. | `lib/companionBrain.ts`, `hooks/useBoardBrain.ts` |
+
+The brain is fully opt-in (palette: "Give the board a brain"). Transformers.js is
+loaded lazily from a CDN — **not** in the main bundle — and the ~0.5GB model
+downloads only after the user opts in (cached after). If WebGPU is missing it
+falls back to WASM/CPU; if anything fails it silently reverts to the
+deterministic quips. Persona + prompt live in `companionBrain.ts` (tested).
+
 ---
 
 ## Loop protocol
