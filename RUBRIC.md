@@ -26,29 +26,35 @@ here). Scores below reflect that honestly.
 - **L4 Agentic** — reliably takes the right actions from intent. ← _narrowly (create-task only)_
 - **L5 Reasoning** — plans, infers, adapts; multi-step and self-correcting. ← _not yet_
 
-**Current overall: L2, reaching into L3/L4.** A highly reliable contextual
-companion with emerging conversation and narrow agency; raw reasoning is gated by
-model size, and generative quality is unproven on real hardware.
+**Current overall: L3–L4.** A highly reliable contextual companion that now
+takes real, broad actions from natural language and synthesizes a plan; open
+generative conversation is the remaining frontier (gated by model size + unproven
+on real hardware).
+
+**The standard:** comprehension is now pinned by a CI-enforced eval
+(`companionEval.ts`): a 34-utterance corpus across every intent, currently
+**100% (bar: ≥90%)**. Raising the bar means broadening the parser, not vibes.
 
 ## Dimensions (score 0–5)
 
 | # | Dimension | Score | Why |
 |---|-----------|:-----:|-----|
-| 1 | **Comprehension** (understands intent) | 3 | Reliable on a small command set (create / next / overdue / status) via the parser; LLM adds open understanding but a 0.5B is weak/narrow. |
+| 1 | **Comprehension** (understands intent) | 4 | Parser now covers 9 intents (create / complete / delete / reprioritize / reschedule / plan / next / overdue / status) + fuzzy task matching, CI-graded at 100% on a 34-case corpus. Open NLU still bounded by the small model. |
 | 2 | **Context awareness** | 4 | Real signals → mood; board counts + sample titles + memory fed to every prompt and to deterministic answers. Doesn't read task *content* deeply. |
 | 3 | **Memory & continuity** | 4 | Genuine cross-session memory (days known, ships, streaks, away) + in-session chat history. Doesn't recall past *conversations* across sessions. |
-| 4 | **Reasoning & planning** | 2 | Focus ranking is a decent heuristic; otherwise no multi-step planning. 0.5B reasoning is unreliable. |
-| 5 | **Agency** (does things) | 3 | Creates tasks from natural language reliably (priority + due date). Can't yet edit / complete / reschedule / delete via chat. |
+| 4 | **Reasoning & planning** | 3 | "Plan my day" synthesizes the focus ranking into an ordered, justified shortlist. Still single-step; no adaptive/multi-turn planning. |
+| 5 | **Agency** (does things) | 4 | From chat it creates, completes, deletes, reprioritizes, and reschedules real tasks via fuzzy matching. Missing: bulk ops, labels/assignees, undo. |
 | 6 | **Conversation quality** | 2? | Streaming chat is wired and in-character by construction, but **unmeasured** — bounded by a tiny model. Could be incoherent. |
 | 7 | **Personality & voice** | 4 | Distinct, consistent, tunable (gentle↔savage) with earned warmth; strong even with the model off. |
-| 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 146 tests; normal mode untouched. |
+| 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 153 tests; normal mode untouched. |
 | 9 | **Proactivity** | 4 | Mood shifts, event reactions, welcome-back, goal nudges — it initiates, not just responds. |
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 3.4/5**, but the *shape* matters more than the average: strong on
-reliability / personality / context / memory / proactivity; weak on reasoning /
-conversation quality / breadth of agency.
+**Mean ≈ 3.8/5**, but the *shape* matters more than the average: strong on
+comprehension / agency / reliability / personality / context / memory /
+proactivity; the open frontier is conversation quality (needs real-hardware
+measurement) and deeper multi-step reasoning.
 
 ## The honesty gap: measure conversation quality for real
 
@@ -69,12 +75,13 @@ scoring each 0–2 (wrong / ok / great):
 
 ## Targets to level up
 
-- **Reasoning → 3:** let chat answer "what's the plan for today?" by composing
-  the focus ranking into an ordered, justified shortlist (deterministic, then
-  phrased by the LLM).
-- **Agency → 4:** chat can complete / reschedule / reprioritize / delete tasks,
-  not just create — with confirmation.
-- **Conversation → measured:** ship the eval set above; record a real score.
-- **Comprehension → 4:** broaden the parser (fuzzy verbs, multi-task, edits) and
-  fall back to the LLM for intent classification when rules miss.
+- ~~Reasoning → 3~~ ✅ "plan my day" shortlist.
+- ~~Agency → 4~~ ✅ complete / delete / reprioritize / reschedule via chat.
+- ~~Comprehension → 4~~ ✅ 9 intents + fuzzy matching, CI-graded.
+- **Conversation → measured:** run the browser eval set; record a real score.
+- **Reasoning → 4:** multi-step / adaptive ("clear my overdue", "what if I only
+  have an hour?") composed from board state.
+- **Agency → 5:** bulk ops, labels/assignees, and an undo for chat actions.
+- **Comprehension → 5:** LLM fallback for intent classification when rules miss,
+  graded by the same corpus; grow the corpus toward 100+ cases.
 - **Memory → 5:** remember salient conversation facts across sessions.

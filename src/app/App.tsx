@@ -79,6 +79,7 @@ import { summarizeMemory } from '../lib/companionMemory';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
+import { matchTask } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { computeInsights } from '../lib/insights';
@@ -315,6 +316,58 @@ export function App() {
       } catch {
         return 'I reached for that one and dropped it. Try again?';
       }
+    }
+
+    if (intent?.kind === 'complete_task') {
+      const task = matchTask(tasks, intent.query);
+      if (!task) return `I can't find a task like "${intent.query}". Be more specific?`;
+      if (task.status === 'done') return `"${task.title}" is already done. We did that. Together.`;
+      companion.registerActivity();
+      void moveTask(task.id, 'done'); // celebrates + tallies via registerShipIfDone
+      return `Marking "${task.title}" done. Chef's kiss.`;
+    }
+
+    if (intent?.kind === 'delete_task') {
+      const task = matchTask(tasks, intent.query);
+      if (!task) return `Can't find "${intent.query}" to delete.`;
+      try {
+        await mutations.deleteTask.mutateAsync(task.id);
+        companion.registerActivity();
+        return `Deleted "${task.title}". Gone. Poof.`;
+      } catch {
+        return 'I tried to delete it and the universe said no.';
+      }
+    }
+
+    if (intent?.kind === 'set_priority') {
+      const task = matchTask(tasks, intent.query);
+      if (!task) return `Can't find "${intent.query}".`;
+      try {
+        await mutations.updateTask.mutateAsync({ id: task.id, input: { priority: intent.priority } });
+        companion.registerActivity();
+        return `"${task.title}" is now ${intent.priority} priority.`;
+      } catch {
+        return 'Could not change that. Try again?';
+      }
+    }
+
+    if (intent?.kind === 'reschedule') {
+      const task = matchTask(tasks, intent.query);
+      if (!task) return `Can't find "${intent.query}".`;
+      try {
+        await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: intent.due_date } });
+        companion.registerActivity();
+        return `Moved "${task.title}" to ${intent.due_date}. Don't blow it this time.`;
+      } catch {
+        return 'Reschedule failed. Rude, I know.';
+      }
+    }
+
+    if (intent?.kind === 'plan') {
+      const ranked = rankFocusTasks(tasks).slice(0, 5);
+      if (!ranked.length) return "Nothing to plan — your board's empty. Living the dream.";
+      const lines = ranked.map((task, index) => `${index + 1}. ${task.title} (${focusReason(task).toLowerCase()})`);
+      return `Here's the play, in order:\n${lines.join('\n')}\nStart at #1 — I'll be watching.`;
     }
 
     if (intent?.kind === 'whats_next') {
