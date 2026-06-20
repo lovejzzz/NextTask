@@ -39,7 +39,11 @@ function upcomingWeekday(now: Date, target: number): Date {
 
 function resolveDue(text: string, now: Date): { dueDate: string | null; rest: string } {
   if (/\btoday\b/i.test(text)) return { dueDate: formatDateInput(now), rest: text.replace(/\btoday\b/i, ' ') };
+  if (/\btonight\b/i.test(text)) return { dueDate: formatDateInput(now), rest: text.replace(/\btonight\b/i, ' ') };
   if (/\btomorrow\b/i.test(text)) return { dueDate: formatDateInput(addDays(now, 1)), rest: text.replace(/\btomorrow\b/i, ' ') };
+  if (/\bnext week\b/i.test(text)) return { dueDate: formatDateInput(addDays(now, 7)), rest: text.replace(/\bnext week\b/i, ' ') };
+  const inDays = text.match(/\bin\s+(\d{1,2})\s+days?\b/i);
+  if (inDays) return { dueDate: formatDateInput(addDays(now, Number(inDays[1]))), rest: text.replace(inDays[0], ' ') };
   const match = text.match(/\b(?:by|on|next|due)?\s*(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i);
   if (match) {
     const date = upcomingWeekday(now, WEEKDAYS.indexOf(match[1].toLowerCase()));
@@ -48,12 +52,22 @@ function resolveDue(text: string, now: Date): { dueDate: string | null; rest: st
   return { dueDate: null, rest: text };
 }
 
+const HIGH_WORDS = 'high[-\\s]?priority|top[-\\s]?priority|urgent|asap|critical|important';
+const LOW_WORDS = 'low[-\\s]?priority|whenever|someday|sometime|eventually|no rush';
+
+function priorityFromWord(word: string): TaskPriority {
+  const w = word.toLowerCase();
+  if (w === 'urgent' || w === 'critical' || w === 'important' || w === 'high') return 'high';
+  if (w === 'low') return 'low';
+  return 'normal';
+}
+
 function resolvePriority(text: string): { priority: TaskPriority; rest: string } {
-  if (/\b(high[-\s]?priority|urgent|asap|important)\b/i.test(text)) {
-    return { priority: 'high', rest: text.replace(/\b(high[-\s]?priority|urgent|asap|important)\b/gi, ' ') };
+  if (new RegExp(`\\b(${HIGH_WORDS})\\b`, 'i').test(text)) {
+    return { priority: 'high', rest: text.replace(new RegExp(`\\b(${HIGH_WORDS})\\b`, 'gi'), ' ') };
   }
-  if (/\b(low[-\s]?priority|whenever|someday|no rush)\b/i.test(text)) {
-    return { priority: 'low', rest: text.replace(/\b(low[-\s]?priority|whenever|someday|no rush)\b/gi, ' ') };
+  if (new RegExp(`\\b(${LOW_WORDS})\\b`, 'i').test(text)) {
+    return { priority: 'low', rest: text.replace(new RegExp(`\\b(${LOW_WORDS})\\b`, 'gi'), ' ') };
   }
   return { priority: 'normal', rest: text };
 }
@@ -80,7 +94,11 @@ function cleanQuery(text: string): string {
 }
 
 export function parseIntent(text: string, now: Date = new Date()): CompanionIntent | null {
-  const raw = text.trim();
+  // Strip leading pleasantries so "can you add…", "hey, finish…" parse cleanly.
+  const raw = text
+    .trim()
+    .replace(/^(?:hey|ok|okay|yo|so|um|please|pls|can you|could you|would you|will you|let'?s|i'd like (?:you )?to)[,\s]+/i, '')
+    .trim();
   if (!raw) return null;
   const lower = raw.toLowerCase();
 
@@ -126,7 +144,7 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
 
   // Complete / done.
   const completeMatch =
-    raw.match(/^(?:complete|finish|close)\s+(.+)/i) ||
+    raw.match(/^(?:complete|finish|close|wrap up|knock out|cross off|check off|ship)\s+(.+)/i) ||
     raw.match(/^mark\s+(.+?)\s+(?:as\s+)?(?:done|complete|completed|finished)$/i) ||
     raw.match(/^(?:move|put|drag)\s+(.+?)\s+(?:to|into)\s+done$/i) ||
     raw.match(/^done\s+with\s+(.+)/i) ||
@@ -137,7 +155,7 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
 
   // Delete / remove.
-  const deleteMatch = raw.match(/^(?:delete|remove|drop|trash|get rid of)\s+(.+)/i);
+  const deleteMatch = raw.match(/^(?:delete|remove|drop|trash|get rid of|scrap|kill|nuke|cancel)\s+(.+)/i);
   if (deleteMatch) {
     const query = cleanQuery(deleteMatch[1]);
     if (query) return { kind: 'delete_task', query };
@@ -145,18 +163,16 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
 
   // Set priority.
   const priorityMatch =
-    raw.match(/^(?:make|set|mark|change)\s+(.+?)\s+(?:to\s+|as\s+)?(high|low|normal|urgent)(?:\s*-?\s*priority)?$/i) ||
-    raw.match(/^(.+?)\s+(?:is|should be)\s+(high|low|normal|urgent)(?:\s+priority)?$/i);
+    raw.match(/^(?:make|set|mark|change|bump)\s+(.+?)\s+(?:to\s+|as\s+)?(high|low|normal|urgent|critical|important)(?:\s*-?\s*priority)?$/i) ||
+    raw.match(/^(.+?)\s+(?:is|should be)\s+(high|low|normal|urgent|critical|important)(?:\s+priority)?$/i);
   if (priorityMatch) {
     const query = cleanQuery(priorityMatch[1]);
-    const word = priorityMatch[2].toLowerCase();
-    const priority: TaskPriority = word === 'urgent' ? 'high' : (word as TaskPriority);
-    if (query) return { kind: 'set_priority', query, priority };
+    if (query) return { kind: 'set_priority', query, priority: priorityFromWord(priorityMatch[2]) };
   }
 
   // Reschedule (only if a date actually resolves).
   const rescheduleMatch =
-    raw.match(/^(?:move|reschedule|push|change|set)\s+(.+?)\s+(?:to|due|for|by)\s+(.+)$/i) ||
+    raw.match(/^(?:move|reschedule|push|change|set|bump|shift|defer)\s+(.+?)\s+(?:to|due|for|by|until|back to)\s+(.+)$/i) ||
     raw.match(/^(.+?)\s+(?:is\s+)?due\s+(.+)$/i);
   if (rescheduleMatch) {
     const { dueDate } = resolveDue(rescheduleMatch[2], now);
@@ -170,8 +186,12 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   const createMatch =
     raw.match(/^remind me to\s+(.+)/i) ||
     raw.match(/^remember to\s+(.+)/i) ||
+    raw.match(/^(?:i need to|i have to|i gotta|gotta|i want to|i should)\s+(.+)/i) ||
+    raw.match(/^todo:?\s+(.+)/i) ||
+    raw.match(/^jot down\s+(.+)/i) ||
+    raw.match(/^put\s+(.+?)\s+on (?:the|my)\s+board$/i) ||
     raw.match(/^task:\s*(.+)/i) ||
-    raw.match(/^(?:add|create|make|new)\s+(?:a\s+|an\s+)?(?:task\b\s*)?(?:to\s+|called\s+|named\s+|:\s*)?(.+)/i);
+    raw.match(/^(?:add|create|make|new|start)\s+(?:a\s+|an\s+)?(?:task\b\s*)?(?:to\s+|called\s+|named\s+|:\s*)?(.+)/i);
   if (createMatch) {
     const { priority, rest: afterPriority } = resolvePriority(createMatch[1]);
     const { dueDate, rest: afterDue } = resolveDue(afterPriority, now);

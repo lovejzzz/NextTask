@@ -59,6 +59,29 @@ describe('parseIntent — questions', () => {
   });
 });
 
+describe('parseIntent — robustness (synonyms, pleasantries, dates)', () => {
+  it('strips leading pleasantries before parsing', () => {
+    expect(parseIntent('can you add a task to book flights', NOW)).toMatchObject({ kind: 'create_task', title: 'Book flights' });
+    expect(parseIntent('hey, finish the onboarding flow', NOW)).toMatchObject({ kind: 'complete_task' });
+  });
+
+  it('understands casual create verbs', () => {
+    expect(parseIntent('i need to renew the domain', NOW)).toMatchObject({ kind: 'create_task', title: 'Renew the domain' });
+    expect(parseIntent('gotta water the plants', NOW)).toMatchObject({ kind: 'create_task', title: 'Water the plants' });
+    expect(parseIntent('put call the bank on the board', NOW)).toMatchObject({ kind: 'create_task', title: 'Call the bank' });
+  });
+
+  it('maps critical/important to high priority', () => {
+    expect(parseIntent('the billing fix is critical', NOW)).toMatchObject({ kind: 'set_priority', priority: 'high' });
+    expect(parseIntent('bump the audit to high', NOW)).toMatchObject({ kind: 'set_priority', priority: 'high' });
+  });
+
+  it('parses "next week" and "in N days" due dates', () => {
+    expect(parseIntent('push the launch to next week', NOW)).toMatchObject({ kind: 'reschedule', due_date: '2026-06-27' });
+    expect(parseIntent('move the sync to in 3 days', NOW)).toMatchObject({ kind: 'reschedule', due_date: '2026-06-23' });
+  });
+});
+
 describe('parseIntent — passthrough', () => {
   it('returns null for open conversation', () => {
     expect(parseIntent('you are mean to me', NOW)).toBeNull();
