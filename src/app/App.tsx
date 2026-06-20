@@ -561,6 +561,8 @@ export function App() {
             tasks={tasks}
             loading={boardQuery.isLoading}
             shippedToday={momentum.shippedToday}
+            week={momentum.week}
+            weekTotal={momentum.weekTotal}
             onOpen={openEdit}
             onAdvance={advanceFromSpotlight}
             onFocusComplete={(taskId) => {
@@ -577,7 +579,12 @@ export function App() {
 
       {experimental.enabled ? (
         <>
-          <CommandPalette open={paletteOpen} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+          <CommandPalette
+            open={paletteOpen}
+            commands={paletteCommands}
+            onQuickCapture={(title) => void quickCreateTask('todo', title)}
+            onClose={() => setPaletteOpen(false)}
+          />
           <BoardInsights open={insightsOpen} insights={computeInsights(tasks)} onClose={() => setInsightsOpen(false)} />
         </>
       ) : null}

@@ -22,3 +22,15 @@ export function parseShipped(raw: string | null): number {
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
+
+/**
+ * Storage keys for the last `count` days, oldest first, ending with today.
+ * Used to build the weekly momentum sparkline.
+ */
+export function lastNDayKeys(count: number, now: Date = new Date()): string[] {
+  const keys: string[] = [];
+  for (let offset = count - 1; offset >= 0; offset -= 1) {
+    keys.push(storageKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset)));
+  }
+  return keys;
+}

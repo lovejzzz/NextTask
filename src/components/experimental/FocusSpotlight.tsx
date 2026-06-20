@@ -33,6 +33,8 @@ export function FocusSpotlight({
   tasks,
   loading,
   shippedToday,
+  week,
+  weekTotal,
   onOpen,
   onAdvance,
   onFocusComplete,
@@ -41,6 +43,8 @@ export function FocusSpotlight({
   tasks: Task[];
   loading: boolean;
   shippedToday: number;
+  week: number[];
+  weekTotal: number;
   onOpen: (taskId: string) => void;
   onAdvance: (taskId: string, target: TaskStatus) => void;
   onFocusComplete: (taskId: string) => void;
@@ -130,10 +134,13 @@ export function FocusSpotlight({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {shippedToday > 0 ? (
-              <div className="focus-spotlight-streak">
-                <Flame size={14} />
-                {shippedToday} shipped today — keep the streak alive
+            {weekTotal > 0 ? (
+              <div className="focus-spotlight-momentum">
+                <div className="focus-spotlight-streak">
+                  <Flame size={14} />
+                  {shippedToday} today · {weekTotal} this week
+                </div>
+                <Sparkline week={week} />
               </div>
             ) : null}
 
@@ -254,5 +261,21 @@ function SpotlightTask({
         </p>
       ) : null}
     </>
+  );
+}
+
+function Sparkline({ week }: { week: number[] }) {
+  const peak = Math.max(1, ...week);
+  return (
+    <div className="focus-sparkline" role="img" aria-label={`Shipped over the last ${week.length} days`}>
+      {week.map((count, index) => (
+        <span
+          key={index}
+          className={cx('focus-sparkline-bar', index === week.length - 1 && 'is-today')}
+          style={{ height: `${Math.max(12, (count / peak) * 100)}%` }}
+          title={`${count} shipped`}
+        />
+      ))}
+    </div>
   );
 }

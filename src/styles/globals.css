@@ -2938,3 +2938,34 @@ textarea:focus-visible,
   background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   color: var(--danger);
 }
+
+/* Experimental: momentum sparkline -------------------------------------- */
+.focus-spotlight-momentum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.focus-spotlight-momentum .focus-spotlight-streak {
+  margin-bottom: 0;
+}
+
+.focus-sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 26px;
+}
+
+.focus-sparkline-bar {
+  width: 6px;
+  min-height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.focus-sparkline-bar.is-today {
+  background: var(--gradient-accent);
+}

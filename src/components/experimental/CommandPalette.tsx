@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { type LucideIcon, CornerDownLeft, Search } from 'lucide-react';
+import { type LucideIcon, CornerDownLeft, Plus, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
 import { filterCommands, type CommandItem } from '../../lib/commandPalette';
@@ -22,24 +22,47 @@ export type Command = CommandItem & {
 export function CommandPalette({
   open,
   commands,
+  onQuickCapture,
   onClose,
 }: {
   open: boolean;
   commands: Command[];
+  onQuickCapture: (title: string) => void;
   onClose: () => void;
 }) {
   if (!open) return null;
-  return <CommandPaletteBody commands={commands} onClose={onClose} />;
+  return <CommandPaletteBody commands={commands} onQuickCapture={onQuickCapture} onClose={onClose} />;
 }
 
-function CommandPaletteBody({ commands, onClose }: { commands: Command[]; onClose: () => void }) {
+function CommandPaletteBody({
+  commands,
+  onQuickCapture,
+  onClose,
+}: {
+  commands: Command[];
+  onQuickCapture: (title: string) => void;
+  onClose: () => void;
+}) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useDialogFocus(true, onClose, inputRef);
 
-  const results = useMemo(() => filterCommands(commands, query), [commands, query]);
+  const trimmed = query.trim();
+  const results = useMemo(() => {
+    const matches = filterCommands(commands, query);
+    if (!trimmed) return matches;
+    // Quick capture: turn any typed text into a new task.
+    const capture: Command = {
+      id: '__quick_capture',
+      label: `Create task “${trimmed}”`,
+      hint: 'Enter',
+      icon: Plus,
+      run: () => onQuickCapture(trimmed),
+    };
+    return [...matches, capture];
+  }, [commands, query, trimmed, onQuickCapture]);
   const activeIndex = results.length ? Math.min(active, results.length - 1) : 0;
 
   function runAt(index: number) {
