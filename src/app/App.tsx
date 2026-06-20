@@ -65,6 +65,7 @@ import { useAccent } from '../hooks/useAccent';
 import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
+import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useMomentum } from '../hooks/useMomentum';
 import { useTaskMutations } from '../hooks/useTaskMutations';
@@ -77,6 +78,7 @@ import { parseIntent } from '../lib/companionActions';
 import { pickBiggestRisk, pickDropCandidates, pickQuickWin } from '../lib/companionAdvice';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
+import { formatNotes } from '../lib/companionNotes';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
@@ -268,6 +270,7 @@ export function App() {
   );
   const brain = useBoardBrain(experimental.enabled);
   const memory = useCompanionMemory(experimental.enabled);
+  const companionNotes = useCompanionNotes();
   const companionContext = useMemo(
     () => ({
       active: insights.active,
@@ -284,9 +287,13 @@ export function App() {
   const { run: brainRun } = brain;
   const memorySummary = useMemo(() => summarizeMemory(memory.memory), [memory.memory]);
   const personaText = useMemo(() => personaInstruction(roast, warmthFromMemory(memory.memory)), [roast, memory.memory]);
+  const notesText = useMemo(() => formatNotes(companionNotes.notes), [companionNotes.notes]);
   const generateAmbient = useCallback(
-    (mood: Mood) => brainRun(buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText })),
-    [brainRun, companionContext, memorySummary, personaText],
+    (mood: Mood) =>
+      brainRun(
+        buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText, notes: notesText }),
+      ),
+    [brainRun, companionContext, memorySummary, personaText, notesText],
   );
   // Chat handler: deterministic actions/answers first (reliable, no model needed),
   // then fall through to the LLM for open conversation.
@@ -416,6 +423,18 @@ export function App() {
       }
     }
 
+    if (intent?.kind === 'remember') {
+      companionNotes.addNote(intent.note);
+      companion.registerActivity();
+      return `Got it — I'll remember: ${intent.note}.`;
+    }
+
+    if (intent?.kind === 'recall') {
+      if (!companionNotes.notes.length) return "You haven't told me anything to remember yet. I'm an open notebook.";
+      const lines = companionNotes.notes.map((note) => `- ${note.text}`).join('\n');
+      return `Here's what I'm holding onto:\n${lines}`;
+    }
+
     if (intent?.kind === 'undo') {
       const undo = undoRef.current;
       if (!undo) return 'Nothing to undo. Clean conscience.';
@@ -480,7 +499,14 @@ export function App() {
     }
 
     return brainRun(
-      buildChatMessages({ mood: companion.mood, context: companionContext, memory: memorySummary, persona: personaText, history }),
+      buildChatMessages({
+        mood: companion.mood,
+        context: companionContext,
+        memory: memorySummary,
+        persona: personaText,
+        notes: notesText,
+        history,
+      }),
       onToken,
     );
   }

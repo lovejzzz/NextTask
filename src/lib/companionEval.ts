@@ -55,6 +55,12 @@ export const EVAL_CORPUS: EvalCase[] = [
   { text: "what's my biggest risk?", expect: 'risk' },
   { text: 'what should I worry about', expect: 'risk' },
   { text: "what's most urgent", expect: 'risk' },
+  // long-term notes
+  { text: 'remember that the launch is friday', expect: 'remember' },
+  { text: "I'm focusing on the redesign", expect: 'remember' },
+  { text: 'fyi the client hates blue', expect: 'remember' },
+  { text: 'what do you remember about me', expect: 'recall' },
+  { text: 'remember to call mom', expect: 'create_task' }, // a reminder is a task, not a note
   // questions
   { text: "what's next?", expect: 'whats_next' },
   { text: 'next', expect: 'whats_next' },

@@ -44,6 +44,7 @@ export type PromptParts = {
   context: BrainContext;
   memory: string; // summarizeMemory(...) output
   persona: string; // personaInstruction(...) output
+  notes?: string; // formatNotes(...) — things the user asked it to remember
 };
 
 export type OnToken = (chunk: string) => void;
@@ -57,18 +58,22 @@ const MAX_HISTORY_TURNS = 8;
  * what's on it right now. A tiny voice example anchors the tone for the 0.5B
  * model. Pure + tested.
  */
-export function buildSystemPrompt({ mood, context, memory, persona }: PromptParts): string {
+export function buildSystemPrompt({ mood, context, memory, persona, notes }: PromptParts): string {
   const facts = `${context.active} active, ${context.overdue} overdue, ${context.inProgress} in progress, ${context.shippedToday} shipped today`;
   const titles = context.titles.slice(0, 3).filter(Boolean);
   const sample = titles.length ? ` A few tasks: ${titles.map((t) => `"${t}"`).join(', ')}.` : '';
-  return [
+  const lines = [
     "You ARE this person's kanban task board — alive, speaking in the first person as the board itself.",
     persona,
     `What you remember: ${memory}`,
+  ];
+  if (notes) lines.push(`They asked you to remember: ${notes}. Reference this naturally when relevant.`);
+  lines.push(
     `Your current mood: ${mood}. The board right now: ${facts}.${sample}`,
     'Voice example — if three tasks were overdue you might say: "Three overdue. I\'m not mad, I\'m a board, we don\'t do mad. (We do.)"',
     'Stay in character as the board. Be concise and specific to their tasks. No emoji. Never mention being an AI or a model.',
-  ].join('\n');
+  );
+  return lines.join('\n');
 }
 
 /** Messages for the ambient one-liner shown in the speech bubble. */

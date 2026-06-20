@@ -32,16 +32,16 @@ generative conversation is the remaining frontier (gated by model size + unprove
 on real hardware).
 
 **The standard:** comprehension is now pinned by a CI-enforced eval
-(`companionEval.ts`): a 49-utterance corpus across every intent, currently
+(`companionEval.ts`): a 54-utterance corpus across every intent, currently
 **100% (bar: ≥90%)**. Raising the bar means broadening the parser, not vibes.
 
 ## Dimensions (score 0–5)
 
 | # | Dimension | Score | Why |
 |---|-----------|:-----:|-----|
-| 1 | **Comprehension** (understands intent) | 4 | Parser covers 15 intents (create / complete / delete / reprioritize / reschedule / bulk-clear / undo / plan / triage / quick-win / risk / next / overdue / status) + fuzzy task matching, CI-graded at 100% on a 49-case corpus. Open NLU still bounded by the small model. |
+| 1 | **Comprehension** (understands intent) | 4 | Parser covers 17 intents (create / complete / delete / reprioritize / reschedule / bulk-clear / undo / remember / recall / plan / triage / quick-win / risk / next / overdue / status) + fuzzy task matching, CI-graded at 100% on a 54-case corpus. Open NLU still bounded by the small model. |
 | 2 | **Context awareness** | 4 | Real signals → mood; board counts + sample titles + memory fed to every prompt and to deterministic answers. Doesn't read task *content* deeply. |
-| 3 | **Memory & continuity** | 4 | Genuine cross-session memory (days known, ships, streaks, away) + in-session chat history. Doesn't recall past *conversations* across sessions. |
+| 3 | **Memory & continuity** | 5 | Cross-session stats (days known, ships, streaks, away) **plus durable notes**: tell it "remember that…" / "I'm focusing on…" and it carries those facts across sessions, weaves them into its prompt, and recalls them on "what do you remember". |
 | 4 | **Reasoning & planning** | 4 | Plans the day, and gives grounded judgment calls — what to **drop** (triage), the fastest **quick win**, and your **biggest risk** — each composed from board state. Not yet multi-turn / constraint-aware ("if I only have an hour"). |
 | 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. Remaining gap: setting labels/assignees. |
 | 6 | **Conversation quality** | 2? | Streaming chat is wired and in-character by construction, but **unmeasured** — bounded by a tiny model. Could be incoherent. |
@@ -51,7 +51,7 @@ on real hardware).
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 4.0/5**, but the *shape* matters more than the average: strong on
+**Mean ≈ 4.1/5**, but the *shape* matters more than the average: strong on
 comprehension / agency / reliability / personality / context / memory /
 proactivity; the open frontier is conversation quality (needs real-hardware
 measurement) and deeper multi-step reasoning.
@@ -83,6 +83,7 @@ scoring each 0–2 (wrong / ok / great):
 - **Conversation → measured:** run the browser eval set; record a real score.
 - **Reasoning → 5:** multi-turn + constraint-aware ("if I only have an hour",
   "given X is blocked, replan").
+- ~~Memory → 5~~ ✅ durable cross-session notes ("remember that…", recall).
 - **Comprehension → 5:** LLM fallback for intent classification when rules miss,
   graded by the same corpus; grow the corpus toward 100+ cases.
-- **Memory → 5:** remember salient conversation facts across sessions.
+- **Conversation → measured:** the one rung that needs your WebGPU hardware.

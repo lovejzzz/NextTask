@@ -29,6 +29,8 @@ describe('companion comprehension standard', () => {
       'triage',
       'quick_win',
       'risk',
+      'remember',
+      'recall',
     ]) {
       expect(kinds.has(kind as never)).toBe(true);
     }

@@ -8,6 +8,7 @@
 import { addDays } from 'date-fns';
 
 import { formatDateInput } from './dates';
+import { parseRememberable } from './companionNotes';
 import type { TaskPriority } from './types';
 
 export type CompanionIntent =
@@ -18,6 +19,8 @@ export type CompanionIntent =
   | { kind: 'reschedule'; query: string; due_date: string | null }
   | { kind: 'complete_overdue' }
   | { kind: 'undo' }
+  | { kind: 'remember'; note: string }
+  | { kind: 'recall' }
   | { kind: 'plan' }
   | { kind: 'triage' }
   | { kind: 'quick_win' }
@@ -84,6 +87,11 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   if (/^(?:undo|revert|nevermind|never mind|take that back|oops|undo that)\b/.test(lower)) {
     return { kind: 'undo' };
   }
+  if (/\b(what do you (?:remember|know)(?: about me)?|what did i tell you|what'?s in your memory)\b/.test(lower)) {
+    return { kind: 'recall' };
+  }
+  const fact = parseRememberable(raw);
+  if (fact) return { kind: 'remember', note: fact };
   if (
     /\b(?:clear|knock out|wipe)\b[^.]*\boverdue(?:\s+(?:ones|tasks|items|stuff))?\s*[?.!]*$/i.test(raw) ||
     /\b(?:complete|finish|close)\s+(?:all\s+|my\s+|the\s+|every\s+)?overdue(?:\s+(?:ones|tasks|items|stuff))?\s*[?.!]*$/i.test(raw)
@@ -161,6 +169,7 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
 
   const createMatch =
     raw.match(/^remind me to\s+(.+)/i) ||
+    raw.match(/^remember to\s+(.+)/i) ||
     raw.match(/^task:\s*(.+)/i) ||
     raw.match(/^(?:add|create|make|new)\s+(?:a\s+|an\s+)?(?:task\b\s*)?(?:to\s+|called\s+|named\s+|:\s*)?(.+)/i);
   if (createMatch) {
