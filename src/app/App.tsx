@@ -23,6 +23,7 @@ import {
   Clock3,
   Command,
   Filter,
+  FlaskConical,
   Github,
   KanbanSquare,
   LogOut,
@@ -51,11 +52,13 @@ import {
   type SessionRecovery,
 } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
+import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
+import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
 import { BoardColumn } from '../components/board/BoardColumn';
 import { TaskCard } from '../components/board/TaskCard';
 import { TaskDrawer } from '../components/drawer/TaskDrawer';
@@ -162,6 +165,7 @@ export function App() {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
+  const experimental = useExperimentalMode();
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
@@ -211,6 +215,18 @@ export function App() {
       active = false;
     };
   }, [session.userId]);
+
+  useEffect(() => {
+    if (!experimental.lastToggle) return;
+    notify(
+      'success',
+      experimental.lastToggle === 'on'
+        ? '🧪 Experimental mode unlocked — Focus Spotlight is live.'
+        : 'Experimental mode off. Back to the stable board.',
+    );
+    experimental.acknowledgeToggle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experimental.lastToggle]);
 
   function openCreate(status: TaskStatus = 'todo') {
     setDrawerMode('create');
@@ -377,6 +393,8 @@ export function App() {
         onRefresh={() => void refreshBoard()}
         syncing={syncing}
         lastSyncedAt={lastSyncedAt}
+        experimental={experimental.enabled}
+        onLogoTap={experimental.registerLogoTap}
       />
 
       <main className="app-main">
@@ -460,6 +478,18 @@ export function App() {
       <ChangelogDialog open={changelogOpen} entries={CHANGELOG} onClose={() => setChangelogOpen(false)} />
 
       <AnimatePresence>
+        {experimental.enabled ? (
+          <FocusSpotlight
+            key="focus-spotlight"
+            tasks={tasks}
+            loading={boardQuery.isLoading}
+            onOpen={openEdit}
+            onAdvance={(taskId, target) => void moveTask(taskId, target)}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {toast ? (
           <motion.div
             className={cx('toast', toast.tone === 'error' ? 'toast-error' : 'toast-success')}
@@ -489,6 +519,8 @@ function AppHeader({
   onRefresh,
   syncing,
   lastSyncedAt,
+  experimental,
+  onLogoTap,
 }: {
   session: {
     userId: string | null;
@@ -504,6 +536,8 @@ function AppHeader({
   onRefresh: () => void;
   syncing: boolean;
   lastSyncedAt: number;
+  experimental: boolean;
+  onLogoTap: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
@@ -586,11 +620,25 @@ function AppHeader({
   return (
     <header className="app-header">
       <div className="brand-block">
-        <div className="brand-mark">
+        <button
+          type="button"
+          className={cx('brand-mark', experimental && 'is-experimental')}
+          onClick={onLogoTap}
+          aria-label="Next Task"
+          title="Next Task"
+        >
           <KanbanSquare size={20} />
-        </div>
+        </button>
         <div>
-          <div className="brand-title">Next Task</div>
+          <div className="brand-title">
+            Next Task
+            {experimental ? (
+              <span className="brand-lab-badge">
+                <FlaskConical size={11} />
+                Lab
+              </span>
+            ) : null}
+          </div>
           <div className="brand-subtitle">Plan. Review. Ship.</div>
         </div>
       </div>
