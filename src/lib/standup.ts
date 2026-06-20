@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, isBefore, parseISO } from 'date-fns';
 
 import { rankFocusTasks } from './experimental';
 import type { Task } from './types';
@@ -28,12 +28,16 @@ function section(emoji: string, title: string, items: Task[]): string[] {
 
 export function buildStandup(tasks: Task[], now: Date = new Date()): string {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const overdue = tasks.filter(
+    (task) => task.status !== 'done' && task.due_date && isBefore(parseISO(`${task.due_date}T00:00:00`), today),
+  );
   const inProgress = tasks.filter((task) => task.status === 'in_progress');
   const inReview = tasks.filter((task) => task.status === 'in_review');
   const doneToday = tasks.filter((task) => task.status === 'done' && sameLocalDay(task.updated_at, now));
   const next = rankFocusTasks(tasks, today)[0] ?? null;
 
   const lines: string[] = [`🗓️ Standup — ${format(now, 'EEE, MMM d')}`, ''];
+  if (overdue.length > 0) lines.push(...section('⚠️', 'Overdue', overdue));
   lines.push(...section('🚀', 'In progress', inProgress));
   lines.push(...section('🔍', 'In review', inReview));
   lines.push(...section('✅', 'Done today', doneToday));

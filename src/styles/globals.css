@@ -2650,3 +2650,106 @@ textarea:focus-visible,
   letter-spacing: 0.02em;
   color: var(--muted);
 }
+
+/* Experimental: Command Palette ----------------------------------------- */
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14vh 16px 16px;
+  background: rgba(10, 14, 22, 0.46);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.command-panel {
+  width: min(560px, 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--surface);
+  box-shadow: 0 30px 80px rgba(10, 14, 22, 0.4);
+  overflow: hidden;
+}
+
+.command-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.command-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text, inherit);
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+}
+
+.command-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-2) 18%, var(--surface));
+  color: var(--accent-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.command-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text, inherit);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.command-item.is-active {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.command-label {
+  flex: 1;
+}
+
+.command-hint {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.command-enter {
+  color: var(--accent);
+}
+
+.command-empty {
+  padding: 18px 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}

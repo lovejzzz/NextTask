@@ -18,14 +18,17 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
+  ArrowRight,
   Check,
   ChevronDown,
+  ClipboardList,
   Clock3,
   Command,
   Filter,
   FlaskConical,
   Github,
   KanbanSquare,
+  Sparkles,
   LogOut,
   Loader2,
   Mail,
@@ -58,8 +61,10 @@ import { useTaskMutations } from '../hooks/useTaskMutations';
 import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
+import { nextStatusFor, rankFocusTasks } from '../lib/experimental';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { buildStandup } from '../lib/standup';
+import { CommandPalette, type Command as PaletteCommand } from '../components/experimental/CommandPalette';
 import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
 import { BoardColumn } from '../components/board/BoardColumn';
@@ -171,6 +176,7 @@ export function App() {
   const experimental = useExperimentalMode();
   const momentum = useMomentum();
   const [confettiBurst, setConfettiBurst] = useState<number | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
@@ -222,11 +228,23 @@ export function App() {
   }, [session.userId]);
 
   useEffect(() => {
+    if (!experimental.enabled) return;
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((value) => !value);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [experimental.enabled]);
+
+  useEffect(() => {
     if (!experimental.lastToggle) return;
     notify(
       'success',
       experimental.lastToggle === 'on'
-        ? '🧪 Experimental mode unlocked — Focus Spotlight is live.'
+        ? '🧪 Experimental mode unlocked — Focus Spotlight live. Press ⌘K for the command palette.'
         : 'Experimental mode off. Back to the stable board.',
     );
     experimental.acknowledgeToggle();
@@ -395,6 +413,36 @@ export function App() {
     }
   }
 
+  const paletteCommands: PaletteCommand[] = [
+    { id: 'new-task', label: 'New task', hint: 'To Do', keywords: 'create add', icon: Plus, run: () => openCreate('todo') },
+    {
+      id: 'open-next',
+      label: 'Open next task',
+      keywords: 'focus spotlight',
+      icon: Sparkles,
+      run: () => {
+        const top = rankFocusTasks(tasks)[0];
+        if (top) openEdit(top.id);
+        else notify('success', 'Nothing left to focus on.');
+      },
+    },
+    {
+      id: 'advance-next',
+      label: 'Move next task forward',
+      keywords: 'advance progress',
+      icon: ArrowRight,
+      run: () => {
+        const top = rankFocusTasks(tasks)[0];
+        const target = top ? nextStatusFor(top.status) : null;
+        if (top && target) advanceFromSpotlight(top.id, target);
+      },
+    },
+    { id: 'copy-standup', label: 'Copy standup', keywords: 'clipboard summary', icon: ClipboardList, run: () => void copyStandup() },
+    { id: 'manage', label: 'Manage team & labels', keywords: 'members tags', icon: Users, run: () => setManagerOpen(true) },
+    { id: 'changelog', label: "What's new", keywords: 'changelog updates', icon: Command, run: () => setChangelogOpen(true) },
+    { id: 'exit-lab', label: 'Exit experimental mode', keywords: 'disable lab off', icon: FlaskConical, run: experimental.disable },
+  ];
+
   if (session.status === 'loading') {
     return <LoadingExperience />;
   }
@@ -520,6 +568,10 @@ export function App() {
       </AnimatePresence>
 
       {confettiBurst ? <Confetti key={confettiBurst} onDone={() => setConfettiBurst(null)} /> : null}
+
+      {experimental.enabled ? (
+        <CommandPalette open={paletteOpen && experimental.enabled} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+      ) : null}
 
       <AnimatePresence>
         {toast ? (

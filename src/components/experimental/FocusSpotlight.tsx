@@ -59,6 +59,13 @@ export function FocusSpotlight({
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+
+      if (event.key.toLowerCase() === 'c') {
+        onCopyStandup();
+        event.preventDefault();
+        return;
+      }
+
       if (!task) return;
 
       switch (event.key.toLowerCase()) {
@@ -82,7 +89,7 @@ export function FocusSpotlight({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [task, onOpen, onAdvance]);
+  }, [task, onOpen, onAdvance, onCopyStandup]);
 
   return (
     <motion.aside
@@ -155,7 +162,7 @@ export function FocusSpotlight({
                 <ClipboardList size={14} />
                 Copy standup
               </button>
-              {task ? <span className="focus-spotlight-keys">N next · M move · O open</span> : null}
+              <span className="focus-spotlight-keys">{task ? 'N next · M move · O open · C standup' : 'C standup'}</span>
             </div>
           </motion.div>
         )}

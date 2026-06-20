@@ -39,6 +39,21 @@ describe('buildStandup', () => {
     expect(text).toContain('⏭️ Up next\n- Overdue thing');
   });
 
+  it('calls out overdue tasks in their own section', () => {
+    const tasks = [
+      makeTask({ title: 'Late report', status: 'todo', due_date: '2026-06-10' }),
+      makeTask({ title: 'On track', status: 'todo', due_date: '2026-06-25' }),
+    ];
+    const text = buildStandup(tasks, NOW);
+    expect(text).toContain('⚠️ Overdue (1)');
+    expect(text).toContain('- Late report');
+  });
+
+  it('omits the overdue section when nothing is late', () => {
+    const text = buildStandup([makeTask({ title: 'Fresh', status: 'todo' })], NOW);
+    expect(text).not.toContain('Overdue');
+  });
+
   it('handles an empty board gracefully', () => {
     const text = buildStandup([], NOW);
     expect(text).toContain('🚀 In progress (0)');
