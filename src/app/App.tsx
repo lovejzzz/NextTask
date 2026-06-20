@@ -29,6 +29,7 @@ import {
   FlaskConical,
   Github,
   KanbanSquare,
+  Keyboard,
   Sparkles,
   LogOut,
   Loader2,
@@ -72,6 +73,7 @@ import { BoardInsights } from '../components/experimental/BoardInsights';
 import { CommandPalette, type Command as PaletteCommand } from '../components/experimental/CommandPalette';
 import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
+import { ShortcutsHelp } from '../components/experimental/ShortcutsHelp';
 import { BoardColumn } from '../components/board/BoardColumn';
 import { TaskCard } from '../components/board/TaskCard';
 import { TaskDrawer } from '../components/drawer/TaskDrawer';
@@ -180,10 +182,12 @@ export function App() {
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const experimental = useExperimentalMode();
   const accent = useAccent(experimental.enabled);
+  const { theme, toggle: toggleTheme } = useTheme();
   const momentum = useMomentum();
   const [confettiBurst, setConfettiBurst] = useState<number | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
@@ -240,6 +244,13 @@ export function App() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setPaletteOpen((value) => !value);
+        return;
+      }
+      if (event.key === '?' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const node = event.target as HTMLElement | null;
+        if (node && (node.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(node.tagName))) return;
+        event.preventDefault();
+        setShortcutsOpen(true);
       }
     }
     window.addEventListener('keydown', onKey);
@@ -448,6 +459,8 @@ export function App() {
     { id: 'insights', label: 'Board insights', keywords: 'stats analytics metrics', icon: BarChart3, run: () => setInsightsOpen(true) },
     { id: 'refresh', label: 'Refresh board', keywords: 'reload sync', icon: RefreshCw, run: () => void refreshBoard() },
     { id: 'accent', label: 'Cycle accent theme', keywords: 'color palette skin', icon: Palette, run: () => notify('success', `Accent → ${accent.cycle()}`) },
+    { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: toggleTheme },
+    { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
     { id: 'manage', label: 'Manage team & labels', keywords: 'members tags', icon: Users, run: () => setManagerOpen(true) },
     { id: 'changelog', label: "What's new", keywords: 'changelog updates', icon: Command, run: () => setChangelogOpen(true) },
     { id: 'exit-lab', label: 'Exit experimental mode', keywords: 'disable lab off', icon: FlaskConical, run: experimental.disable },
@@ -476,6 +489,8 @@ export function App() {
         lastSyncedAt={lastSyncedAt}
         experimental={experimental.enabled}
         onLogoTap={experimental.registerLogoTap}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <main className="app-main">
@@ -590,6 +605,7 @@ export function App() {
             onClose={() => setPaletteOpen(false)}
           />
           <BoardInsights open={insightsOpen} insights={computeInsights(tasks)} onClose={() => setInsightsOpen(false)} />
+          <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         </>
       ) : null}
 
@@ -625,6 +641,8 @@ function AppHeader({
   lastSyncedAt,
   experimental,
   onLogoTap,
+  theme,
+  onToggleTheme,
 }: {
   session: {
     userId: string | null;
@@ -642,9 +660,10 @@ function AppHeader({
   lastSyncedAt: number;
   experimental: boolean;
   onLogoTap: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const { theme, toggle: toggleTheme } = useTheme();
   const [authRedirectError] = useState(() => readAuthRedirectError());
   const [accountOpen, setAccountOpen] = useState(Boolean(authRedirectError));
   const [emailInput, setEmailInput] = useState(session.email ?? '');
@@ -801,7 +820,7 @@ function AppHeader({
         </button>
         <button
           className="icon-button sync-button"
-          onClick={toggleTheme}
+          onClick={onToggleTheme}
           type="button"
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
