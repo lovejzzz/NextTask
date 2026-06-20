@@ -34,6 +34,7 @@ import {
   Loader2,
   Mail,
   Moon,
+  Palette,
   Pencil,
   Plus,
   RefreshCw,
@@ -56,6 +57,7 @@ import {
   type SessionRecovery,
 } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
+import { useAccent } from '../hooks/useAccent';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useMomentum } from '../hooks/useMomentum';
 import { useTaskMutations } from '../hooks/useTaskMutations';
@@ -177,6 +179,7 @@ export function App() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const experimental = useExperimentalMode();
+  const accent = useAccent(experimental.enabled);
   const momentum = useMomentum();
   const [confettiBurst, setConfettiBurst] = useState<number | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -444,6 +447,7 @@ export function App() {
     { id: 'copy-standup', label: 'Copy standup', keywords: 'clipboard summary', icon: ClipboardList, run: () => void copyStandup() },
     { id: 'insights', label: 'Board insights', keywords: 'stats analytics metrics', icon: BarChart3, run: () => setInsightsOpen(true) },
     { id: 'refresh', label: 'Refresh board', keywords: 'reload sync', icon: RefreshCw, run: () => void refreshBoard() },
+    { id: 'accent', label: 'Cycle accent theme', keywords: 'color palette skin', icon: Palette, run: () => notify('success', `Accent → ${accent.cycle()}`) },
     { id: 'manage', label: 'Manage team & labels', keywords: 'members tags', icon: Users, run: () => setManagerOpen(true) },
     { id: 'changelog', label: "What's new", keywords: 'changelog updates', icon: Command, run: () => setChangelogOpen(true) },
     { id: 'exit-lab', label: 'Exit experimental mode', keywords: 'disable lab off', icon: FlaskConical, run: experimental.disable },

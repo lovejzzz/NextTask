@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { AlertTriangle, BarChart3, Flame, X } from 'lucide-react';
+import { AlertTriangle, BarChart3, Clock3, Flame, X } from 'lucide-react';
 import { useRef } from 'react';
 
 import { STATUSES } from '../../lib/constants';
@@ -108,6 +108,10 @@ function BoardInsightsBody({ insights, onClose }: { insights: Insights; onClose:
           <span className="insights-chip">
             <Flame size={14} />
             {insights.highPriority} high priority
+          </span>
+          <span className="insights-chip">
+            <Clock3 size={14} />
+            {insights.avgAgeDays}d avg age
           </span>
         </div>
       </motion.div>

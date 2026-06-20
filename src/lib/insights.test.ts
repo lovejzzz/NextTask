@@ -28,6 +28,16 @@ describe('computeInsights', () => {
     expect(insights.byStatus.todo).toBe(1);
   });
 
+  it('averages the age of active tasks only', () => {
+    const tasks = [
+      makeTask({ status: 'todo', created_at: '2026-06-10T00:00:00.000Z' }), // 10 days
+      makeTask({ status: 'in_progress', created_at: '2026-06-16T00:00:00.000Z' }), // 4 days
+      makeTask({ status: 'done', created_at: '2026-01-01T00:00:00.000Z' }), // ignored
+    ];
+    const insights = computeInsights(tasks, NOW);
+    expect(insights.avgAgeDays).toBe(7);
+  });
+
   it('flags overdue and high-priority active work, ignoring done tasks', () => {
     const tasks = [
       makeTask({ status: 'todo', priority: 'high', due_date: '2026-06-10' }),
