@@ -26,6 +26,7 @@ describe('companion comprehension standard', () => {
       'complete_overdue',
       'undo',
       'plan',
+      'quick_plan',
       'triage',
       'quick_win',
       'risk',

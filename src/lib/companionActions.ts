@@ -22,6 +22,7 @@ export type CompanionIntent =
   | { kind: 'remember'; note: string }
   | { kind: 'recall' }
   | { kind: 'plan' }
+  | { kind: 'quick_plan' }
   | { kind: 'triage' }
   | { kind: 'quick_win' }
   | { kind: 'risk' }
@@ -116,6 +117,13 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
     /\b(?:complete|finish|close)\s+(?:all\s+|my\s+|the\s+|every\s+)?overdue(?:\s+(?:ones|tasks|items|stuff))?\s*[?.!]*$/i.test(raw)
   ) {
     return { kind: 'complete_overdue' };
+  }
+  if (
+    /\b(quick plan|short on time|in a hurry|i (?:only )?have (?:an hour|a few|a little|some time|\d+\s?min(?:ute)?s?)|if i (?:only )?have (?:an hour|a few|some time|\d+\s?min(?:ute)?s?))\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'quick_plan' };
   }
   if (/\b(plan (?:my )?day|what'?s the plan|game ?plan|plan for (?:today|the day))\b/.test(lower)) {
     return { kind: 'plan' };

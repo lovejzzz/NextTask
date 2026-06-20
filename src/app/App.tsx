@@ -75,7 +75,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin } from '../lib/companionAdvice';
+import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes } from '../lib/companionNotes';
@@ -452,10 +452,21 @@ export function App() {
     }
 
     if (intent?.kind === 'plan') {
-      const ranked = rankFocusTasks(tasks).slice(0, 5);
-      if (!ranked.length) return "Nothing to plan — your board's empty. Living the dream.";
+      const blockedIds = new Set(detectBlocked(tasks).map((task) => task.id));
+      const ranked = rankFocusTasks(tasks)
+        .filter((task) => !blockedIds.has(task.id))
+        .slice(0, 5);
+      if (!ranked.length) return "Nothing actionable to plan — your board's empty (or all blocked). Living the dream.";
       const lines = ranked.map((task, index) => `${index + 1}. ${task.title} (${focusReason(task).toLowerCase()})`);
-      return `Here's the play, in order:\n${lines.join('\n')}\nStart at #1 — I'll be watching.`;
+      const blockedNote = blockedIds.size ? `\n(Skipped ${blockedIds.size} blocked — unstick those separately.)` : '';
+      return `Here's the play, in order:\n${lines.join('\n')}${blockedNote}\nStart at #1 — I'll be watching.`;
+    }
+
+    if (intent?.kind === 'quick_plan') {
+      const wins = pickQuickWins(tasks, 2);
+      if (!wins.length) return 'Nothing quick to grab right now. Maybe just breathe for a sec.';
+      const lines = wins.map((task, index) => `${index + 1}. ${task.title}`).join('\n');
+      return `Short on time? Hit these, in order:\n${lines}\nIgnore everything else for now.`;
     }
 
     if (intent?.kind === 'triage') {

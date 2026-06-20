@@ -15,17 +15,28 @@ export function pickDropCandidates(tasks: Task[], now?: Date): Task[] {
   return ranked.slice(-3).reverse(); // the tail = least deserving; show worst first
 }
 
-/** The fastest thing to finish: closest to done, then smallest commitment. */
+const PRIORITY_WEIGHT: Record<string, number> = { low: 3, normal: 2, high: 1 };
+
+// Fastest first: closest to done, then smallest commitment, then board order.
+function byQuickness(a: Task, b: Task): number {
+  return (
+    CLOSENESS[b.status] - CLOSENESS[a.status] ||
+    PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority] ||
+    a.position - b.position
+  );
+}
+
+/** The N fastest things to finish, skipping anything blocked. */
+export function pickQuickWins(tasks: Task[], limit = 2): Task[] {
+  const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
+  const active = tasks.filter((task) => task.status !== 'done' && !blocked.has(task.id));
+  return [...active].sort(byQuickness).slice(0, limit);
+}
+
+/** The single fastest thing to finish: closest to done, then smallest commitment. */
 export function pickQuickWin(tasks: Task[]): Task | null {
   const active = tasks.filter((task) => task.status !== 'done');
-  if (!active.length) return null;
-  const priorityWeight: Record<string, number> = { low: 3, normal: 2, high: 1 };
-  return [...active].sort(
-    (a, b) =>
-      CLOSENESS[b.status] - CLOSENESS[a.status] ||
-      priorityWeight[b.priority] - priorityWeight[a.priority] ||
-      a.position - b.position,
-  )[0];
+  return active.length ? [...active].sort(byQuickness)[0] : null;
 }
 
 /** The most pressing task — the focus ranking already weights overdue + priority. */

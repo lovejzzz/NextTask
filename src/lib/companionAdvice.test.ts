@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeLabel, makeTask } from '../test/factories';
-import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin } from './companionAdvice';
+import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from './companionAdvice';
 
 const NOW = new Date(2026, 5, 20);
 
@@ -17,6 +17,20 @@ describe('pickQuickWin', () => {
 
   it('returns null on an empty board', () => {
     expect(pickQuickWin([makeTask({ status: 'done' })])).toBeNull();
+  });
+});
+
+describe('pickQuickWins', () => {
+  it('returns the top N fastest wins, excluding blocked tasks', () => {
+    const tasks = [
+      makeTask({ id: 'review', status: 'in_review' }),
+      makeTask({ id: 'prog', status: 'in_progress' }),
+      makeTask({ id: 'blocked', status: 'in_review', title: 'Deploy (blocked on infra)' }),
+      makeTask({ id: 'todo', status: 'todo' }),
+    ];
+    const ids = pickQuickWins(tasks, 2).map((task) => task.id);
+    expect(ids).toEqual(['review', 'prog']);
+    expect(ids).not.toContain('blocked');
   });
 });
 
