@@ -59,6 +59,7 @@ import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
+import { buildStandup } from '../lib/standup';
 import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
 import { BoardColumn } from '../components/board/BoardColumn';
@@ -305,6 +306,16 @@ export function App() {
     void moveTask(taskId, targetStatus);
   }
 
+  async function copyStandup() {
+    const text = buildStandup(tasks);
+    try {
+      await navigator.clipboard.writeText(text);
+      notify('success', 'Standup copied to clipboard.');
+    } catch {
+      notify('error', 'Could not access the clipboard.');
+    }
+  }
+
   async function quickCreateTask(status: TaskStatus, title: string) {
     try {
       await mutations.createTask.mutateAsync({
@@ -503,6 +514,7 @@ export function App() {
               const task = tasks.find((item) => item.id === taskId);
               notify('success', task ? `Focus session done: “${task.title}”. Nice deep work.` : 'Focus session complete!');
             }}
+            onCopyStandup={() => void copyStandup()}
           />
         ) : null}
       </AnimatePresence>

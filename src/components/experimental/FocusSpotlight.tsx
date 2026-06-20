@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
   ChevronDown,
+  ClipboardList,
   FlaskConical,
   Flame,
   PartyPopper,
@@ -12,7 +13,7 @@ import {
   Sparkles,
   Timer,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { formatClock } from '../../lib/clock';
@@ -35,6 +36,7 @@ export function FocusSpotlight({
   onOpen,
   onAdvance,
   onFocusComplete,
+  onCopyStandup,
 }: {
   tasks: Task[];
   loading: boolean;
@@ -42,6 +44,7 @@ export function FocusSpotlight({
   onOpen: (taskId: string) => void;
   onAdvance: (taskId: string, target: TaskStatus) => void;
   onFocusComplete: (taskId: string) => void;
+  onCopyStandup: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [skips, setSkips] = useState(0);
@@ -49,6 +52,37 @@ export function FocusSpotlight({
   const ranked = useMemo(() => rankFocusTasks(tasks), [tasks]);
   const index = ranked.length ? skips % ranked.length : 0;
   const task = ranked[index] ?? null;
+
+  // Hands-free hotkeys (experimental mode only — this is mounted only then).
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      if (!task) return;
+
+      switch (event.key.toLowerCase()) {
+        case 'n':
+          setSkips((value) => value + 1);
+          event.preventDefault();
+          break;
+        case 'o':
+          onOpen(task.id);
+          event.preventDefault();
+          break;
+        case 'm': {
+          const nextTarget = nextStatusFor(task.status);
+          if (nextTarget) onAdvance(task.id, nextTarget);
+          event.preventDefault();
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [task, onOpen, onAdvance]);
 
   return (
     <motion.aside
@@ -115,6 +149,14 @@ export function FocusSpotlight({
                 <p>Nothing left to focus on. Inbox zero energy.</p>
               </div>
             )}
+
+            <div className="focus-spotlight-toolbar">
+              <button type="button" className="focus-spotlight-standup" onClick={onCopyStandup}>
+                <ClipboardList size={14} />
+                Copy standup
+              </button>
+              {task ? <span className="focus-spotlight-keys">N next · M move · O open</span> : null}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
