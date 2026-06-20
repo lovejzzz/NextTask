@@ -19,6 +19,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
   ArrowRight,
+  BarChart3,
   Check,
   ChevronDown,
   ClipboardList,
@@ -63,7 +64,9 @@ import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import { nextStatusFor, rankFocusTasks } from '../lib/experimental';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
+import { computeInsights } from '../lib/insights';
 import { buildStandup } from '../lib/standup';
+import { BoardInsights } from '../components/experimental/BoardInsights';
 import { CommandPalette, type Command as PaletteCommand } from '../components/experimental/CommandPalette';
 import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
@@ -177,6 +180,7 @@ export function App() {
   const momentum = useMomentum();
   const [confettiBurst, setConfettiBurst] = useState<number | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
 
@@ -438,6 +442,8 @@ export function App() {
       },
     },
     { id: 'copy-standup', label: 'Copy standup', keywords: 'clipboard summary', icon: ClipboardList, run: () => void copyStandup() },
+    { id: 'insights', label: 'Board insights', keywords: 'stats analytics metrics', icon: BarChart3, run: () => setInsightsOpen(true) },
+    { id: 'refresh', label: 'Refresh board', keywords: 'reload sync', icon: RefreshCw, run: () => void refreshBoard() },
     { id: 'manage', label: 'Manage team & labels', keywords: 'members tags', icon: Users, run: () => setManagerOpen(true) },
     { id: 'changelog', label: "What's new", keywords: 'changelog updates', icon: Command, run: () => setChangelogOpen(true) },
     { id: 'exit-lab', label: 'Exit experimental mode', keywords: 'disable lab off', icon: FlaskConical, run: experimental.disable },
@@ -570,7 +576,10 @@ export function App() {
       {confettiBurst ? <Confetti key={confettiBurst} onDone={() => setConfettiBurst(null)} /> : null}
 
       {experimental.enabled ? (
-        <CommandPalette open={paletteOpen && experimental.enabled} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+        <>
+          <CommandPalette open={paletteOpen} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+          <BoardInsights open={insightsOpen} insights={computeInsights(tasks)} onClose={() => setInsightsOpen(false)} />
+        </>
       ) : null}
 
       <AnimatePresence>

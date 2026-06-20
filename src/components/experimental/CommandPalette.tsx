@@ -122,6 +122,12 @@ function CommandPaletteBody({ commands, onClose }: { commands: Command[]; onClos
             })
           )}
         </ul>
+
+        <footer className="command-foot">
+          <span>↑↓ navigate</span>
+          <span>↵ select</span>
+          <span>esc close</span>
+        </footer>
       </motion.div>
     </motion.div>
   );
