@@ -47,11 +47,11 @@ on real hardware).
 | 6 | **Conversation quality** | 2? | Streaming chat is wired and in-character by construction, but **unmeasured** — bounded by a tiny model. Could be incoherent. |
 | 7 | **Personality & voice** | 4 | Distinct, consistent, tunable (gentle↔savage) with earned warmth; strong even with the model off. |
 | 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 153 tests; normal mode untouched. |
-| 9 | **Proactivity** | 4 | Mood shifts, event reactions, welcome-back, goal nudges — it initiates, not just responds. |
+| 9 | **Proactivity** | 5 | Initiates on many signals: mood shifts, ship/milestone/goal reactions, **one-away-from-goal** nudge, **streak-at-risk** nudge on return, welcome-back after time away, and created/cleared lines. |
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 4.4/5**, but the *shape* matters more than the average: strong on
+**Mean ≈ 4.6/5**, but the *shape* matters more than the average: strong on
 comprehension / agency / reliability / personality / context / memory /
 proactivity; the open frontier is conversation quality (needs real-hardware
 measurement) and deeper multi-step reasoning.

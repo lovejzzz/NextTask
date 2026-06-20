@@ -630,6 +630,9 @@ export function App() {
       queueMicrotask(() =>
         flashCompanion(`You're back — it's been ${days} day${days === 1 ? '' : 's'}. I kept your tasks warm.`),
       );
+    } else if (memory.memory.currentStreak >= 2 && momentum.shippedToday === 0) {
+      // Proactive: a live streak hasn't been fed yet today.
+      queueMicrotask(() => flashCompanion(eventLine('streak_risk', Date.now())));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [experimental.enabled]);
@@ -710,7 +713,14 @@ export function App() {
     momentum.recordShip();
     memory.recordShip();
     setConfettiBurst(Date.now());
-    const kind: CompanionEvent = newCount === goal ? 'goal' : newCount === 3 ? 'milestone' : 'shipped';
+    const kind: CompanionEvent =
+      newCount === goal
+        ? 'goal'
+        : goal >= 2 && newCount === goal - 1
+          ? 'almost'
+          : newCount === 3
+            ? 'milestone'
+            : 'shipped';
     fireCompanionEvent(kind);
   }
 

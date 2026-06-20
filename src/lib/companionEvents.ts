@@ -4,13 +4,23 @@
  * rule-based (instant, reliable) even when the LLM brain is on, since they need
  * to land immediately on the event.
  */
-export type CompanionEvent = 'shipped' | 'milestone' | 'goal' | 'created' | 'cleared';
+export type CompanionEvent = 'shipped' | 'almost' | 'milestone' | 'goal' | 'created' | 'cleared' | 'streak_risk';
 
 const LINES: Record<CompanionEvent, string[]> = {
   shipped: [
     'One down. I felt that.',
     "Shipped. Don't let it go to your head. (Do.)",
     "That's the good stuff. Next one.",
+  ],
+  almost: [
+    'One more and you hit your goal. I can taste it.',
+    "That's all but one. Don't you dare stop now.",
+    'So close to your number. One more. Go.',
+  ],
+  streak_risk: [
+    "Your streak's still alive — but the day's slipping. Ship one.",
+    "Don't break the streak on my watch. One task. Any task.",
+    'A streak this good would be a shame to drop today. Just one.',
   ],
   milestone: [
     'Three today?! Who ARE you.',
