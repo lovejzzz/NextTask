@@ -601,6 +601,17 @@ export function App() {
     { id: 'theme', label: 'Toggle light / dark', keywords: 'theme dark mode', icon: theme === 'dark' ? Sun : Moon, run: () => { companion.registerFidget(); toggleTheme(); } },
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
     { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
+    ...(brain.status !== 'off'
+      ? [
+          {
+            id: 'brain-model',
+            label: `Brain model: ${brain.modelName}`,
+            keywords: 'llm model size qwen smarter switch',
+            icon: BrainCircuit,
+            run: () => notify('success', `Brain model → ${brain.cycleModel()} (reloading if active)`),
+          } satisfies PaletteCommand,
+        ]
+      : []),
     brain.status === 'ready' || brain.status === 'loading'
       ? {
           id: 'brain-off',

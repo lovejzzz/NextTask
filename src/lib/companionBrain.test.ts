@@ -5,6 +5,9 @@ import {
   buildChatMessages,
   buildSystemPrompt,
   cleanLine,
+  MODELS,
+  modelLabel,
+  nextModelId,
   type PromptParts,
 } from './companionBrain';
 
@@ -63,6 +66,19 @@ describe('buildChatMessages', () => {
     const messages = buildChatMessages({ ...parts, history });
     expect(messages.length).toBe(1 + 8); // system + 8 turns
     expect(messages.at(-1)?.content).toBe('m19');
+  });
+});
+
+describe('model selection', () => {
+  it('cycles through the available models and wraps', () => {
+    const ids = MODELS.map((model) => model.id);
+    expect(nextModelId(ids[0])).toBe(ids[1]);
+    expect(nextModelId(ids[ids.length - 1])).toBe(ids[0]);
+  });
+
+  it('labels a model, defaulting for unknown ids', () => {
+    expect(modelLabel(MODELS[0].id)).toBe(MODELS[0].label);
+    expect(modelLabel('mystery')).toBe(MODELS[0].label);
   });
 });
 

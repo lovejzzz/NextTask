@@ -12,8 +12,23 @@ import type { Mood } from './companion';
 
 // Major-pinned so the CDN always resolves a valid latest v3 build.
 const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
-// Tiny instruct model (~0.5GB q4): small enough to download, chat-tuned.
-const MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+
+// Selectable chat models (both Transformers.js-compatible Qwen2.5 instruct).
+export type BrainModel = { id: string; label: string; note: string };
+export const MODELS: BrainModel[] = [
+  { id: 'onnx-community/Qwen2.5-0.5B-Instruct', label: 'Qwen 0.5B', note: 'fast · ~0.5GB' },
+  { id: 'onnx-community/Qwen2.5-1.5B-Instruct', label: 'Qwen 1.5B', note: 'smarter · ~1GB' },
+];
+export const DEFAULT_MODEL_ID = MODELS[0].id;
+
+export function modelLabel(id: string): string {
+  return (MODELS.find((model) => model.id === id) ?? MODELS[0]).label;
+}
+
+export function nextModelId(id: string): string {
+  const index = MODELS.findIndex((model) => model.id === id);
+  return MODELS[(index + 1) % MODELS.length].id;
+}
 
 export type BrainMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
@@ -78,16 +93,18 @@ export function cleanLine(raw: string): string {
   return line.trim();
 }
 
-let pipelinePromise: Promise<GenerateFn> | null = null;
+const pipelines = new Map<string, Promise<GenerateFn>>();
 
 /**
- * Lazily fetch Transformers.js from the CDN and warm up the model. Returns a
- * generate function that streams tokens when an `onToken` callback is passed.
+ * Lazily fetch Transformers.js from the CDN and warm up the chosen model.
+ * Returns a generate function that streams tokens when an `onToken` callback is
+ * passed. Pipelines are cached per model id, so switching back is instant.
  */
-export async function loadBrain(onProgress?: ProgressCb): Promise<GenerateFn> {
-  if (pipelinePromise) return pipelinePromise;
+export async function loadBrain(modelId: string = DEFAULT_MODEL_ID, onProgress?: ProgressCb): Promise<GenerateFn> {
+  const cached = pipelines.get(modelId);
+  if (cached) return cached;
 
-  pipelinePromise = (async () => {
+  const promise = (async () => {
     const url = TRANSFORMERS_CDN; // variable specifier → not bundled by Vite
     const mod: any = await import(/* @vite-ignore */ url);
     const pipeline = mod.pipeline as (task: string, model: string, opts: unknown) => Promise<unknown>;
@@ -96,7 +113,7 @@ export async function loadBrain(onProgress?: ProgressCb): Promise<GenerateFn> {
     const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator;
     let lastRatio = 0;
 
-    const generator = (await pipeline('text-generation', MODEL_ID, {
+    const generator = (await pipeline('text-generation', modelId, {
       device: hasWebGPU ? 'webgpu' : 'wasm',
       dtype: 'q4',
       progress_callback: (info: any) => {
@@ -139,5 +156,8 @@ export async function loadBrain(onProgress?: ProgressCb): Promise<GenerateFn> {
     };
   })();
 
-  return pipelinePromise;
+  // If loading fails, drop it from the cache so a retry can start fresh.
+  promise.catch(() => pipelines.delete(modelId));
+  pipelines.set(modelId, promise);
+  return promise;
 }
