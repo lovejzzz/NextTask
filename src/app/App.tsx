@@ -76,6 +76,7 @@ import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
+import { runBrainEval } from '../lib/brainEval';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes } from '../lib/companionNotes';
@@ -556,6 +557,26 @@ export function App() {
     notify('success', `Daily ship goal: ${next}.`);
   }
 
+  async function runBrainSelfTest() {
+    notify('success', 'Running brain self-test…');
+    const generate = async (text: string) =>
+      (await brainRun(
+        buildChatMessages({
+          mood: companion.mood,
+          context: companionContext,
+          memory: memorySummary,
+          persona: personaText,
+          notes: notesText,
+          history: [{ role: 'user', content: text }],
+        }),
+      )) ?? '';
+    const { score, max } = await runBrainEval(generate, tasks);
+    notify(
+      score >= max * 0.75 ? 'success' : 'error',
+      `Brain self-test: ${score}/${max} on grounding · concision · staying in character.`,
+    );
+  }
+
   function cyclePersona() {
     const next = nextRoast(roast);
     setRoast(next);
@@ -860,6 +881,17 @@ export function App() {
             keywords: 'llm model size qwen smarter switch',
             icon: BrainCircuit,
             run: () => notify('success', `Brain model → ${brain.cycleModel()} (reloading if active)`),
+          } satisfies PaletteCommand,
+        ]
+      : []),
+    ...(brain.status === 'ready'
+      ? [
+          {
+            id: 'brain-selftest',
+            label: 'Run brain self-test',
+            keywords: 'evaluate score quality grounding test',
+            icon: BrainCircuit,
+            run: () => void runBrainSelfTest(),
           } satisfies PaletteCommand,
         ]
       : []),

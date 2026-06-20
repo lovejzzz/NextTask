@@ -44,23 +44,28 @@ on real hardware).
 | 3 | **Memory & continuity** | 5 | Cross-session stats (days known, ships, streaks, away) **plus durable notes**: tell it "remember that…" / "I'm focusing on…" and it carries those facts across sessions, weaves them into its prompt, and recalls them on "what do you remember". |
 | 4 | **Reasoning & planning** | 5 | Plans the day (skipping blocked tasks), adapts to constraints ("I only have an hour" → a tight quick-win plan), and gives grounded judgment calls — what to **drop**, the fastest **win**, your **biggest risk**. Asterisk: true multi-turn self-correction is model-gated. |
 | 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. Remaining gap: setting labels/assignees. |
-| 6 | **Conversation quality** | 2? | Streaming chat is wired and in-character by construction, but **unmeasured** — bounded by a tiny model. Could be incoherent. |
+| 6 | **Conversation quality** | 3? | Now partly **measurable**: `brainEval.ts` auto-scores each reply for grounding (no invented task names), concision, and staying in character — runnable in CI with a mock and live via the **"Run brain self-test"** command. Raw eloquence still needs a human, so the number isn't certified until run on WebGPU. |
 | 7 | **Personality & voice** | 5 | Tunable gentle↔balanced↔savage with earned warmth — and the tone is now **consistent across both brains**: the rule-based mood quips are persona-tiered too, so the voice doesn't change when the model is off. |
 | 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 153 tests; normal mode untouched. |
 | 9 | **Proactivity** | 5 | Initiates on many signals: mood shifts, ship/milestone/goal reactions, **one-away-from-goal** nudge, **streak-at-risk** nudge on return, welcome-back after time away, and created/cleared lines. |
 
 `?` = score is a best-guess pending real-hardware evaluation.
 
-**Mean ≈ 4.7/5**, but the *shape* matters more than the average: strong on
+**Mean ≈ 4.8/5**, but the *shape* matters more than the average: strong on
 comprehension / agency / reliability / personality / context / memory /
 proactivity; the open frontier is conversation quality (needs real-hardware
 measurement) and deeper multi-step reasoning.
 
 ## The honesty gap: measure conversation quality for real
 
-We can't score dimension 6 from CI. To evaluate on real hardware, open the app in
-desktop Chrome (WebGPU), enable the brain, and run this prompt set in the chat —
-scoring each 0–2 (wrong / ok / great):
+**Now automated (objective part):** with the brain on, run **"Run brain self-test"**
+from the command palette. It runs the battery through the live model and scores
+grounding · concision · in-character out of 12. That number IS certifiable on
+WebGPU — it just can't run in CI (no GPU).
+
+For the fuller human read (eloquence, helpfulness), open the app in desktop
+Chrome (WebGPU), enable the brain, and run this prompt set in the chat — scoring
+each 0–2 (wrong / ok / great):
 
 1. "what should I focus on?" — does it name a real, sensible task?
 2. "add a high-priority task to email Sam by friday" — created with right fields?
