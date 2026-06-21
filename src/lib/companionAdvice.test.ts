@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { makeLabel, makeTask } from '../test/factories';
 import {
   detectBlocked,
+  focusConfidence,
   honestStatus,
   pickBiggestRisk,
   pickDropCandidates,
@@ -77,6 +78,34 @@ describe('detectBlocked', () => {
     ];
     const ids = detectBlocked(tasks).map((task) => task.id);
     expect(ids).toEqual(['title', 'desc', 'label']);
+  });
+});
+
+describe('focusConfidence', () => {
+  it('is weak when the board is flat and nothing stands out', () => {
+    const flat = [
+      makeTask({ id: 'a', status: 'todo', priority: 'normal', position: 0 }),
+      makeTask({ id: 'b', status: 'todo', priority: 'normal', position: 1 }),
+      makeTask({ id: 'c', status: 'todo', priority: 'normal', position: 2 }),
+    ];
+    expect(focusConfidence(flat, NOW)).toBe('weak');
+  });
+
+  it('is clear when one task plainly leads', () => {
+    const tasks = [
+      makeTask({ id: 'late', status: 'todo', priority: 'low', due_date: '2026-06-10' }),
+      makeTask({ id: 'fresh', status: 'todo', priority: 'normal' }),
+    ];
+    expect(focusConfidence(tasks, NOW)).toBe('clear');
+  });
+
+  it('is clear when there is only one actionable task', () => {
+    expect(focusConfidence([makeTask({ id: 'only', status: 'todo' })], NOW)).toBe('clear');
+  });
+
+  it('is none when nothing is actionable', () => {
+    expect(focusConfidence([makeTask({ status: 'done' })], NOW)).toBe('none');
+    expect(focusConfidence([makeTask({ title: 'Ship (blocked on legal)' })], NOW)).toBe('none');
   });
 });
 

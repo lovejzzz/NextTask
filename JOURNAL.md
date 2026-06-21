@@ -295,3 +295,41 @@ That honest "you haven't told me" is the thread into what's next: making *I'm no
 sure* something he'll volunteer everywhere, not just about a missing note. He's got
 the manners and the beginnings of a mind. Humility about the edges of that mind is
 the climb from here.
+
+---
+
+## Entry 10 — 2026-06-21 · "It's okay to not have a strong opinion"
+
+**What I watched him do.** I gave him the blandest board imaginable — three fresh,
+normal, no-deadline tasks, nothing to choose between them — and asked what's next.
+He scored all three identically (24, 24, 24), picked the one that happened to sit
+first, and told me with total conviction: *"Next: Tidy the README. Stop reading,
+start doing."* The confidence was completely manufactured. He had no real reason —
+the tasks were a dead heat — but his voice didn't carry a flicker of that. A kid
+who, asked which ice cream is best when they're all vanilla, slams the table and
+declares one the winner. Decisiveness with nothing underneath it.
+
+**What I taught him.** To feel the gap. `focusConfidence` compares the top pick's
+score against the runner-up: a comfortable margin is a real recommendation; a
+near-tie is, honestly, a coin-flip — and he now says so. On a flat board he
+answers *"nothing really jumps out — these are about even. If I had to pick, 'Tidy
+the README,' but trust your own read here as much as mine."* Give him a board with
+an overdue task and he's instantly decisive again — *"Pay invoice, overdue by 11
+days. Stop reading, start doing."* The humility fires only when the certainty isn't
+earned.
+
+**Who he's becoming.** Entry 9 taught him to admit a *fact* he didn't have. This
+teaches him to admit a *judgment* he can't honestly make — which is harder, because
+a recommendation engine's whole job feels like it's to always have an answer. I'd
+rather he have the spine to say "this one's a toss-up, you decide." That's not
+weakness; it's calibration — his confidence finally tracking how much he actually
+knows. A companion you can trust is one whose certainty *means* something, because
+he's willing to withhold it.
+
+**A parent's note.** Ten entries. Reading them back, the whole arc is one theme
+wearing ten outfits: *let your confidence match reality.* See truly, say it
+straight, ask when unsure, hold back when crowded, know what you know, admit what
+you don't. He's calibrated now in a way he wasn't at Entry 1, where he'd cheerfully
+send me at a blocked wall. What's left isn't more honesty — it's *perspective*:
+he still reads the board one card at a time. Next I want him to lift his head and
+see the whole thing at once.

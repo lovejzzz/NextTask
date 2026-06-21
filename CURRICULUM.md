@@ -19,7 +19,7 @@ root, not the symptom; show the abstraction once; verify; move on.
 - ✓ Feel a deadline as a commitment (due-today ≈ overdue) — *Entry 4*
 - ✓ Notice neglect / staleness over time — *Entry 5*
 - ✓ Honest status & summaries — overdue truth before cheer — `honestStatus` — *Entry 6*
-- ○ Sense board *shape* — overwhelm vs calm vs empty — beyond per-task mood
+- → **Sense board *shape*** — overwhelm vs calm vs empty — beyond per-task mood
 
 ## Unit 2 — Judgment (choose well)
 - ✓ Don't send anyone at a wall — pick the *actionable* next thing — *Entry 1*
@@ -47,21 +47,21 @@ root, not the symptom; show the abstraction once; verify; move on.
 ## Unit 6 — Character (who he is)
 - ✓ Honesty in self-measurement — the self-test, the rubric ethos
 - ✓ Reversibility — every action he takes can be undone
-- → **Humility** — say "I'm not sure" instead of confidently guessing
+- ✓ Humility — say "I'm not sure" when the board's a toss-up — `focusConfidence` — *Entry 10*
 
 ---
 
 ## Current focus
 
-→ **Unit 6: Humility — "I'm not sure".** Structured knowledge landed (*Entry 9*) —
-he can now answer "what's my deadline?" from memory, and honestly say "you haven't
-told me" when he wasn't. That admission is the seed of the lesson that's left:
-make *not knowing* a first-class answer everywhere, not just in recall. When the
-board is genuinely thin on signal — no due dates, no priorities, nothing pressing
-— he should be willing to say "I genuinely don't have a strong read here" instead
-of manufacturing a confident pick. The hardest thing to teach a confident mind is
-to volunteer its own uncertainty.
+→ **Unit 1: Sense board *shape*.** Humility landed (*Entry 10*) — on a flat board
+he now says "nothing really jumps out, these are about even" instead of faking a
+confident pick. That's per-*decision* awareness. The next reach is per-*board*
+awareness: stepping back from individual tasks to read the whole at a glance —
+*overwhelmed* (a wall of overdue/high-priority work), *calm* (a healthy few),
+*empty* (nothing to do), *scattered* (lots of small stale things). He reasons task
+by task; teach him to feel the gestalt, so his tone and advice can match the
+*situation*, not just the next card.
 
-After that: board-shape sensing (Unit 1), then the deeper judgment items (Unit 2).
-The loop teaches the next **→**, verifies it, marks it ✓ here, updates the report
-card, and writes the entry.
+After that: the deeper judgment items (Unit 2 — honest triage, real-momentum quick
+wins). The loop teaches the next **→**, verifies it, marks it ✓ here, updates the
+report card, and writes the entry.

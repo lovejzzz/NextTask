@@ -78,7 +78,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, honestStatus, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
+import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
@@ -665,10 +665,16 @@ export function App() {
     if (intent?.kind === 'whats_next') {
       const top = pickNextActionable(tasks);
       if (top) {
+        const reason = focusReason(top).toLowerCase();
+        // Humility: when the top pick barely edges the rest, say it's a toss-up
+        // rather than fake certainty.
+        if (focusConfidence(tasks) === 'weak') {
+          return `Honestly? Nothing really jumps out — these are about even. If I had to pick, "${top.title}" (${reason}) — but trust your own read here as much as mine.`;
+        }
         return gatedWhy(
           top,
           `In one short sentence, why should I do "${top.title}" next? Only mention that task.`,
-          `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`,
+          `Next: "${top.title}" — ${reason}. Stop reading, start doing.`,
         );
       }
       // Nothing actionable — don't send you at a wall; name the blocker instead.

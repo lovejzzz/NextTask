@@ -3,7 +3,7 @@
  * what to drop, the fastest win, and the biggest risk — all composed
  * deterministically from board state so the answers are grounded and testable.
  */
-import { rankFocusTasks } from './experimental';
+import { focusScore, rankFocusTasks } from './experimental';
 import type { Task, TaskStatus } from './types';
 
 // How close a status is to "done" — used to find low-effort wins.
@@ -51,6 +51,28 @@ export function pickBiggestRisk(tasks: Task[], now?: Date): Task | null {
 export function pickNextActionable(tasks: Task[], now?: Date): Task | null {
   const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
   return rankFocusTasks(tasks, now).find((task) => !blocked.has(task.id)) ?? null;
+}
+
+/** How sure Boardy is about a "what's next" pick. */
+export type FocusConfidence = 'clear' | 'weak' | 'none';
+
+// A top pick needs to clear the runner-up by at least this much to feel real —
+// less than ~one priority/status step apart is, honestly, a coin-flip.
+const CONFIDENT_MARGIN = 8;
+
+/**
+ * How confident is the next-action recommendation? Compares the top actionable
+ * task's focus score against the runner-up. A comfortable margin is a genuine
+ * pick; a near-tie means he's essentially guessing — and should say so instead
+ * of manufacturing certainty. Humility, made measurable.
+ */
+export function focusConfidence(tasks: Task[], now?: Date): FocusConfidence {
+  const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
+  const actionable = rankFocusTasks(tasks, now).filter((task) => !blocked.has(task.id));
+  if (!actionable.length) return 'none';
+  if (actionable.length === 1) return 'clear';
+  const margin = focusScore(actionable[0], now) - focusScore(actionable[1], now);
+  return margin >= CONFIDENT_MARGIN ? 'clear' : 'weak';
 }
 
 const BLOCKED_RE = /\b(blocked|waiting on|waiting for|on hold|stuck|depends on|blocker)\b/i;
