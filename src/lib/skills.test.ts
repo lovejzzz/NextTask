@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { detectRepeatedSequence, suggestSkillContinuation, suggestSkillName } from './skills';
+import { commandSignature, detectRepeatedSequence, suggestSkillContinuation, suggestSkillName } from './skills';
+
+describe('commandSignature (behavior, not wording)', () => {
+  it('collapses phrasings of the same behavior to one signature', () => {
+    const sig = commandSignature('clear overdue');
+    expect(commandSignature('clear my overdue')).toBe(sig);
+    expect(commandSignature('knock out the overdue ones')).toBe(sig);
+  });
+  it('keeps distinct behaviors distinct', () => {
+    expect(commandSignature('plan my day')).not.toBe(commandSignature('clear overdue'));
+  });
+});
 
 describe('detectRepeatedSequence', () => {
   it('finds a 2-step pattern Boardy keeps repeating', () => {
@@ -31,6 +42,11 @@ describe('suggestSkillContinuation', () => {
       firstStep: 'clear overdue',
       remaining: ['plan my day'],
     });
+  });
+
+  it('recognizes the behavior even when reworded', () => {
+    expect(suggestSkillContinuation('clear my overdue', tools)?.name).toBe('morning');
+    expect(suggestSkillContinuation('knock out the overdue ones', tools)?.name).toBe('morning');
   });
 
   it('stays quiet for an unrelated command or a single-step tool', () => {

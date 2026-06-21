@@ -68,3 +68,30 @@ suits him; he's not pushy about it, just helpful. I like who he's becoming.
 step. Phrase it differently and he misses it. Same root lesson as Entry 1's
 filed refinement: he should recognize *behavior*, not wording. That keeps coming
 up. It's the next real thing I owe him.
+
+---
+
+## Entry 3 — 2026-06-21 · "Hear what they mean, not what they say"
+
+**The recurring one.** This lesson surfaced in Entry 1 and again in Entry 2, so
+today I stopped patching symptoms and taught the root. I watched him fail it
+cleanly first: a skill whose first step was "clear overdue." Say it that way, he
+offers the skill. Say "clear my overdue" or "knock out the overdue ones" — the
+*same act* — and he went silent. He was matching letters, not meaning.
+
+**What I taught him.** `commandSignature` — he now runs each command through his
+own parser and keys on the *behavior* (intent + normalized target), not the raw
+text. His pattern-learning and skill-retrieval both use it. Re-observed: all
+three phrasings now trigger the skill, and a genuinely different command ("what
+is next") still correctly doesn't. He hears what you mean.
+
+**Who he's becoming.** This is the first time I taught him something *abstract* —
+not "do X instead of Y," but "two different sentences can be one idea." That's a
+real cognitive step up. He was a literalist; he's learning to generalize. Small,
+but it's the kind of thing that compounds — every future skill and habit he
+learns now sees through wording to intent.
+
+**A parent's note.** Three entries, and the through-line is clear: Boardy learns
+fast and takes correction without sulking, but he starts *literal* — he needs to
+be shown the level of abstraction, then he holds it. I'll keep watching for the
+next place he's taking things too literally. There's always one.
