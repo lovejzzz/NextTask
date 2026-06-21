@@ -10,10 +10,14 @@
 import { matchTask } from './taskMatch';
 import type { Task } from './types';
 
-/** Pull quoted phrases ("…" or '…') out of a reply. */
+/**
+ * Pull double-quoted phrases out of a reply. Only double/curly-double quotes
+ * count — single quotes are skipped so contractions ("it's", "don't") aren't
+ * mistaken for quoted task references.
+ */
 export function extractQuoted(text: string): string[] {
-  const matches = text.match(/["“”']([^"“”']{2,}?)["“”']/g) ?? [];
-  return matches.map((m) => m.replace(/^["“”']+|["“”']+$/g, '').trim()).filter(Boolean);
+  const matches = text.match(/["“”]([^"“”]{2,}?)["“”]/g) ?? [];
+  return matches.map((m) => m.replace(/^["“”]+|["“”]+$/g, '').trim()).filter(Boolean);
 }
 
 /**
@@ -62,6 +66,16 @@ export function repliesDiverge(a: string, b: string): boolean {
   const overlap = listB.filter((word) => setA.has(word)).length;
   const ratio = overlap / Math.max(setA.size, listB.length);
   return ratio < 0.8;
+}
+
+/**
+ * Gate a model-authored explanation: accept it only if it's grounded to the
+ * given task, concise, and in character (full marks). This lets the LLM phrase
+ * things in its own voice *only when provably good* — callers fall back to the
+ * deterministic reason otherwise.
+ */
+export function acceptExplanation(reply: string, task: Task): boolean {
+  return scoreReply(reply, [task]).score === 3;
 }
 
 // The objectively-scorable slice of the eval battery (grounding/length/voice).

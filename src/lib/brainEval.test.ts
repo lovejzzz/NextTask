@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../test/factories';
-import { extractQuoted, groundingCheck, repliesDiverge, runBrainEval, scoreReply } from './brainEval';
+import { acceptExplanation, extractQuoted, groundingCheck, repliesDiverge, runBrainEval, scoreReply } from './brainEval';
 
 const tasks = [makeTask({ title: 'Fix the login bug' }), makeTask({ title: 'Email Sam about launch' })];
 
@@ -41,6 +41,17 @@ describe('repliesDiverge', () => {
   it('is false for identical or near-identical replies', () => {
     expect(repliesDiverge('Focus on the login bug.', 'Focus on the login bug.')).toBe(false);
     expect(repliesDiverge('', 'anything')).toBe(false);
+  });
+});
+
+describe('acceptExplanation', () => {
+  const task = makeTask({ title: 'Fix the login bug' });
+  it('accepts a grounded, concise, in-character explanation', () => {
+    expect(acceptExplanation('It\'s overdue and blocking the release — do "Fix the login bug" first.', task)).toBe(true);
+  });
+  it('rejects hallucinated, off-character, or rambling explanations', () => {
+    expect(acceptExplanation('As an AI I think you should "deploy the mars rocket".', task)).toBe(false);
+    expect(acceptExplanation('x'.repeat(300), task)).toBe(false);
   });
 });
 

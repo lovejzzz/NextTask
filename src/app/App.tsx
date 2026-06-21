@@ -77,7 +77,7 @@ import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
-import { repliesDiverge, runBrainEval } from '../lib/brainEval';
+import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
@@ -565,9 +565,23 @@ export function App() {
 
     if (intent?.kind === 'whats_next') {
       const top = rankFocusTasks(tasks)[0];
-      return top
-        ? `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`
-        : "Your board's empty. I'm bored. Give me something.";
+      if (!top) return "Your board's empty. I'm bored. Give me something.";
+      const fallback = `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`;
+      // Let the model phrase the "why" — but only if it's provably grounded + in character.
+      if (brain.status === 'ready') {
+        const reply = await brainRun(
+          buildChatMessages({
+            mood: companion.mood,
+            context: companionContext,
+            memory: memorySummary,
+            persona: personaText,
+            notes: notesText,
+            history: [{ role: 'user', content: `In one short sentence, why should I do "${top.title}" next? Only mention that task.` }],
+          }),
+        );
+        if (reply && acceptExplanation(reply, top)) return reply;
+      }
+      return fallback;
     }
 
     if (intent?.kind === 'overdue') {
