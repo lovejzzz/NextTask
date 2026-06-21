@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../test/factories';
-import { matchNamed, matchScore, matchTask } from './taskMatch';
+import { matchNamed, matchScore, matchTask, resolveTaskReference } from './taskMatch';
 
 const tasks = [
   makeTask({ id: 'a', title: 'Fix the login bug' }),
@@ -34,6 +34,41 @@ describe('matchTask', () => {
   it('prefers active work when scores are close', () => {
     const pair = [makeTask({ id: 'x', title: 'Review notes', status: 'done' }), makeTask({ id: 'y', title: 'Review notes' })];
     expect(matchTask(pair, 'review notes')?.id).toBe('y');
+  });
+});
+
+describe('resolveTaskReference', () => {
+  it('resolves a clear single match to one task', () => {
+    const ref = resolveTaskReference(tasks, 'login bug');
+    expect(ref.kind).toBe('one');
+    if (ref.kind === 'one') expect(ref.task.id).toBe('a');
+  });
+
+  it('reports none when nothing clears the bar', () => {
+    expect(resolveTaskReference(tasks, 'deploy kubernetes').kind).toBe('none');
+  });
+
+  it('flags ambiguity when two tasks are too close to call', () => {
+    const board = [
+      makeTask({ id: '1', title: 'Fix login bug' }),
+      makeTask({ id: '2', title: 'Login page redesign' }),
+      makeTask({ id: '3', title: 'Write release notes' }),
+    ];
+    const ref = resolveTaskReference(board, 'login');
+    expect(ref.kind).toBe('ambiguous');
+    if (ref.kind === 'ambiguous') {
+      expect(ref.candidates.map((task) => task.id).sort()).toEqual(['1', '2']);
+    }
+  });
+
+  it('does not cry ambiguity when one match clearly wins', () => {
+    const board = [
+      makeTask({ id: '1', title: 'Login' }), // exact-ish → 100
+      makeTask({ id: '2', title: 'Login page redesign' }), // substring → ~80
+    ];
+    const ref = resolveTaskReference(board, 'login');
+    expect(ref.kind).toBe('one');
+    if (ref.kind === 'one') expect(ref.task.id).toBe('1');
   });
 });
 

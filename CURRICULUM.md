@@ -30,7 +30,7 @@ root, not the symptom; show the abstraction once; verify; move on.
 ## Unit 3 — Language & understanding
 - ✓ Behavior over wording — `commandSignature` — *Entry 3*
 - ✓ Broad, robust intent parsing — 102-case corpus at 100%
-- → **Ask when genuinely ambiguous** instead of guessing
+- ✓ Ask when genuinely ambiguous instead of guessing — `resolveTaskReference` — *Entry 7*
 
 ## Unit 4 — Memory & learning
 - ✓ Persistent experience across sessions — `useCommandHistory`
@@ -42,7 +42,7 @@ root, not the symptom; show the abstraction once; verify; move on.
 - ✓ Propose, don't impose — Boardy's Desk
 - ✓ Consent before anything destructive — accept/dismiss, undo
 - ✓ Explain his reasoning when it helps — gated "why"
-- ○ **Restraint** — know when to stay quiet; don't nag
+- → **Restraint** — know when to stay quiet; don't nag
 
 ## Unit 6 — Character (who he is)
 - ✓ Honesty in self-measurement — the self-test, the rubric ethos
@@ -53,12 +53,14 @@ root, not the symptom; show the abstraction once; verify; move on.
 
 ## Current focus
 
-→ **Unit 3: Ask when genuinely ambiguous.** Honest status landed (*Entry 6*) —
-he no longer dresses up an overdue pile as a winning streak. Next he learns the
-harder humility: when a command could mean two real things, *ask* instead of
-guessing confidently. He parses intent well (102 cases at 100%), but confidence
-without a clarifying question is its own kind of dishonesty.
+→ **Unit 5: Restraint.** Ask-when-ambiguous landed (*Entry 7*) — he no longer
+deletes one of two matching tasks on a coin-flip; he asks which one. That was the
+first half of humility (*asking*). Restraint is the other half: knowing when to
+say *nothing at all*. He proposes on his Desk and explains himself well, but he
+doesn't yet sense when a nudge is unwelcome — when the user is in flow, when he
+just spoke, when there's genuinely nothing worth interrupting for. Teach him the
+quiet.
 
-After that, in order: restraint (Unit 5), then structured knowledge (Unit 4).
-The loop teaches the next **→**, verifies it, marks it ✓ here, and writes the
-entry.
+After that: structured knowledge (Unit 4), then humility — "I'm not sure"
+(Unit 6). The loop teaches the next **→**, verifies it, marks it ✓ here, updates
+the report card, and writes the entry.

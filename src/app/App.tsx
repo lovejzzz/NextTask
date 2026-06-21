@@ -99,7 +99,7 @@ import { formatNotes } from '../lib/companionNotes';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
-import { matchNamed, matchTask } from '../lib/taskMatch';
+import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { computeInsights } from '../lib/insights';
@@ -389,6 +389,21 @@ export function App() {
     // Remember recognized commands so Boardy can learn repeated patterns into skills.
     if (intent) experience.record(text);
 
+    // Resolve a spoken task reference, but don't guess when it's a real toss-up:
+    // if several tasks are too close to call, ask which one rather than act on a
+    // coin-flip — anything below this point mutates the board.
+    const resolveTask = (query: string, notFound: string): Task | string => {
+      const ref = resolveTaskReference(tasks, query);
+      if (ref.kind === 'none') return notFound;
+      if (ref.kind === 'ambiguous') {
+        const names = ref.candidates.slice(0, 4).map((candidate) => `"${candidate.title}"`);
+        const list =
+          names.length === 2 ? `${names[0]} or ${names[1]}` : `${names.slice(0, -1).join(', ')}, or ${names[names.length - 1]}`;
+        return `"${query}" could mean ${list}. Which one?`;
+      }
+      return ref.task;
+    };
+
     if (intent?.kind === 'create_task') {
       try {
         const created = await mutations.createTask.mutateAsync({
@@ -416,8 +431,9 @@ export function App() {
     }
 
     if (intent?.kind === 'complete_task') {
-      const task = matchTask(tasks, intent.query);
-      if (!task) return `I can't find a task like "${intent.query}". Be more specific?`;
+      const found = resolveTask(intent.query, `I can't find a task like "${intent.query}". Be more specific?`);
+      if (typeof found === 'string') return found;
+      const task = found;
       if (task.status === 'done') return `"${task.title}" is already done. We did that. Together.`;
       const prevStatus = task.status;
       companion.registerActivity();
@@ -429,8 +445,9 @@ export function App() {
     }
 
     if (intent?.kind === 'delete_task') {
-      const task = matchTask(tasks, intent.query);
-      if (!task) return `Can't find "${intent.query}" to delete.`;
+      const found = resolveTask(intent.query, `Can't find "${intent.query}" to delete.`);
+      if (typeof found === 'string') return found;
+      const task = found;
       try {
         await mutations.deleteTask.mutateAsync(task.id);
         companion.registerActivity();
@@ -454,8 +471,9 @@ export function App() {
     }
 
     if (intent?.kind === 'set_priority') {
-      const task = matchTask(tasks, intent.query);
-      if (!task) return `Can't find "${intent.query}".`;
+      const found = resolveTask(intent.query, `Can't find "${intent.query}".`);
+      if (typeof found === 'string') return found;
+      const task = found;
       const prevPriority = task.priority;
       try {
         await mutations.updateTask.mutateAsync({ id: task.id, input: { priority: intent.priority } });
@@ -470,8 +488,9 @@ export function App() {
     }
 
     if (intent?.kind === 'reschedule') {
-      const task = matchTask(tasks, intent.query);
-      if (!task) return `Can't find "${intent.query}".`;
+      const found = resolveTask(intent.query, `Can't find "${intent.query}".`);
+      if (typeof found === 'string') return found;
+      const task = found;
       const prevDue = task.due_date;
       try {
         await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: intent.due_date } });
@@ -486,8 +505,9 @@ export function App() {
     }
 
     if (intent?.kind === 'assign_task') {
-      const task = matchTask(tasks, intent.query);
-      if (!task) return `Can't find "${intent.query}".`;
+      const found = resolveTask(intent.query, `Can't find "${intent.query}".`);
+      if (typeof found === 'string') return found;
+      const task = found;
       const member = matchNamed(board?.teamMembers ?? [], intent.assignee);
       if (!member) return `No teammate named "${intent.assignee}" — add them in Manage first.`;
       const prev = task.assignees.map((person) => person.id);
@@ -505,8 +525,9 @@ export function App() {
     }
 
     if (intent?.kind === 'label_task') {
-      const task = matchTask(tasks, intent.query);
-      if (!task) return `Can't find "${intent.query}".`;
+      const found = resolveTask(intent.query, `Can't find "${intent.query}".`);
+      if (typeof found === 'string') return found;
+      const task = found;
       const label = matchNamed(board?.labels ?? [], intent.label);
       if (!label) return `No label called "${intent.label}" — make it in Manage first.`;
       const prev = task.labels.map((entry) => entry.id);

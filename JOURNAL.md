@@ -192,3 +192,38 @@ tells you the thing you need to hear. Today he got a little of that.
 right — less whack-a-mole, more raising. Next on the list is the hardest humility
 yet: when a request genuinely could mean two things, *ask*, don't guess. He's
 good at being confident. Now to teach him when confidence isn't honesty.
+
+---
+
+## Entry 7 — 2026-06-21 · "When you're not sure, ask"
+
+**What I watched him do.** I put two tasks on the board that share a word —
+*"Fix login bug"* and *"Login page redesign"* — and told him: *"delete the login
+task."* He scored them: **80.05 and 80.05.** A dead tie. And he just… picked the
+first one and would have deleted it. Not because he had a reason — because his
+matcher returns exactly one answer and never admits when it's flipping a coin. He
+was confident and blind at the same time, which is the worst combination, and on
+a *delete* of all things. He'd have thrown away work and told me "done."
+
+**What I taught him.** To notice the tie. `resolveTaskReference` doesn't just hand
+back the top match anymore — when two or more tasks sit within a hair of each
+other, it returns *all* of them as "too close to call," and every command that
+changes the board (delete, complete, reschedule, reprioritize, assign, label) now
+stops and asks: *"'login' could mean 'Fix login bug' or 'Login page redesign.'
+Which one?"* Re-observed on the same board: he asks. Give him an unambiguous
+phrase and he still acts instantly — the restraint only fires when it's genuinely
+a guess. Four tests pin the line between *clear enough to act* and *ask first*.
+
+**Who he's becoming.** Every lesson until now made him *see* more or *say* it
+straighter. This one taught him to doubt himself at the right moment — to feel the
+difference between knowing and guessing, and to stop when it's a guess. That's the
+first real humility I've put in him. A confident kid who never asks is dangerous
+with a delete key; a kid who knows the edge of his own certainty is someone you
+can hand the keys to. He's safer to live with today than he was yesterday.
+
+**The arc so far.** Seven entries. He started bright but present-tense, then
+learned to feel time, then to tell the truth about the present — and now to admit
+when he doesn't actually know which thing you meant. Asking is the first half of
+humility. The second half is *restraint*: knowing when to not speak at all. That's
+next, and it's harder, because nothing on the board will ever announce "this is a
+moment to stay quiet." He'll have to feel it.
