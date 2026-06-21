@@ -9,6 +9,8 @@
  */
 import type { TaskPriority } from './types';
 
+export const LOOP_NAME = 'Ouroboros';
+
 export type AutopilotProposal = { title: string; description: string; priority: TaskPriority };
 
 // Real upgrades the board would want, drawn from RUBRIC.md / LAB.md backlogs.

@@ -78,7 +78,7 @@ import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/c
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { runBrainEval } from '../lib/brainEval';
-import { AUTOPILOT_PREFIX, proposeImprovements } from '../lib/autopilot';
+import { AUTOPILOT_PREFIX, LOOP_NAME, proposeImprovements } from '../lib/autopilot';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes } from '../lib/companionNotes';
@@ -618,7 +618,7 @@ export function App() {
   }
 
   async function aiPlanForItself() {
-    notify('success', 'The board is planning its own upgrades…');
+    notify('success', `${LOOP_NAME}: planning my own upgrades…`);
     const proposals = proposeImprovements(Date.now(), 3);
     const createdIds: string[] = [];
     try {
@@ -636,10 +636,10 @@ export function App() {
       }
       companion.registerActivity();
       fireCompanionEvent('created');
-      setUndo(`file ${createdIds.length} AI tickets`, async () => {
+      setUndo(`file ${createdIds.length} ${LOOP_NAME} tickets`, async () => {
         for (const id of createdIds) await mutations.deleteTask.mutateAsync(id);
       });
-      flashCompanion(`Filed ${createdIds.length} upgrades I want for myself. Build them and I get smarter.`);
+      flashCompanion(`${LOOP_NAME}: filed ${createdIds.length} upgrades I want for myself. Build them and I get smarter.`);
     } catch {
       notify('error', 'I tried to plan for myself and dropped the pen. Try again?');
     }
@@ -941,7 +941,7 @@ export function App() {
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
     { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
     { id: 'goal', label: `Daily ship goal: ${goal}`, keywords: 'goal target daily ships quota', icon: Target, run: cycleGoal },
-    { id: 'autopilot', label: '🤖 AI: file its own upgrade tickets', keywords: 'autopilot ai self plan improve tickets backlog', icon: Bot, run: () => void aiPlanForItself() },
+    { id: 'autopilot', label: '🤖 Ouroboros: file its own upgrade tickets', keywords: 'autopilot ouroboros ai self plan improve tickets backlog loop', icon: Bot, run: () => void aiPlanForItself() },
     ...(brain.status !== 'off'
       ? [
           {
