@@ -12,16 +12,27 @@ import type { AutopilotProposal } from './autopilot';
 
 export type Proposal =
   | { id: string; kind: 'clear_overdue'; count: number; summary: string }
+  | { id: string; kind: 'save_skill'; steps: string[]; summary: string }
   | { id: string; kind: 'upgrade'; idea: AutopilotProposal; summary: string };
 
 export type ProposalInput = {
   overdue: number; // count of overdue tasks
   ideas: AutopilotProposal[]; // Ouroboros upgrade ideas (already deduped vs board)
+  learned?: string[] | null; // a repeated command sequence worth saving as a skill
 };
 
 /** What does Boardy want right now? Highest-leverage wants first. */
-export function generateProposals({ overdue, ideas }: ProposalInput): Proposal[] {
+export function generateProposals({ overdue, ideas, learned }: ProposalInput): Proposal[] {
   const proposals: Proposal[] = [];
+
+  if (learned && learned.length) {
+    proposals.push({
+      id: `save-skill-${learned.join('-').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}`,
+      kind: 'save_skill',
+      steps: learned,
+      summary: `I keep doing this: ${learned.join(' → ')}. Want me to save it as a skill?`,
+    });
+  }
 
   if (overdue > 0) {
     proposals.push({

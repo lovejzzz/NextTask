@@ -44,6 +44,19 @@ reliable despite a baby model — and why it works with the model off entirely.
 - **A deterministic planner** that sequences tools toward a goal; the LLM only
   translates the goal in and the result out.
 
+## Learning loop (Boardy's playground)
+
+Experimental mode is Boardy's playground, and he learns from experience — a safe
+take on Voyager's skill library and Hermes Agent's automated skill creation:
+
+- **Skill library** = tools/macros (`tools.ts`).
+- **Skill acquisition** = when Boardy notices he keeps running the same command
+  sequence (`detectRepeatedSequence` over recent history), he offers to **save it
+  as a skill** on Boardy's Desk; accept → it's in his library, reusable via
+  "run <name>". Procedural memory, earned from use — composition only, no codegen.
+- **Self-verification** = the brain self-test (`brainEval.ts`).
+- **Curriculum** = Boardy's Desk proposals + the Ouroboros backlog.
+
 ## The honest tradeoff
 
 - **Code:** reliable / fast / free / testable / auditable — but only knows what we

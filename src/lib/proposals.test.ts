@@ -29,4 +29,10 @@ describe('generateProposals', () => {
     const ids = generateProposals({ overdue: 1, ideas }).map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('leads with a learned-skill proposal when Boardy spots a repeated pattern', () => {
+    const proposals = generateProposals({ overdue: 0, ideas: [], learned: ['clear overdue', 'plan my day'] });
+    expect(proposals[0].kind).toBe('save_skill');
+    expect(proposals[0].summary).toContain('save it as a skill');
+  });
 });

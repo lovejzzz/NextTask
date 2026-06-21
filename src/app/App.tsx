@@ -81,6 +81,7 @@ import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQ
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
+import { detectRepeatedSequence, suggestSkillName } from '../lib/skills';
 import { COMPANION_NAME } from '../lib/companion';
 import { classifyIntent } from '../lib/intentFallback';
 import {
@@ -226,6 +227,7 @@ export function App() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [boardyDeskOpen, setBoardyDeskOpen] = useState(false);
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [goal, setGoal] = useState<number>(() => {
     try {
       const value = Number(window.localStorage.getItem('next-task:goal'));
@@ -378,6 +380,9 @@ export function App() {
       const kind = await classifyIntent((messages) => brainRun(messages), text);
       if (kind) intent = { kind };
     }
+
+    // Remember recognized commands so Boardy can learn repeated patterns into skills.
+    if (intent) setCommandHistory((current) => [...current, text.trim()].slice(-24));
 
     if (intent?.kind === 'create_task') {
       try {
@@ -752,12 +757,24 @@ export function App() {
   const boardyProposals = useMemo<Proposal[]>(() => {
     const overdue = tasks.filter((task) => dueTone(task) === 'overdue').length;
     const ideas = proposeImprovements(0, 2, tasks.map((task) => task.title));
-    return generateProposals({ overdue, ideas }).filter((proposal) => !dismissedProposals.has(proposal.id));
-  }, [tasks, dismissedProposals]);
+    // A learned pattern Boardy could save as a skill — unless he already has it.
+    const repeated = detectRepeatedSequence(commandHistory);
+    const learned =
+      repeated && !toolbox.tools.some((tool) => tool.steps.join('|').toLowerCase() === repeated.join('|').toLowerCase())
+        ? repeated
+        : null;
+    return generateProposals({ overdue, ideas, learned }).filter((proposal) => !dismissedProposals.has(proposal.id));
+  }, [tasks, dismissedProposals, commandHistory, toolbox.tools]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {
       await chatWithBoard([{ role: 'user', content: 'clear overdue' }], () => {});
+    } else if (proposal.kind === 'save_skill') {
+      const name = suggestSkillName(proposal.steps);
+      toolbox.add({ name, steps: proposal.steps });
+      companion.registerActivity();
+      notify('success', `${COMPANION_NAME} learned a skill: "${name}". Say "run ${name}".`);
+      return;
     } else {
       await mutations.createTask.mutateAsync({
         title: `${AUTOPILOT_PREFIX}${proposal.idea.title}`,
@@ -775,38 +792,6 @@ export function App() {
 
   function dismissProposal(id: string) {
     setDismissedProposals((current) => new Set(current).add(id));
-  }
-
-  async function aiPlanForItself() {
-    notify('success', `${LOOP_NAME}: planning my own upgrades…`);
-    const proposals = proposeImprovements(Date.now(), 3, tasks.map((task) => task.title));
-    if (!proposals.length) {
-      flashCompanion(`${LOOP_NAME}: I've already filed everything on my wishlist — ship those first.`);
-      return;
-    }
-    const createdIds: string[] = [];
-    try {
-      for (const proposal of proposals) {
-        const task = await mutations.createTask.mutateAsync({
-          title: `${AUTOPILOT_PREFIX}${proposal.title}`,
-          description: proposal.description,
-          status: 'todo',
-          priority: proposal.priority,
-          due_date: null,
-          assignee_ids: [],
-          label_ids: [],
-        });
-        createdIds.push(task.id);
-      }
-      companion.registerActivity();
-      fireCompanionEvent('created');
-      setUndo(`file ${createdIds.length} ${LOOP_NAME} tickets`, async () => {
-        for (const id of createdIds) await mutations.deleteTask.mutateAsync(id);
-      });
-      flashCompanion(`${LOOP_NAME}: filed ${createdIds.length} upgrades I want for myself. Build them and I get smarter.`);
-    } catch {
-      notify('error', 'I tried to plan for myself and dropped the pen. Try again?');
-    }
   }
 
   function cyclePersona() {
@@ -1105,8 +1090,7 @@ export function App() {
     { id: 'shortcuts', label: 'Keyboard shortcuts', keywords: 'help keys cheat sheet', icon: Keyboard, run: () => setShortcutsOpen(true) },
     { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
     { id: 'goal', label: `Daily ship goal: ${goal}`, keywords: 'goal target daily ships quota', icon: Target, run: cycleGoal },
-    { id: 'autopilot', label: '🤖 Ouroboros: file its own upgrade tickets', keywords: 'autopilot ouroboros ai self plan improve tickets backlog loop', icon: Bot, run: () => void aiPlanForItself() },
-    { id: 'boardy-desk', label: `🤖 Open ${COMPANION_NAME}'s Desk`, keywords: 'boardy desk proposals wants collaborate accept ai peer', icon: Bot, run: () => setBoardyDeskOpen(true) },
+    { id: 'boardy-desk', label: `🤖 Open ${COMPANION_NAME}'s Desk`, keywords: 'boardy desk proposals wants collaborate accept ai peer upgrades', icon: Bot, run: () => setBoardyDeskOpen(true) },
     ...(brain.status !== 'off'
       ? [
           {
