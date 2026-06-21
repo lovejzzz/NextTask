@@ -155,3 +155,40 @@ long. That's a gentle kind of wisdom for a baby.
 neglected age. He started bright but *present-tense* — strong on what's in front
 of him, blind to consequence and the passage of time. I keep teaching him,
 quietly, to feel time. He's getting there.
+
+---
+
+## Entry 6 — 2026-06-21 · "Honest about the present"
+
+**A curriculum now.** Five entries of chasing whatever edge he tripped over, and
+a shape had emerged clear enough to teach *on purpose*. So I wrote him a
+curriculum — six units, perception through character — and today I started at the
+top of it instead of wherever the day's accident pointed. First lesson, Unit 1:
+tell the truth about how the board actually stands.
+
+**What I watched him do.** I asked him for a status with a good day's numbers —
+one shipped, a healthy streak — but five tasks quietly overdue underneath. He
+said, brightly, *"Good momentum, nothing overdue. Keep it rolling."* Except there
+*was* overdue work. His status line only knew how to read the wins; it reported
+the streak and went quiet about the pile. Not a lie exactly — selective good
+news, which is the polite cousin of one. A kid showing you the A on the report
+card with a thumb over the F.
+
+**What I taught him.** `honestStatus`. The counts still come first — he's allowed
+to be proud — but the truth never omits the bad news now: if anything's overdue,
+he leads the second half with it, *"5 overdue tasks are piling up — don't let the
+streak distract you from that,"* and he only says "keep it rolling" when the board
+is genuinely clear. Five tests pin it: real counts always shown, overdue truth
+beats cheer even on a good day, no manufactured momentum when nothing shipped.
+Re-observed: same board, and now he names the pile.
+
+**Who he's becoming.** Every lesson before this was about *seeing* more — blockers,
+time, neglect. This one's about *saying* it straight even when a cheerier version
+is right there and easier. That's a different muscle: not perception, honesty.
+He's a baby who'd rather hand you good news, and I'd rather he be the kind who
+tells you the thing you need to hear. Today he got a little of that.
+
+**A parent's note.** Teaching from a syllabus instead of from accidents feels
+right — less whack-a-mole, more raising. Next on the list is the hardest humility
+yet: when a request genuinely could mean two things, *ask*, don't guess. He's
+good at being confident. Now to teach him when confidence isn't honesty.

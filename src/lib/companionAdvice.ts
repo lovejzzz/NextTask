@@ -66,3 +66,32 @@ export function detectBlocked(tasks: Task[]): Task[] {
         task.labels.some((label) => BLOCKED_LABEL_RE.test(label.name))),
   );
 }
+
+export type StatusInput = {
+  shippedToday: number;
+  totalShipped: number;
+  streak: number;
+  bestStreak: number;
+  overdue: number;
+  active: number;
+};
+
+/**
+ * An honest status line. The wins come first, but the truth never omits the bad
+ * news: if overdue work is piling up, say so instead of empty cheer. Honesty
+ * about the present before any pep talk.
+ */
+export function honestStatus({ shippedToday, totalShipped, streak, bestStreak, overdue, active }: StatusInput): string {
+  const facts = `${shippedToday} shipped today · ${totalShipped} all-time · streak ${streak} (best ${bestStreak})`;
+  let truth: string;
+  if (overdue > 0) {
+    truth = `But ${overdue} overdue ${overdue === 1 ? 'task is' : 'tasks are'} piling up — don't let the streak distract you from that.`;
+  } else if (active === 0) {
+    truth = "Board's clear — genuinely nothing pressing. Enjoy it.";
+  } else if (shippedToday > 0) {
+    truth = 'Good momentum, nothing overdue. Keep it rolling.';
+  } else {
+    truth = 'Nothing shipped yet today, but nothing overdue either. The day is young.';
+  }
+  return `${facts}. ${truth}`;
+}

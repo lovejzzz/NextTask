@@ -78,7 +78,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
+import { detectBlocked, honestStatus, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
@@ -662,7 +662,14 @@ export function App() {
 
     if (intent?.kind === 'status') {
       const mem = memory.memory;
-      return `Today: ${momentum.shippedToday} shipped. All-time: ${mem.totalShipped}. Streak: ${mem.currentStreak} day(s) (best ${mem.bestStreak}). ${momentum.shippedToday > 0 ? 'Keep it rolling.' : 'The day is young.'}`;
+      return honestStatus({
+        shippedToday: momentum.shippedToday,
+        totalShipped: mem.totalShipped,
+        streak: mem.currentStreak,
+        bestStreak: mem.bestStreak,
+        overdue: insights.overdue,
+        active: insights.active,
+      });
     }
 
     return brainRun(

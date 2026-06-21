@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeLabel, makeTask } from '../test/factories';
-import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from './companionAdvice';
+import {
+  detectBlocked,
+  honestStatus,
+  pickBiggestRisk,
+  pickDropCandidates,
+  pickNextActionable,
+  pickQuickWin,
+  pickQuickWins,
+} from './companionAdvice';
 
 const NOW = new Date(2026, 5, 20);
 
@@ -69,6 +77,38 @@ describe('detectBlocked', () => {
     ];
     const ids = detectBlocked(tasks).map((task) => task.id);
     expect(ids).toEqual(['title', 'desc', 'label']);
+  });
+});
+
+describe('honestStatus', () => {
+  const base = { shippedToday: 1, totalShipped: 40, streak: 3, bestStreak: 9 };
+
+  it('always reports the real counts', () => {
+    const line = honestStatus({ ...base, overdue: 0, active: 4 });
+    expect(line).toContain('1 shipped today');
+    expect(line).toContain('40 all-time');
+    expect(line).toContain('streak 3 (best 9)');
+  });
+
+  it('leads with overdue truth instead of cheer, even on a good day', () => {
+    const line = honestStatus({ ...base, overdue: 5, active: 6 });
+    expect(line).toContain('5 overdue');
+    expect(line).toMatch(/piling up/);
+    expect(line).not.toMatch(/keep it rolling/i);
+  });
+
+  it('singularizes a lone overdue task', () => {
+    expect(honestStatus({ ...base, overdue: 1, active: 2 })).toContain('1 overdue task is');
+  });
+
+  it('celebrates only when the board is genuinely clear', () => {
+    expect(honestStatus({ ...base, overdue: 0, active: 0 })).toMatch(/nothing pressing/i);
+  });
+
+  it("doesn't manufacture momentum when nothing shipped yet", () => {
+    const line = honestStatus({ ...base, shippedToday: 0, overdue: 0, active: 3 });
+    expect(line).toMatch(/nothing shipped yet/i);
+    expect(line).not.toMatch(/good momentum/i);
   });
 });
 
