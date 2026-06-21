@@ -74,7 +74,7 @@ import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
-import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
+import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { repliesDiverge, runBrainEval } from '../lib/brainEval';
@@ -675,6 +675,11 @@ export function App() {
       } catch {
         // ignore — the score toast already landed
       }
+    }
+    // Recommend a sharper model when this one underperforms.
+    const upgrade = recommendUpgrade(brain.model, score, max);
+    if (upgrade) {
+      notify('success', `Want sharper replies? Try the ${upgrade.label} model — ⌘K → "Brain model".`);
     }
   }
 

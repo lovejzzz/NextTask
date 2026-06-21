@@ -30,6 +30,17 @@ export function nextModelId(id: string): string {
   return MODELS[(index + 1) % MODELS.length].id;
 }
 
+/**
+ * Suggest a larger model when the self-test scored poorly and a bigger one is
+ * available (MODELS is ordered small→large). Null when healthy or already on the
+ * biggest.
+ */
+export function recommendUpgrade(currentId: string, score: number, max: number): BrainModel | null {
+  if (max <= 0 || score / max >= 0.75) return null;
+  const index = MODELS.findIndex((model) => model.id === currentId);
+  return index >= 0 ? MODELS[index + 1] ?? null : null;
+}
+
 export type BrainMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 export type BrainContext = {

@@ -8,6 +8,7 @@ import {
   MODELS,
   modelLabel,
   nextModelId,
+  recommendUpgrade,
   type PromptParts,
 } from './companionBrain';
 
@@ -86,6 +87,12 @@ describe('model selection', () => {
   it('labels a model, defaulting for unknown ids', () => {
     expect(modelLabel(MODELS[0].id)).toBe(MODELS[0].label);
     expect(modelLabel('mystery')).toBe(MODELS[0].label);
+  });
+
+  it('recommends a bigger model only when the score is weak and one exists', () => {
+    expect(recommendUpgrade(MODELS[0].id, 4, 12)?.id).toBe(MODELS[1].id); // weak on small → suggest big
+    expect(recommendUpgrade(MODELS[0].id, 11, 12)).toBeNull(); // healthy → no nag
+    expect(recommendUpgrade(MODELS[MODELS.length - 1].id, 4, 12)).toBeNull(); // already biggest
   });
 });
 
