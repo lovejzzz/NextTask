@@ -61,7 +61,18 @@ export function focusScore(task: Task, now: Date = startOfToday()): number {
     }
   }
 
+  // Staleness: work untouched for weeks shouldn't rot silently. A mild, capped
+  // nudge so neglected tasks eventually resurface — never enough to outshout a
+  // deadline or high priority.
+  const ageDays = differenceInCalendarDays(now, parseISO(task.updated_at));
+  if (ageDays >= 14) score += Math.min(Math.floor((ageDays - 14) / 7) + 1, 4) * 2;
+
   return score;
+}
+
+/** Days since a task was last touched. */
+export function taskAgeDays(task: Task, now: Date = startOfToday()): number {
+  return Math.max(0, differenceInCalendarDays(now, parseISO(task.updated_at)));
 }
 
 /**
@@ -86,6 +97,9 @@ export function focusReason(task: Task, now: Date = startOfToday()): string {
   if (task.priority === 'high') return 'High priority';
   if (task.status === 'in_review') return 'Waiting on review';
   if (task.status === 'in_progress') return 'Already in motion';
+
+  const age = taskAgeDays(task, now);
+  if (age >= 14) return `Stale — untouched ${age} days`;
   return 'Next in your queue';
 }
 

@@ -29,6 +29,12 @@ describe('rankFocusTasks', () => {
     expect(ranked[0].id).toBe('today');
   });
 
+  it('resurfaces a neglected task over an equal fresh one', () => {
+    const fresh = makeTask({ id: 'fresh', priority: 'low', status: 'todo', updated_at: '2026-06-19T00:00:00.000Z' });
+    const stale = makeTask({ id: 'stale', priority: 'low', status: 'todo', updated_at: '2026-04-01T00:00:00.000Z' });
+    expect(rankFocusTasks([fresh, stale], NOW)[0].id).toBe('stale');
+  });
+
   it('prefers work already in motion when priority ties', () => {
     const doing = makeTask({ id: 'doing', priority: 'normal', status: 'in_progress' });
     const waiting = makeTask({ id: 'waiting', priority: 'normal', status: 'todo' });
@@ -66,7 +72,14 @@ describe('focusReason', () => {
     expect(focusReason(makeTask({ status: 'todo', priority: 'high' }), NOW)).toBe('High priority');
     expect(focusReason(makeTask({ status: 'in_review', priority: 'normal' }), NOW)).toBe('Waiting on review');
     expect(focusReason(makeTask({ status: 'in_progress', priority: 'normal' }), NOW)).toBe('Already in motion');
-    expect(focusReason(makeTask({ status: 'todo', priority: 'normal' }), NOW)).toBe('Next in your queue');
+    expect(focusReason(makeTask({ status: 'todo', priority: 'normal', updated_at: '2026-06-19T00:00:00.000Z' }), NOW)).toBe(
+      'Next in your queue',
+    );
+  });
+
+  it('notices when a task has gone stale', () => {
+    const stale = makeTask({ status: 'todo', priority: 'low', updated_at: '2026-04-01T00:00:00.000Z' });
+    expect(focusReason(stale, NOW)).toMatch(/stale/i);
   });
 });
 

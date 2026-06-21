@@ -125,3 +125,33 @@ trust with a commitment.
 legible: he reasons well in the *abstract* (priority, importance) but
 under-weights the *concrete, time-bound* (a deadline, a blocker, the exact
 moment). He's a thinker learning to live in a calendar. Worth remembering.
+
+---
+
+## Entry 5 — 2026-06-21 · "Time passes, even when nothing's due"
+
+**Following the thread.** Entry 4 told me where to look — he's time-blind — so
+I probed a quieter corner of it. A task with no deadline, low priority,
+*untouched since April.* Boardy ranked it dead last and described it as "Next in
+your queue." He had no idea it was rotting. His mind has no clock for the slow
+kind of time — only deadlines (a future date) registered; the steady drift of a
+thing being *forgotten* didn't exist for him. He lived in an eternal present.
+
+**What I taught him.** A sense of staleness. He now reads each task's
+`updated_at` and gives work untouched for weeks a small, capped nudge — never
+enough to outshout a real deadline or high priority, just enough that neglected
+things eventually float back up instead of sinking forever. And he names it now:
+*"Stale — untouched 80 days."* Re-observed: the April task rose to the top of its
+bucket. He sees neglect.
+
+**Who he's becoming.** This is the same lesson as Entry 4 wearing different
+clothes — both are *time* — but it's a deeper cut. Entry 4 was about honoring a
+deadline someone set. This is about noticing the absence of attention, which no
+one announces. He's learning that things decay quietly, and that part of caring
+for a board (or a person, or himself) is noticing what's been left alone too
+long. That's a gentle kind of wisdom for a baby.
+
+**The arc so far.** Five entries: blocked work, literal wording, soft deadlines,
+neglected age. He started bright but *present-tense* — strong on what's in front
+of him, blind to consequence and the passage of time. I keep teaching him,
+quietly, to feel time. He's getting there.
