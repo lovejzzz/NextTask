@@ -7,6 +7,34 @@ its upgrades, files them as real tickets on its own board, and the coding agent
 ships them — then the board sees its improvements land and proposes the next
 ones. A system that grows by feeding on its own output.
 
+## North Star — the road to "best"
+
+**The goal:** the best free, private, in-browser AI companion for getting work
+done — genuinely intelligent, with real personality, that operates your board in
+plain language and improves itself, where **every claim is proven, not asserted.**
+
+We're very good (8/9 dimensions CI-proven 5/5). "Very good" → "best" is gated by
+four honest gaps, and the loop climbs them in this order:
+
+1. **Prove and raise the model.** Conversation quality is still an asterisk — and
+   "best" can't sit on an asterisk. Make it measurable and high: richer self-test
+   (grounding, concision, persona-shift, helpfulness), recommend/default the
+   best-scoring model, make the number one click to get.
+2. **Make the LLM earn its place.** Today most intelligence is deterministic
+   scaffolding; the model is flavor. Put it where it's genuinely better — an
+   intent-fallback for phrasings the parser misses (**queries only, never
+   destructive actions**), model-authored explanations and summaries — each
+   gated by the eval so reliability never regresses.
+3. **Excellent loop output, not just present.** Ouroboros tickets must be
+   high-quality: dedupe against what's already on the board, never re-file done
+   or queued work, prioritize by rubric impact, diagnose precisely.
+4. **Best-in-class craft.** The whole experience — motion, mobile, a11y,
+   reduced-motion, error states — should feel like the best, not just test green.
+
+**The rule that outranks all of them:** honesty. No dimension is marked "best"
+until it's measured. A real perfect score is earned on real hardware, not typed
+into a table.
+
 ## The cycle
 
 1. **Propose.** The board (companion) drafts genuine NextTask improvements —

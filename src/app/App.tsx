@@ -78,6 +78,7 @@ import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/c
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { runBrainEval } from '../lib/brainEval';
+import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
   LOOP_NAME,
@@ -313,7 +314,14 @@ export function App() {
   // then fall through to the LLM for open conversation.
   async function chatWithBoard(history: ChatTurn[], onToken: (chunk: string) => void): Promise<string | null> {
     const text = history[history.length - 1]?.content ?? '';
-    const intent = parseIntent(text);
+    let intent = parseIntent(text);
+
+    // Rules missed but the brain is on → let the model classify, restricted to
+    // safe parameter-less queries (never destructive actions).
+    if (!intent && brain.status === 'ready') {
+      const kind = await classifyIntent((messages) => brainRun(messages), text);
+      if (kind) intent = { kind };
+    }
 
     if (intent?.kind === 'create_task') {
       try {
