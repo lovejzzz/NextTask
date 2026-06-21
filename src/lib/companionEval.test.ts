@@ -33,6 +33,7 @@ describe('companion comprehension standard', () => {
       'quick_win',
       'risk',
       'blocked',
+      'ouroboros_backlog',
       'remember',
       'recall',
     ]) {

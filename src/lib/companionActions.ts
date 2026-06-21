@@ -29,6 +29,7 @@ export type CompanionIntent =
   | { kind: 'quick_win' }
   | { kind: 'risk' }
   | { kind: 'blocked' }
+  | { kind: 'ouroboros_backlog' }
   | { kind: 'whats_next' }
   | { kind: 'overdue' }
   | { kind: 'status' };
@@ -145,6 +146,9 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(what'?s blocked|what am i (?:waiting|blocked) on|any blockers|what'?s stuck|am i blocked|what'?s on hold)\b/.test(lower)) {
     return { kind: 'blocked' };
+  }
+  if (/\b(your (?:own )?(?:backlog|tickets|queue|upgrades|wishlist)|what have you (?:queued|filed)|what are you (?:working on|building) for yourself|ouroboros (?:status|backlog|queue))\b/.test(lower)) {
+    return { kind: 'ouroboros_backlog' };
   }
   if (/\bwhat'?s next\b/.test(lower) || /^(?:next(?: up| task)?\??|what should i (?:do|work on)\??)$/.test(lower)) {
     return { kind: 'whats_next' };

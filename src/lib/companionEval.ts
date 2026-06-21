@@ -94,6 +94,10 @@ export const EVAL_CORPUS: EvalCase[] = [
   { text: "what's blocked?", expect: 'blocked' },
   { text: 'what am I waiting on', expect: 'blocked' },
   { text: 'any blockers?', expect: 'blocked' },
+  // the loop's own backlog
+  { text: "what's in your backlog?", expect: 'ouroboros_backlog' },
+  { text: 'what have you queued for yourself', expect: 'ouroboros_backlog' },
+  { text: 'show your own tickets', expect: 'ouroboros_backlog' },
   // long-term notes
   { text: 'remember that the launch is friday', expect: 'remember' },
   { text: "I'm focusing on the redesign", expect: 'remember' },

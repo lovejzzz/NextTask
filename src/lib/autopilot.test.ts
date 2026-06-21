@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { AUTOPILOT_PREFIX, diagnoseFromSelfTest, proposeImprovements } from './autopilot';
+import {
+  AUTOPILOT_PREFIX,
+  diagnoseFromSelfTest,
+  isOuroborosTask,
+  ouroborosTasks,
+  proposeImprovements,
+  stripOuroborosPrefix,
+} from './autopilot';
 
 describe('proposeImprovements', () => {
   it('returns the requested number of distinct proposals', () => {
@@ -29,6 +36,18 @@ describe('proposeImprovements', () => {
 
   it('exposes a marker prefix for AI-authored tickets', () => {
     expect(AUTOPILOT_PREFIX.trim()).toBe('🤖');
+  });
+});
+
+describe('ouroboros task tagging', () => {
+  const tasks = [{ title: '🤖 Add LLM intent-fallback' }, { title: 'Email Sam' }, { title: '🤖 Cache the weights' }];
+  it('identifies and filters the loop’s own tickets', () => {
+    expect(isOuroborosTask(tasks[0])).toBe(true);
+    expect(isOuroborosTask(tasks[1])).toBe(false);
+    expect(ouroborosTasks(tasks)).toHaveLength(2);
+  });
+  it('strips the marker for clean display', () => {
+    expect(stripOuroborosPrefix('🤖 Cache the weights')).toBe('Cache the weights');
   });
 });
 

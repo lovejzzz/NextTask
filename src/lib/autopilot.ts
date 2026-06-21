@@ -69,6 +69,21 @@ export function proposeImprovements(seed: number, count = 3): AutopilotProposal[
 
 export const AUTOPILOT_PREFIX = '🤖 ';
 
+/** Was this ticket authored by the loop? (marked with the 🤖 prefix). */
+export function isOuroborosTask(task: { title: string }): boolean {
+  return task.title.trimStart().startsWith(AUTOPILOT_PREFIX.trim());
+}
+
+/** The loop's self-authored tickets, newest-relevant first by caller's order. */
+export function ouroborosTasks<T extends { title: string }>(tasks: T[]): T[] {
+  return tasks.filter(isOuroborosTask);
+}
+
+/** A title with the 🤖 marker stripped, for clean display. */
+export function stripOuroborosPrefix(title: string): string {
+  return title.replace(AUTOPILOT_PREFIX, '').replace(AUTOPILOT_PREFIX.trim(), '').trim();
+}
+
 const WEAKNESS_FOCUS: Record<string, string> = {
   grounded: 'grounding — it referenced tasks that aren’t on the board',
   concise: 'concision — replies ran too long',

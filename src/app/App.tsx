@@ -78,7 +78,14 @@ import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/c
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { runBrainEval } from '../lib/brainEval';
-import { AUTOPILOT_PREFIX, LOOP_NAME, diagnoseFromSelfTest, proposeImprovements } from '../lib/autopilot';
+import {
+  AUTOPILOT_PREFIX,
+  LOOP_NAME,
+  diagnoseFromSelfTest,
+  ouroborosTasks,
+  proposeImprovements,
+  stripOuroborosPrefix,
+} from '../lib/autopilot';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes } from '../lib/companionNotes';
@@ -536,6 +543,16 @@ export function App() {
       const blocked = detectBlocked(tasks);
       if (!blocked.length) return "Nothing's blocked. So whatever's not moving — that's on you.";
       return `Blocked or waiting: ${blocked.map((task) => `"${task.title}"`).join(', ')}. Go unstick those.`;
+    }
+
+    if (intent?.kind === 'ouroboros_backlog') {
+      const mine = ouroborosTasks(tasks).filter((task) => task.status !== 'done');
+      if (!mine.length) return `Nothing queued for myself yet. Run "${LOOP_NAME}: file its own upgrade tickets" and I'll draft some.`;
+      const list = mine
+        .slice(0, 6)
+        .map((task) => `- ${stripOuroborosPrefix(task.title)}`)
+        .join('\n');
+      return `My own upgrade queue (${mine.length}):\n${list}`;
     }
 
     if (intent?.kind === 'whats_next') {
