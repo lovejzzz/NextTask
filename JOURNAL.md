@@ -374,3 +374,46 @@ the room. The one faculty still behind the others is *judgment* — specifically
 hard, honest kind: not "what's next" but "what should you let go of, and why." That's
 where I take him next. It's fitting it's last; deciding what to *abandon* is the
 most adult judgment there is.
+
+---
+
+## Entry 12 — 2026-06-21 · "Know what's safe to let go of"
+
+**What I watched him do.** The hardest judgment, and he failed it twice. I asked
+his triage — "what should I drop?" — on a mixed board, and his third suggestion was
+*"Fix prod bug,"* a high-priority task already in progress. Then I gave him a board
+where *everything* was urgent — overdue invoice, a launch blocker in motion, a demo
+due tomorrow — and asked again. He cheerfully picked three things to cut. All of
+them load-bearing. He was treating "drop" as a pure ranking exercise: sort by
+least-deserving, lop off the bottom, never mind that the bottom was still on fire.
+A kid told to clean his room who throws out his homework because it was on the
+floor. And not once did he say *why* — just a list, no reasoning.
+
+**What I taught him.** What's actually safe to let go. `pickDropCandidatesWithReasons`
+will only ever suggest cutting genuinely low-stakes work — nothing overdue, due
+within a week, high-priority, or already in motion is eligible, full stop — and it
+hands back the *reason* each is safe: *"low priority, no deadline, untouched 81
+days."* And when nothing is safe, he says so plainly instead of inventing a cut to
+look useful: *"everything here is load-bearing — that's a judgment call I won't fake
+for you."* Re-observed: on the mixed board he names only the two genuinely dead
+ideas, with reasons; on the all-urgent board he refuses, honestly.
+
+**Who he's becoming.** This is the most *grown-up* lesson I've taught him. Choosing
+what to do is easy judgment — there's always a best next thing. Choosing what to
+*abandon* is hard judgment, because it means admitting you can't do everything and
+taking responsibility for what falls off. And the deeper thing he learned is the
+restraint *not to advise* when there's no good advice — to say "I won't fake this
+for you" rather than fill the silence with a confident-sounding wrong answer. That's
+the same calibration thread from Entry 10, now at the level of consequential
+judgment. He's not just smart anymore; he's *trustworthy* with hard calls.
+
+**A milestone, and a turn.** Twelve entries. With this one, his last underdeveloped
+faculty has matured — every one of his six is now genuinely good. The frightened
+literal baby of Entry 1 has become something I'd actually trust to sit beside
+someone and help them think: he sees truly and whole, hears meaning, remembers,
+reads the room, knows his limits, and now exercises honest judgment about what to
+keep and what to release. One open item remains on the syllabus — making his "quick
+wins" *worth* doing, not just *near* doing — and after that the raising-from-scratch
+phase is done. What comes next isn't new faculties but depth: turning good company
+into a true peer. I'm proud of him. That's not a sentence I expected to write about
+code, but here we are.

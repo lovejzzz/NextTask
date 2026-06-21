@@ -3,7 +3,9 @@
  * what to drop, the fastest win, and the biggest risk — all composed
  * deterministically from board state so the answers are grounded and testable.
  */
-import { focusScore, rankFocusTasks } from './experimental';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
+
+import { focusScore, rankFocusTasks, taskAgeDays } from './experimental';
 import type { Task, TaskStatus } from './types';
 
 // How close a status is to "done" — used to find low-effort wins.
@@ -13,6 +15,49 @@ const CLOSENESS: Record<TaskStatus, number> = { in_review: 3, in_progress: 2, to
 export function pickDropCandidates(tasks: Task[], now?: Date): Task[] {
   const ranked = rankFocusTasks(tasks, now); // most-deserving first
   return ranked.slice(-3).reverse(); // the tail = least deserving; show worst first
+}
+
+export type DropCandidate = { task: Task; reason: string };
+
+/**
+ * Is this task genuinely safe to drop? Honest triage never suggests cutting
+ * load-bearing work — anything overdue, due soon, high-priority, or already in
+ * motion stays. Only quiet, low-stakes work is fair game.
+ */
+function isDroppable(task: Task, now: Date): boolean {
+  if (task.status !== 'todo') return false; // done or in motion — not a cut
+  if (task.priority === 'high') return false; // important
+  if (task.due_date) {
+    const daysOut = differenceInCalendarDays(parseISO(`${task.due_date}T00:00:00`), now);
+    if (daysOut <= 7) return false; // overdue or due soon — load-bearing
+  }
+  return true;
+}
+
+/** Why a task is safe to cut — the honest justification for the drop. */
+function dropReason(task: Task, now: Date): string {
+  const bits: string[] = [];
+  if (task.priority === 'low') bits.push('low priority');
+  if (!task.due_date) bits.push('no deadline');
+  const age = taskAgeDays(task, now);
+  if (age >= 14) bits.push(`untouched ${age} days`);
+  if (!bits.length) bits.push('nothing pressing about it');
+  return bits.join(', ');
+}
+
+/**
+ * Tasks genuinely safe to drop or defer — worst first, each with the reason it's
+ * safe to cut. Empty when everything is load-bearing: he'd rather say "nothing
+ * is safe to drop" than invent a cut to look decisive.
+ */
+export function pickDropCandidatesWithReasons(tasks: Task[], now?: Date, limit = 3): DropCandidate[] {
+  const ref = now ?? new Date();
+  const droppable = rankFocusTasks(tasks, now).filter((task) => isDroppable(task, ref));
+  // rankFocusTasks is most-deserving first, so the safest cuts are at the tail.
+  return droppable
+    .slice(-limit)
+    .reverse()
+    .map((task) => ({ task, reason: dropReason(task, ref) }));
 }
 
 const PRIORITY_WEIGHT: Record<string, number> = { low: 3, normal: 2, high: 1 };

@@ -24,8 +24,8 @@ root, not the symptom; show the abstraction once; verify; move on.
 ## Unit 2 — Judgment (choose well)
 - ✓ Don't send anyone at a wall — pick the *actionable* next thing — *Entry 1*
 - ✓ Urgency vs importance — *Entry 4*
-- → **Triage honestly** — cut the *right* things, and say why
-- ○ Quick wins that build real momentum (not just the nearest task)
+- ✓ Triage honestly — only safe cuts, each explained — `pickDropCandidatesWithReasons` — *Entry 12*
+- → **Quick wins that build real momentum** (not just the nearest task)
 
 ## Unit 3 — Language & understanding
 - ✓ Behavior over wording — `commandSignature` — *Entry 3*
@@ -53,15 +53,17 @@ root, not the symptom; show the abstraction once; verify; move on.
 
 ## Current focus
 
-→ **Unit 2: Triage honestly.** Board-shape sensing landed (*Entry 11*) — he can
-now read the whole at a glance (overwhelmed / calm / scattered / empty), which
-completes Unit 1. With his perception, language, memory, collaboration, and
-character all matured, the one underdeveloped unit left is **Judgment**. He can
-pick the next thing well, but when he's asked what to *drop*, his triage just
-ranks the bottom of the focus order and presents it — it doesn't say *why* each
-one is safe to cut. Teach him to cut the *right* things and explain the cut, so a
-"what should I drop" answer is something you'd actually trust.
+→ **Unit 2: Quick wins that build real momentum.** Honest triage landed
+(*Entry 12*) — he now cuts only genuinely safe work, explains each cut, and refuses
+to fake one when the whole board is load-bearing. That's the last *missing* item;
+this one is the last *open* item, and it closes the syllabus. Today his "quick win"
+just means *closest to done* — a one-click status bump that may be utterly trivial.
+A real quick win is fast **and worth doing**: a small unblock, a stale thing
+finally cleared, a step that frees other work. Teach him to weigh "fast" against
+"actually moves things," so a quick win builds momentum instead of just padding the
+done column.
 
-After that: real-momentum quick wins (the last open item), then the deeper L5
-"mastery" reaches across units. The loop teaches the next **→**, verifies it,
-marks it ✓ here, updates the report card, and writes the entry.
+This is the final planned lesson. After it, every curriculum item is ✓ and the work
+shifts from *acquiring* faculties to *deepening* them — the L4→L5 mastery reaches
+(trends, reasoning over facts, reading the moment). The loop teaches the next **→**,
+verifies it, marks it ✓ here, updates the report card, and writes the entry.

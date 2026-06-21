@@ -7,6 +7,7 @@ import {
   honestStatus,
   pickBiggestRisk,
   pickDropCandidates,
+  pickDropCandidatesWithReasons,
   pickNextActionable,
   pickQuickWin,
   pickQuickWins,
@@ -151,5 +152,41 @@ describe('pickDropCandidates', () => {
     const drops = pickDropCandidates(tasks, NOW);
     expect(drops[0].id).toBe('meh');
     expect(drops.some((task) => task.status === 'done')).toBe(false);
+  });
+});
+
+describe('pickDropCandidatesWithReasons', () => {
+  it('only suggests genuinely safe cuts, never load-bearing work', () => {
+    const tasks = [
+      makeTask({ id: 'overdue', status: 'todo', priority: 'high', due_date: '2026-06-10' }),
+      makeTask({ id: 'inmotion', status: 'in_progress', priority: 'normal' }),
+      makeTask({ id: 'soon', status: 'todo', priority: 'normal', due_date: '2026-06-22' }),
+      makeTask({ id: 'safe', status: 'todo', priority: 'low', updated_at: '2026-04-01T00:00:00.000Z' }),
+    ];
+    const drops = pickDropCandidatesWithReasons(tasks, NOW);
+    const ids = drops.map((d) => d.task.id);
+    expect(ids).toEqual(['safe']);
+    expect(ids).not.toContain('overdue');
+    expect(ids).not.toContain('inmotion');
+    expect(ids).not.toContain('soon');
+  });
+
+  it('explains why each cut is safe', () => {
+    const [drop] = pickDropCandidatesWithReasons(
+      [makeTask({ id: 'safe', status: 'todo', priority: 'low', updated_at: '2026-04-01T00:00:00.000Z' })],
+      NOW,
+    );
+    expect(drop.reason).toMatch(/low priority/);
+    expect(drop.reason).toMatch(/no deadline/);
+    expect(drop.reason).toMatch(/untouched \d+ days/);
+  });
+
+  it('returns nothing when the whole board is load-bearing', () => {
+    const allUrgent = [
+      makeTask({ status: 'todo', priority: 'high', due_date: '2026-06-10' }),
+      makeTask({ status: 'in_progress', priority: 'high' }),
+      makeTask({ status: 'todo', priority: 'high', due_date: '2026-06-22' }),
+    ];
+    expect(pickDropCandidatesWithReasons(allUrgent, NOW)).toEqual([]);
   });
 });

@@ -78,7 +78,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
+import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
@@ -620,10 +620,12 @@ export function App() {
     }
 
     if (intent?.kind === 'triage') {
-      const drops = pickDropCandidates(tasks);
-      if (!drops.length) return "Nothing to drop — your board's already lean. Respect.";
-      const list = drops.map((task) => `"${task.title}"`).join(', ');
-      return `If something has to give, drop or defer: ${list}. They're the least load-bearing.`;
+      const drops = pickDropCandidatesWithReasons(tasks);
+      if (!drops.length) {
+        return "Nothing safe to drop — everything here is load-bearing (overdue, due soon, high-priority, or in motion). If something truly has to give, that's a judgment call I won't fake for you.";
+      }
+      const list = drops.map(({ task, reason }) => `"${task.title}" (${reason})`).join('; ');
+      return `If something has to give, drop or defer: ${list}. Each is safe to cut for the reason shown — I'd start from the first.`;
     }
 
     if (intent?.kind === 'quick_win') {
