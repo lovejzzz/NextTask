@@ -44,6 +44,15 @@ export function pickBiggestRisk(tasks: Task[], now?: Date): Task | null {
   return rankFocusTasks(tasks, now)[0] ?? null;
 }
 
+/**
+ * The top task you can actually act on right now — focus ranking minus anything
+ * blocked. Don't send someone at a wall: "what's next" should be doable.
+ */
+export function pickNextActionable(tasks: Task[], now?: Date): Task | null {
+  const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
+  return rankFocusTasks(tasks, now).find((task) => !blocked.has(task.id)) ?? null;
+}
+
 const BLOCKED_RE = /\b(blocked|waiting on|waiting for|on hold|stuck|depends on|blocker)\b/i;
 const BLOCKED_LABEL_RE = /blocked|on.?hold|waiting/i;
 

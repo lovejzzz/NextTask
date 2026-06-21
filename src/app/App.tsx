@@ -78,7 +78,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
+import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
@@ -632,13 +632,18 @@ export function App() {
     }
 
     if (intent?.kind === 'whats_next') {
-      const top = rankFocusTasks(tasks)[0];
-      if (!top) return "Your board's empty. I'm bored. Give me something.";
-      return gatedWhy(
-        top,
-        `In one short sentence, why should I do "${top.title}" next? Only mention that task.`,
-        `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`,
-      );
+      const top = pickNextActionable(tasks);
+      if (top) {
+        return gatedWhy(
+          top,
+          `In one short sentence, why should I do "${top.title}" next? Only mention that task.`,
+          `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`,
+        );
+      }
+      // Nothing actionable — don't send you at a wall; name the blocker instead.
+      const blocked = detectBlocked(tasks);
+      if (blocked.length) return `Everything pressing is blocked — e.g. "${blocked[0].title}". Unstick that before anything else.`;
+      return "Your board's empty. I'm bored. Give me something.";
     }
 
     if (intent?.kind === 'overdue') {

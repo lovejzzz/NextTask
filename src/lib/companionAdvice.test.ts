@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeLabel, makeTask } from '../test/factories';
-import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from './companionAdvice';
+import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickNextActionable, pickQuickWin, pickQuickWins } from './companionAdvice';
 
 const NOW = new Date(2026, 5, 20);
 
@@ -31,6 +31,20 @@ describe('pickQuickWins', () => {
     const ids = pickQuickWins(tasks, 2).map((task) => task.id);
     expect(ids).toEqual(['review', 'prog']);
     expect(ids).not.toContain('blocked');
+  });
+});
+
+describe('pickNextActionable', () => {
+  it('skips a blocked task even when it ranks highest', () => {
+    const tasks = [
+      makeTask({ id: 'blocked', title: 'Ship launch (blocked on legal)', priority: 'high', due_date: '2026-06-10' }),
+      makeTask({ id: 'doable', title: 'Reply to investor', priority: 'high', due_date: '2026-06-12' }),
+    ];
+    expect(pickNextActionable(tasks, NOW)?.id).toBe('doable');
+  });
+
+  it('returns null when everything actionable is gone', () => {
+    expect(pickNextActionable([makeTask({ title: 'X (blocked on infra)' })], NOW)).toBeNull();
   });
 });
 
