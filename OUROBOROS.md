@@ -41,6 +41,24 @@ closes the loop alone — together they do.
   `claude/secret-experimental-mode-sbyylv` branch; each tick = one
   build/polish/harden iteration with all evals kept green.
 
+## The mentor (how the loop is supervised)
+
+Ouroboros runs autonomously, but every tick passes under a mentor's eye — the
+coding agent acts as reviewer/architect, not just an implementer:
+
+- **Judgment over output.** Each tick picks the *highest-value* next move (backlog
+  item or self-diagnosis), keeps it in scope, and prefers the smaller verifiable
+  step over an un-runnable grand swing.
+- **Standards are the curriculum.** No commit lands unless the eval corpus stays
+  ≥90%, the full suite is green, and typecheck/lint/build are clean — with normal
+  (non-experimental) mode untouched. New logic ships with a test.
+- **Teach through the trail.** Commit messages explain the *why*; `RUBRIC.md`
+  stays brutally honest (no model-gated dimension is marked certified without a
+  real hardware eval); `LAB.md` / this file catalog new capability.
+- **Course-correct.** Scope creep, risky refactors, or "autonomy" that depends on
+  unverifiable LLM behavior get pruned. Genuinely ambiguous calls go to the human
+  rather than getting guessed.
+
 ## Guardrails
 
 - Deterministic by default (curated backlog), so a flaky 0.5B model can't derail
