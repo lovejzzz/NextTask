@@ -3095,6 +3095,11 @@ textarea:focus-visible,
   pointer-events: none;
 }
 
+.companion-live {
+  width: fit-content;
+  max-width: 100%;
+}
+
 .companion-bubble {
   pointer-events: auto;
   position: relative;

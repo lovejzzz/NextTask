@@ -111,26 +111,29 @@ export function BoardCompanion({
     >
       <AnimatePresence>{chatOpen && chat ? <CompanionChat chat={chat} onClose={() => setChatOpen(false)} /> : null}</AnimatePresence>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={line}
-          className="companion-bubble"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.18 }}
-        >
-          <span className="companion-mood">
-            {mood}
-            {brainStatus === 'ready' ? (
-              <span className="companion-brain-tag" title="In-browser LLM active">
-                {thinking ? 'thinking…' : '🧠'}
-              </span>
-            ) : null}
-          </span>
-          {line}
-        </motion.div>
-      </AnimatePresence>
+      {/* Stable live region so screen readers announce the board's lines as they change. */}
+      <div className="companion-live" role="status" aria-live="polite">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={line}
+            className="companion-bubble"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+          >
+            <span className="companion-mood">
+              {mood}
+              {brainStatus === 'ready' ? (
+                <span className="companion-brain-tag" title="In-browser LLM active">
+                  {thinking ? 'thinking…' : '🧠'}
+                </span>
+              ) : null}
+            </span>
+            {line}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {brainStatus === 'loading' ? (
         <div className="companion-loading" role="status">

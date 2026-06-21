@@ -11,6 +11,13 @@ describe('BoardCompanion', () => {
     expect(screen.getByText(/Three overdue/)).toBeInTheDocument();
   });
 
+  it('announces its lines through a polite live region', () => {
+    render(<BoardCompanion mood="content" quip="Pick something." onPoke={() => {}} />);
+    const live = screen.getByRole('status');
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveTextContent('Pick something.');
+  });
+
   it('exposes the mood to assistive tech and pokes on click', () => {
     const onPoke = vi.fn();
     render(<BoardCompanion mood="proud" quip="Look at you." onPoke={onPoke} />);
@@ -20,7 +27,7 @@ describe('BoardCompanion', () => {
 
   it('shows a download progress pill while the brain is loading', () => {
     render(<BoardCompanion mood="content" quip="hi" onPoke={() => {}} brainStatus="loading" brainProgress={0.42} />);
-    expect(screen.getByRole('status')).toHaveTextContent('42%');
+    expect(screen.getByText(/waking up/)).toHaveTextContent('42%');
   });
 
   it('speaks the generated line (and a brain badge) once the brain is ready', async () => {
