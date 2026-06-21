@@ -32,14 +32,14 @@ generative conversation is the remaining frontier (gated by model size + unprove
 on real hardware).
 
 **The standard:** comprehension is now pinned by a CI-enforced eval
-(`companionEval.ts`): a 99-utterance corpus across every intent, currently
+(`companionEval.ts`): a 102-utterance corpus across every intent, currently
 **100% (bar: ≥90%)**. Raising the bar means broadening the parser, not vibes.
 
 ## Dimensions (score 0–5)
 
 | # | Dimension | Score | Why |
 |---|-----------|:-----:|-----|
-| 1 | **Comprehension** (understands intent) | 5 | 19 intents with broad synonyms (casual verbs, pleasantry-stripping, critical→high, "next week"/"in N days") + fuzzy task matching, CI-graded **100% on a 99-case corpus**. Truly novel phrasing falls through to the model (intent-fallback is the remaining asterisk). |
+| 1 | **Comprehension** (understands intent) | 5 | 21 intents with broad synonyms (casual verbs, pleasantry-stripping, critical→high, "next week"/"in N days") + fuzzy task matching, CI-graded **100% on a 102-case corpus**, plus an LLM intent-fallback (safe queries only) for phrasings the rules miss. |
 | 2 | **Context awareness** | 5 | Real signals → mood; board counts + sample titles + memory + **blocked/waiting detection** (read from task titles, descriptions, and labels) fed to every prompt and to "what's blocked?". |
 | 3 | **Memory & continuity** | 5 | Cross-session stats (days known, ships, streaks, away) **plus durable notes**: tell it "remember that…" / "I'm focusing on…" and it carries those facts across sessions, weaves them into its prompt, and recalls them on "what do you remember". |
 | 4 | **Reasoning & planning** | 5 | Plans the day (skipping blocked tasks), adapts to constraints ("I only have an hour" → a tight quick-win plan), and gives grounded judgment calls — what to **drop**, the fastest **win**, your **biggest risk**. Asterisk: true multi-turn self-correction is model-gated. |
@@ -89,5 +89,5 @@ each 0–2 (wrong / ok / great):
 - **Reasoning → 5:** multi-turn + constraint-aware ("if I only have an hour",
   "given X is blocked, replan").
 - ~~Memory → 5~~ ✅ durable cross-session notes ("remember that…", recall).
-- ~~Comprehension → 5~~ ✅ broad synonyms + pleasantry-stripping, 89-case CI corpus at 100% (LLM intent-fallback for novel phrasing still open).
+- ~~Comprehension → 5~~ ✅ broad synonyms + pleasantry-stripping + LLM intent-fallback; 102-case CI corpus at 100%.
 - **Conversation → measured:** the one rung that needs your WebGPU hardware.

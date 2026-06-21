@@ -15,6 +15,10 @@ describe('companion comprehension standard', () => {
     expect(accuracy, `scored ${correct}/${total}`).toBeGreaterThanOrEqual(STANDARD);
   });
 
+  it('keeps the corpus from silently shrinking below the bar', () => {
+    expect(EVAL_CORPUS.length).toBeGreaterThanOrEqual(100);
+  });
+
   it('covers every actionable intent kind at least once', () => {
     const kinds = new Set(EVAL_CORPUS.map((entry) => entry.expect));
     for (const kind of [

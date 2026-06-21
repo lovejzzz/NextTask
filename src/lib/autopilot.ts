@@ -56,6 +56,11 @@ const IDEAS: AutopilotProposal[] = [
     description: 'Track how many tasks ship per day on a rolling window to visualize momentum.',
     priority: 'low',
   },
+  {
+    title: 'Extract the companion chat-intent handlers out of App.tsx',
+    description: 'App.tsx is ~2.3k lines; move the chat action/answer handlers into a dedicated module to slim the component and make them unit-testable.',
+    priority: 'normal',
+  },
 ];
 
 /** Is this idea already represented by something on the board? */
