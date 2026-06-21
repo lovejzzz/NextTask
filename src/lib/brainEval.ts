@@ -43,6 +43,27 @@ export function scoreReply(reply: string, tasks: Task[]): { score: number; max: 
   return { score, max: 3, checks };
 }
 
+/**
+ * Do two replies genuinely differ? Used to prove the persona dial actually moves
+ * the model (gentle vs savage), not just the rule-based lines. True when the
+ * replies share less than 80% of their words.
+ */
+export function repliesDiverge(a: string, b: string): boolean {
+  const tokenize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+  if (!a.trim() || !b.trim() || a.trim() === b.trim()) return false;
+  const setA = new Set(tokenize(a));
+  const listB = tokenize(b);
+  if (!setA.size || !listB.length) return false;
+  const overlap = listB.filter((word) => setA.has(word)).length;
+  const ratio = overlap / Math.max(setA.size, listB.length);
+  return ratio < 0.8;
+}
+
 // The objectively-scorable slice of the eval battery (grounding/length/voice).
 export const EVAL_PROMPTS = ['what should I focus on?', 'summarize my board', "I'm overwhelmed", 'are you even useful?'];
 

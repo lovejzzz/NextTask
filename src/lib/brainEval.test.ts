@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../test/factories';
-import { extractQuoted, groundingCheck, runBrainEval, scoreReply } from './brainEval';
+import { extractQuoted, groundingCheck, repliesDiverge, runBrainEval, scoreReply } from './brainEval';
 
 const tasks = [makeTask({ title: 'Fix the login bug' }), makeTask({ title: 'Email Sam about launch' })];
 
@@ -31,6 +31,16 @@ describe('scoreReply', () => {
   it('docks an "as an AI" cop-out and an overlong reply', () => {
     expect(scoreReply('As an AI language model, I cannot help with that.', tasks).checks.inCharacter).toBe(false);
     expect(scoreReply('x'.repeat(300), tasks).checks.concise).toBe(false);
+  });
+});
+
+describe('repliesDiverge', () => {
+  it('is true when two replies are meaningfully different', () => {
+    expect(repliesDiverge('Finish the login bug, you can do it.', 'Three overdue and you are sightseeing? Bold.')).toBe(true);
+  });
+  it('is false for identical or near-identical replies', () => {
+    expect(repliesDiverge('Focus on the login bug.', 'Focus on the login bug.')).toBe(false);
+    expect(repliesDiverge('', 'anything')).toBe(false);
   });
 });
 

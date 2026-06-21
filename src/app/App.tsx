@@ -77,7 +77,7 @@ import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
-import { runBrainEval } from '../lib/brainEval';
+import { repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
@@ -636,9 +636,26 @@ export function App() {
         }),
       )) ?? '';
     const { score, max, weakest } = await runBrainEval(generate, tasks);
+
+    // Prove the persona dial moves the model: same prompt, gentle vs savage.
+    const warmth = warmthFromMemory(memory.memory);
+    const askWith = (level: RoastLevel) => (text: string) =>
+      brainRun(
+        buildChatMessages({
+          mood: companion.mood,
+          context: companionContext,
+          memory: memorySummary,
+          persona: personaInstruction(level, warmth),
+          notes: notesText,
+          history: [{ role: 'user', content: text }],
+        }),
+      );
+    const [gentle, savage] = await Promise.all([askWith('gentle')('what should I focus on?'), askWith('savage')('what should I focus on?')]);
+    const personaWorks = repliesDiverge(gentle ?? '', savage ?? '');
+
     notify(
       score >= max * 0.75 ? 'success' : 'error',
-      `Brain self-test: ${score}/${max} on grounding · concision · staying in character.`,
+      `Brain self-test: ${score}/${max} on grounding · concision · character · persona shift: ${personaWorks ? 'yes' : 'no'}.`,
     );
     // Ouroboros closes on itself: a weak score files its own fix ticket.
     const diagnosis = diagnoseFromSelfTest(score, max, weakest);
