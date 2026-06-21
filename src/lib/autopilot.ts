@@ -68,3 +68,28 @@ export function proposeImprovements(seed: number, count = 3): AutopilotProposal[
 }
 
 export const AUTOPILOT_PREFIX = '🤖 ';
+
+const WEAKNESS_FOCUS: Record<string, string> = {
+  grounded: 'grounding — it referenced tasks that aren’t on the board',
+  concise: 'concision — replies ran too long',
+  inCharacter: 'staying in character — it broke the board persona',
+};
+
+/**
+ * Turn a low self-test result into a fix ticket. This is Ouroboros closing on
+ * itself: the AI measures its own conversation quality and files the repair.
+ * Returns null when the score is healthy (≥ 75%).
+ */
+export function diagnoseFromSelfTest(
+  score: number,
+  max: number,
+  weakest: 'grounded' | 'concise' | 'inCharacter' | null,
+): AutopilotProposal | null {
+  if (max <= 0 || score / max >= 0.75) return null;
+  const focus = weakest ? WEAKNESS_FOCUS[weakest] : 'overall reply quality';
+  return {
+    title: `Improve brain ${weakest ?? 'quality'} (self-test ${score}/${max})`,
+    description: `The conversation self-test flagged weak ${focus}. Sharpen the system prompt or model, then re-run "${LOOP_NAME}" self-test to confirm.`,
+    priority: 'high',
+  };
+}

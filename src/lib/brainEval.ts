@@ -47,22 +47,28 @@ export function scoreReply(reply: string, tasks: Task[]): { score: number; max: 
 export const EVAL_PROMPTS = ['what should I focus on?', 'summarize my board', "I'm overwhelmed", 'are you even useful?'];
 
 export type EvalGenerate = (userText: string) => Promise<string>;
+export type ReplyDetail = { prompt: string; score: number; checks: ReplyChecks; reply: string };
+export type BrainEvalResult = { score: number; max: number; details: ReplyDetail[]; weakest: keyof ReplyChecks | null };
 
-/** Run the battery through `generate` and aggregate the objective score. */
-export async function runBrainEval(
-  generate: EvalGenerate,
-  tasks: Task[],
-  prompts: string[] = EVAL_PROMPTS,
-): Promise<{ score: number; max: number; details: { prompt: string; score: number; reply: string }[] }> {
+/** Run the battery through `generate`, aggregate the score, and name the weakest criterion. */
+export async function runBrainEval(generate: EvalGenerate, tasks: Task[], prompts: string[] = EVAL_PROMPTS): Promise<BrainEvalResult> {
   let score = 0;
   let max = 0;
-  const details: { prompt: string; score: number; reply: string }[] = [];
+  const details: ReplyDetail[] = [];
+  const failures: Record<keyof ReplyChecks, number> = { grounded: 0, concise: 0, inCharacter: 0 };
   for (const prompt of prompts) {
     const reply = (await generate(prompt)) ?? '';
     const result = scoreReply(reply, tasks);
     score += result.score;
     max += result.max;
-    details.push({ prompt, score: result.score, reply });
+    (Object.keys(result.checks) as (keyof ReplyChecks)[]).forEach((key) => {
+      if (!result.checks[key]) failures[key] += 1;
+    });
+    details.push({ prompt, score: result.score, checks: result.checks, reply });
   }
-  return { score, max, details };
+  const weakest = (Object.keys(failures) as (keyof ReplyChecks)[]).reduce<keyof ReplyChecks | null>(
+    (worst, key) => (failures[key] > 0 && (worst === null || failures[key] > failures[worst]) ? key : worst),
+    null,
+  );
+  return { score, max, details, weakest };
 }

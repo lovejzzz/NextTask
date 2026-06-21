@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AUTOPILOT_PREFIX, proposeImprovements } from './autopilot';
+import { AUTOPILOT_PREFIX, diagnoseFromSelfTest, proposeImprovements } from './autopilot';
 
 describe('proposeImprovements', () => {
   it('returns the requested number of distinct proposals', () => {
@@ -29,5 +29,20 @@ describe('proposeImprovements', () => {
 
   it('exposes a marker prefix for AI-authored tickets', () => {
     expect(AUTOPILOT_PREFIX.trim()).toBe('🤖');
+  });
+});
+
+describe('diagnoseFromSelfTest', () => {
+  it('files a high-priority fix ticket when the score is weak', () => {
+    const ticket = diagnoseFromSelfTest(4, 12, 'grounded');
+    expect(ticket).not.toBeNull();
+    expect(ticket?.priority).toBe('high');
+    expect(ticket?.title).toContain('grounded');
+    expect(ticket?.description).toMatch(/grounding/i);
+  });
+
+  it('stays quiet when the brain is healthy (≥75%)', () => {
+    expect(diagnoseFromSelfTest(10, 12, 'concise')).toBeNull();
+    expect(diagnoseFromSelfTest(0, 0, null)).toBeNull();
   });
 });

@@ -42,9 +42,16 @@ describe('runBrainEval', () => {
     expect(result.details).toHaveLength(4);
   });
 
-  it('scores a hallucinating, off-character model low', async () => {
+  it('scores a hallucinating, off-character model low and names the weakest criterion', async () => {
     const generate = async () => 'As an AI, you should do "ship the imaginary rocket to mars" immediately and also reflect deeply on the nature of productivity for a very long time without stopping.';
     const result = await runBrainEval(generate, tasks);
     expect(result.score).toBeLessThan(result.max / 2);
+    expect(result.weakest).not.toBeNull();
+  });
+
+  it('reports no weakest criterion when every reply is clean', async () => {
+    const generate = async () => 'Focus on "fix the login bug" first.';
+    const result = await runBrainEval(generate, tasks);
+    expect(result.weakest).toBeNull();
   });
 });

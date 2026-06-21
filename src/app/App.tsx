@@ -78,7 +78,7 @@ import { buildAmbientMessages, buildChatMessages, type ChatTurn } from '../lib/c
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { runBrainEval } from '../lib/brainEval';
-import { AUTOPILOT_PREFIX, LOOP_NAME, proposeImprovements } from '../lib/autopilot';
+import { AUTOPILOT_PREFIX, LOOP_NAME, diagnoseFromSelfTest, proposeImprovements } from '../lib/autopilot';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes } from '../lib/companionNotes';
@@ -610,11 +610,30 @@ export function App() {
           history: [{ role: 'user', content: text }],
         }),
       )) ?? '';
-    const { score, max } = await runBrainEval(generate, tasks);
+    const { score, max, weakest } = await runBrainEval(generate, tasks);
     notify(
       score >= max * 0.75 ? 'success' : 'error',
       `Brain self-test: ${score}/${max} on grounding · concision · staying in character.`,
     );
+    // Ouroboros closes on itself: a weak score files its own fix ticket.
+    const diagnosis = diagnoseFromSelfTest(score, max, weakest);
+    if (diagnosis) {
+      try {
+        const task = await mutations.createTask.mutateAsync({
+          title: `${AUTOPILOT_PREFIX}${diagnosis.title}`,
+          description: diagnosis.description,
+          status: 'todo',
+          priority: diagnosis.priority,
+          due_date: null,
+          assignee_ids: [],
+          label_ids: [],
+        });
+        setUndo(`file ${LOOP_NAME} self-fix ticket`, () => mutations.deleteTask.mutateAsync(task.id).then(() => undefined));
+        flashCompanion(`${LOOP_NAME}: I scored ${score}/${max} and filed a ticket to fix my own ${weakest ?? 'quality'}.`);
+      } catch {
+        // ignore — the score toast already landed
+      }
+    }
   }
 
   async function aiPlanForItself() {
