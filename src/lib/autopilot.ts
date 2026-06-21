@@ -111,12 +111,25 @@ export function diagnoseFromSelfTest(
   score: number,
   max: number,
   weakest: 'grounded' | 'concise' | 'inCharacter' | null,
+  personaShifted = true,
 ): AutopilotProposal | null {
-  if (max <= 0 || score / max >= 0.75) return null;
-  const focus = weakest ? WEAKNESS_FOCUS[weakest] : 'overall reply quality';
-  return {
-    title: `Improve brain ${weakest ?? 'quality'} (self-test ${score}/${max})`,
-    description: `The conversation self-test flagged weak ${focus}. Sharpen the system prompt or model, then re-run "${LOOP_NAME}" self-test to confirm.`,
-    priority: 'high',
-  };
+  if (max <= 0) return null;
+  // Reply quality is the more fundamental gap — fix that first.
+  if (score / max < 0.75) {
+    const focus = weakest ? WEAKNESS_FOCUS[weakest] : 'overall reply quality';
+    return {
+      title: `Improve brain ${weakest ?? 'quality'} (self-test ${score}/${max})`,
+      description: `The conversation self-test flagged weak ${focus}. Sharpen the system prompt or model, then re-run "${LOOP_NAME}" self-test to confirm.`,
+      priority: 'high',
+    };
+  }
+  // Replies are good but the persona dial doesn't move the model.
+  if (!personaShifted) {
+    return {
+      title: 'Make the persona dial actually move the model',
+      description: `The self-test found gentle and savage replies barely differed. Strengthen persona injection in the prompt, or default to a larger model, then re-run "${LOOP_NAME}" self-test.`,
+      priority: 'normal',
+    };
+  }
+  return null;
 }

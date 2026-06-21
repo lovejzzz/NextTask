@@ -657,8 +657,8 @@ export function App() {
       score >= max * 0.75 ? 'success' : 'error',
       `Brain self-test: ${score}/${max} on grounding · concision · character · persona shift: ${personaWorks ? 'yes' : 'no'}.`,
     );
-    // Ouroboros closes on itself: a weak score files its own fix ticket.
-    const diagnosis = diagnoseFromSelfTest(score, max, weakest);
+    // Ouroboros closes on itself: a weak score (or a flat persona) files its own fix ticket.
+    const diagnosis = diagnoseFromSelfTest(score, max, weakest, personaWorks);
     if (diagnosis) {
       try {
         const task = await mutations.createTask.mutateAsync({
@@ -671,7 +671,7 @@ export function App() {
           label_ids: [],
         });
         setUndo(`file ${LOOP_NAME} self-fix ticket`, () => mutations.deleteTask.mutateAsync(task.id).then(() => undefined));
-        flashCompanion(`${LOOP_NAME}: I scored ${score}/${max} and filed a ticket to fix my own ${weakest ?? 'quality'}.`);
+        flashCompanion(`${LOOP_NAME}: self-test ${score}/${max} — I filed a ticket to fix my weakest spot. Re-run it after.`);
       } catch {
         // ignore — the score toast already landed
       }

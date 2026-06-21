@@ -72,8 +72,17 @@ describe('diagnoseFromSelfTest', () => {
     expect(ticket?.description).toMatch(/grounding/i);
   });
 
-  it('stays quiet when the brain is healthy (≥75%)', () => {
-    expect(diagnoseFromSelfTest(10, 12, 'concise')).toBeNull();
+  it('stays quiet when the brain is healthy (≥75%) and persona shifts', () => {
+    expect(diagnoseFromSelfTest(10, 12, 'concise', true)).toBeNull();
     expect(diagnoseFromSelfTest(0, 0, null)).toBeNull();
+  });
+
+  it('files a persona ticket when replies are good but the dial is flat', () => {
+    const ticket = diagnoseFromSelfTest(12, 12, null, false);
+    expect(ticket?.title).toMatch(/persona dial/i);
+  });
+
+  it('prioritizes reply-quality over persona when both are off', () => {
+    expect(diagnoseFromSelfTest(4, 12, 'grounded', false)?.title).toMatch(/grounded/i);
   });
 });
