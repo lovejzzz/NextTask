@@ -63,6 +63,11 @@ export const EVAL_CORPUS: EvalCase[] = [
   { text: 'defer the cleanup to friday', expect: 'reschedule' },
   { text: 'bump the review to tomorrow', expect: 'reschedule' },
   { text: 'move the sync to in 3 days', expect: 'reschedule' },
+  // assign / label
+  { text: 'assign the login bug to sam', expect: 'assign_task' },
+  { text: 'give the deck to alex', expect: 'assign_task' },
+  { text: 'label the login bug as bug', expect: 'label_task' },
+  { text: 'tag the deck with design', expect: 'label_task' },
   // bulk + undo
   { text: 'clear my overdue', expect: 'complete_overdue' },
   { text: 'complete all overdue', expect: 'complete_overdue' },

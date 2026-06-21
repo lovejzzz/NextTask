@@ -17,6 +17,8 @@ export type CompanionIntent =
   | { kind: 'delete_task'; query: string }
   | { kind: 'set_priority'; query: string; priority: TaskPriority }
   | { kind: 'reschedule'; query: string; due_date: string | null }
+  | { kind: 'assign_task'; query: string; assignee: string }
+  | { kind: 'label_task'; query: string; label: string }
   | { kind: 'complete_overdue' }
   | { kind: 'undo' }
   | { kind: 'remember'; note: string }
@@ -180,6 +182,28 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   if (priorityMatch) {
     const query = cleanQuery(priorityMatch[1]);
     if (query) return { kind: 'set_priority', query, priority: priorityFromWord(priorityMatch[2]) };
+  }
+
+  // Assign to a teammate.
+  const assignMatch = raw.match(/^(?:assign|give)\s+(.+?)\s+to\s+(.+)$/i);
+  if (assignMatch) {
+    const query = cleanQuery(assignMatch[1]);
+    const assignee = cleanQuery(assignMatch[2]);
+    if (query && assignee) return { kind: 'assign_task', query, assignee };
+  }
+
+  // Label / tag a task.
+  let labelMatch = raw.match(/^(?:label|tag)\s+(.+?)\s+(?:as|with)\s+(.+)$/i);
+  if (labelMatch) {
+    const query = cleanQuery(labelMatch[1]);
+    const label = cleanQuery(labelMatch[2]);
+    if (query && label) return { kind: 'label_task', query, label };
+  }
+  labelMatch = raw.match(/^add (?:the )?label\s+(.+?)\s+to\s+(.+)$/i);
+  if (labelMatch) {
+    const label = cleanQuery(labelMatch[1]);
+    const query = cleanQuery(labelMatch[2]);
+    if (query && label) return { kind: 'label_task', query, label };
   }
 
   // Reschedule (only if a date actually resolves).

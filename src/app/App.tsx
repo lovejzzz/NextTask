@@ -83,7 +83,7 @@ import { formatNotes } from '../lib/companionNotes';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
-import { matchTask } from '../lib/taskMatch';
+import { matchNamed, matchTask } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
 import { computeInsights } from '../lib/insights';
@@ -399,6 +399,44 @@ export function App() {
         return `Moved "${task.title}" to ${intent.due_date}. Don't blow it this time.`;
       } catch {
         return 'Reschedule failed. Rude, I know.';
+      }
+    }
+
+    if (intent?.kind === 'assign_task') {
+      const task = matchTask(tasks, intent.query);
+      if (!task) return `Can't find "${intent.query}".`;
+      const member = matchNamed(board?.teamMembers ?? [], intent.assignee);
+      if (!member) return `No teammate named "${intent.assignee}" — add them in Manage first.`;
+      const prev = task.assignees.map((person) => person.id);
+      if (prev.includes(member.id)) return `"${task.title}" is already on ${member.name}.`;
+      try {
+        await mutations.updateTask.mutateAsync({ id: task.id, input: { assignee_ids: [...prev, member.id] } });
+        companion.registerActivity();
+        setUndo(`assign "${task.title}"`, () =>
+          mutations.updateTask.mutateAsync({ id: task.id, input: { assignee_ids: prev } }).then(() => undefined),
+        );
+        return `Assigned "${task.title}" to ${member.name}. It's their problem now too.`;
+      } catch {
+        return 'Assignment failed. Try again?';
+      }
+    }
+
+    if (intent?.kind === 'label_task') {
+      const task = matchTask(tasks, intent.query);
+      if (!task) return `Can't find "${intent.query}".`;
+      const label = matchNamed(board?.labels ?? [], intent.label);
+      if (!label) return `No label called "${intent.label}" — make it in Manage first.`;
+      const prev = task.labels.map((entry) => entry.id);
+      if (prev.includes(label.id)) return `"${task.title}" already has the ${label.name} label.`;
+      try {
+        await mutations.updateTask.mutateAsync({ id: task.id, input: { label_ids: [...prev, label.id] } });
+        companion.registerActivity();
+        setUndo(`label "${task.title}"`, () =>
+          mutations.updateTask.mutateAsync({ id: task.id, input: { label_ids: prev } }).then(() => undefined),
+        );
+        return `Tagged "${task.title}" with ${label.name}.`;
+      } catch {
+        return 'Labeling failed. Try again?';
       }
     }
 

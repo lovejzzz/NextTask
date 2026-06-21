@@ -32,18 +32,18 @@ generative conversation is the remaining frontier (gated by model size + unprove
 on real hardware).
 
 **The standard:** comprehension is now pinned by a CI-enforced eval
-(`companionEval.ts`): a 95-utterance corpus across every intent, currently
+(`companionEval.ts`): a 99-utterance corpus across every intent, currently
 **100% (bar: ≥90%)**. Raising the bar means broadening the parser, not vibes.
 
 ## Dimensions (score 0–5)
 
 | # | Dimension | Score | Why |
 |---|-----------|:-----:|-----|
-| 1 | **Comprehension** (understands intent) | 5 | 17 intents with broad synonyms (casual verbs, pleasantry-stripping, critical→high, "next week"/"in N days") + fuzzy task matching, CI-graded **100% on an 89-case corpus**. Truly novel phrasing falls through to the model (intent-fallback is the remaining asterisk). |
+| 1 | **Comprehension** (understands intent) | 5 | 19 intents with broad synonyms (casual verbs, pleasantry-stripping, critical→high, "next week"/"in N days") + fuzzy task matching, CI-graded **100% on a 99-case corpus**. Truly novel phrasing falls through to the model (intent-fallback is the remaining asterisk). |
 | 2 | **Context awareness** | 5 | Real signals → mood; board counts + sample titles + memory + **blocked/waiting detection** (read from task titles, descriptions, and labels) fed to every prompt and to "what's blocked?". |
 | 3 | **Memory & continuity** | 5 | Cross-session stats (days known, ships, streaks, away) **plus durable notes**: tell it "remember that…" / "I'm focusing on…" and it carries those facts across sessions, weaves them into its prompt, and recalls them on "what do you remember". |
 | 4 | **Reasoning & planning** | 5 | Plans the day (skipping blocked tasks), adapts to constraints ("I only have an hour" → a tight quick-win plan), and gives grounded judgment calls — what to **drop**, the fastest **win**, your **biggest risk**. Asterisk: true multi-turn self-correction is model-gated. |
-| 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. Remaining gap: setting labels/assignees. |
+| 5 | **Agency** (does things) | 5 | From chat it creates, completes, deletes, reprioritizes, reschedules, **assigns teammates**, **applies labels**, **bulk-clears overdue**, and **undoes** any of it (one-level inverse stack), all via fuzzy matching. |
 | 6 | **Conversation quality** | 3? | Now partly **measurable**: `brainEval.ts` auto-scores each reply for grounding (no invented task names), concision, and staying in character — runnable in CI with a mock and live via the **"Run brain self-test"** command. Raw eloquence still needs a human, so the number isn't certified until run on WebGPU. |
 | 7 | **Personality & voice** | 5 | Tunable gentle↔balanced↔savage with earned warmth — and the tone is now **consistent across both brains**: the rule-based mood quips are persona-tiered too, so the voice doesn't change when the model is off. |
 | 8 | **Reliability & safety** | 5 | Fails safe to rule-based everywhere; opt-in; no crashes; 153 tests; normal mode untouched. |

@@ -23,6 +23,8 @@ describe('companion comprehension standard', () => {
       'delete_task',
       'set_priority',
       'reschedule',
+      'assign_task',
+      'label_task',
       'complete_overdue',
       'undo',
       'plan',

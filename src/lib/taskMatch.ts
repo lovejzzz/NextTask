@@ -50,3 +50,17 @@ export function matchTask(tasks: Task[], phrase: string, threshold = 30): Task |
   }
   return bestScore >= threshold ? best : null;
 }
+
+/** Best match for a phrase against a list of named things (labels, teammates). */
+export function matchNamed<T extends { name: string }>(items: T[], phrase: string, threshold = 40): T | null {
+  let best: T | null = null;
+  let bestScore = 0;
+  for (const item of items) {
+    const score = matchScore(item.name, phrase);
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+  return bestScore >= threshold ? best : null;
+}
