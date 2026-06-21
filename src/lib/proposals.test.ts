@@ -1,0 +1,32 @@
+import { describe, expect, it } from 'vitest';
+
+import { generateProposals } from './proposals';
+
+const ideas = [
+  { title: 'Add an LLM intent-fallback', description: 'x', priority: 'high' as const },
+  { title: 'Cache the model weights', description: 'y', priority: 'normal' as const },
+  { title: 'Zen mode', description: 'z', priority: 'low' as const },
+];
+
+describe('generateProposals', () => {
+  it('leads with clearing overdue when there is any', () => {
+    const [first] = generateProposals({ overdue: 3, ideas: [] });
+    expect(first.kind).toBe('clear_overdue');
+    expect(first.summary).toContain('3 overdue');
+  });
+
+  it('omits the overdue proposal when nothing is overdue', () => {
+    expect(generateProposals({ overdue: 0, ideas: [] })).toEqual([]);
+  });
+
+  it('surfaces at most two upgrade wants', () => {
+    const proposals = generateProposals({ overdue: 0, ideas });
+    expect(proposals).toHaveLength(2);
+    expect(proposals.every((p) => p.kind === 'upgrade')).toBe(true);
+  });
+
+  it('gives each proposal a stable, unique id', () => {
+    const ids = generateProposals({ overdue: 1, ideas }).map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});

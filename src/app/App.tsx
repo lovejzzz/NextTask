@@ -80,6 +80,8 @@ import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
+import { generateProposals, type Proposal } from '../lib/proposals';
+import { COMPANION_NAME } from '../lib/companion';
 import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
@@ -102,6 +104,7 @@ import { computeInsights } from '../lib/insights';
 import { buildStandup } from '../lib/standup';
 import { BoardCompanion } from '../components/experimental/BoardCompanion';
 import { BoardInsights } from '../components/experimental/BoardInsights';
+import { BoardyDesk } from '../components/experimental/BoardyDesk';
 import { CommandPalette, type Command as PaletteCommand } from '../components/experimental/CommandPalette';
 import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
@@ -221,6 +224,8 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [boardyDeskOpen, setBoardyDeskOpen] = useState(false);
+  const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
   const [goal, setGoal] = useState<number>(() => {
     try {
       const value = Number(window.localStorage.getItem('next-task:goal'));
@@ -743,6 +748,35 @@ export function App() {
     }
   }
 
+  // Boardy's Desk: what Boardy wants right now, for the human to accept/dismiss.
+  const boardyProposals = useMemo<Proposal[]>(() => {
+    const overdue = tasks.filter((task) => dueTone(task) === 'overdue').length;
+    const ideas = proposeImprovements(0, 2, tasks.map((task) => task.title));
+    return generateProposals({ overdue, ideas }).filter((proposal) => !dismissedProposals.has(proposal.id));
+  }, [tasks, dismissedProposals]);
+
+  async function acceptProposal(proposal: Proposal) {
+    if (proposal.kind === 'clear_overdue') {
+      await chatWithBoard([{ role: 'user', content: 'clear overdue' }], () => {});
+    } else {
+      await mutations.createTask.mutateAsync({
+        title: `${AUTOPILOT_PREFIX}${proposal.idea.title}`,
+        description: proposal.idea.description,
+        status: 'todo',
+        priority: proposal.idea.priority,
+        due_date: null,
+        assignee_ids: [],
+        label_ids: [],
+      });
+      companion.registerActivity();
+    }
+    notify('success', `${COMPANION_NAME}: done. We make a good team.`);
+  }
+
+  function dismissProposal(id: string) {
+    setDismissedProposals((current) => new Set(current).add(id));
+  }
+
   async function aiPlanForItself() {
     notify('success', `${LOOP_NAME}: planning my own upgrades…`);
     const proposals = proposeImprovements(Date.now(), 3, tasks.map((task) => task.title));
@@ -1072,6 +1106,7 @@ export function App() {
     { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
     { id: 'goal', label: `Daily ship goal: ${goal}`, keywords: 'goal target daily ships quota', icon: Target, run: cycleGoal },
     { id: 'autopilot', label: '🤖 Ouroboros: file its own upgrade tickets', keywords: 'autopilot ouroboros ai self plan improve tickets backlog loop', icon: Bot, run: () => void aiPlanForItself() },
+    { id: 'boardy-desk', label: `🤖 Open ${COMPANION_NAME}'s Desk`, keywords: 'boardy desk proposals wants collaborate accept ai peer', icon: Bot, run: () => setBoardyDeskOpen(true) },
     ...(brain.status !== 'off'
       ? [
           {
@@ -1273,6 +1308,16 @@ export function App() {
             goalProgress={goalProgress(momentum.shippedToday, goal)}
             goalMet={momentum.shippedToday >= goal}
           />
+          <AnimatePresence>
+            {boardyDeskOpen ? (
+              <BoardyDesk
+                proposals={boardyProposals}
+                onAccept={(proposal) => void acceptProposal(proposal)}
+                onDismiss={dismissProposal}
+                onClose={() => setBoardyDeskOpen(false)}
+              />
+            ) : null}
+          </AnimatePresence>
         </>
       ) : null}
 
