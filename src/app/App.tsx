@@ -310,6 +310,24 @@ export function App() {
       ),
     [brainRun, companionContext, memorySummary, personaText, notesText],
   );
+
+  // Let the model phrase a grounded one-liner about a task, but only if it passes
+  // the quality gate (grounded · concise · in character); else the deterministic line.
+  async function gatedWhy(task: Task, question: string, fallback: string): Promise<string> {
+    if (brain.status !== 'ready') return fallback;
+    const reply = await brainRun(
+      buildChatMessages({
+        mood: companion.mood,
+        context: companionContext,
+        memory: memorySummary,
+        persona: personaText,
+        notes: notesText,
+        history: [{ role: 'user', content: question }],
+      }),
+    );
+    return reply && acceptExplanation(reply, task) ? reply : fallback;
+  }
+
   // Chat handler: deterministic actions/answers first (reliable, no model needed),
   // then fall through to the LLM for open conversation.
   async function chatWithBoard(history: ChatTurn[], onToken: (chunk: string) => void): Promise<string | null> {
@@ -535,16 +553,22 @@ export function App() {
 
     if (intent?.kind === 'quick_win') {
       const win = pickQuickWin(tasks);
-      return win
-        ? `Quick win: "${win.title}" — it's closest to done. Knock it out and feel powerful.`
-        : 'Nothing to knock out. Add something first.';
+      if (!win) return 'Nothing to knock out. Add something first.';
+      return gatedWhy(
+        win,
+        `In one short sentence, why is "${win.title}" a quick win? Only mention that task.`,
+        `Quick win: "${win.title}" — it's closest to done. Knock it out and feel powerful.`,
+      );
     }
 
     if (intent?.kind === 'risk') {
       const risk = pickBiggestRisk(tasks);
-      return risk
-        ? `Biggest risk: "${risk.title}" — ${focusReason(risk).toLowerCase()}. Handle it before it handles you.`
-        : 'No risks on the board. Suspiciously calm.';
+      if (!risk) return 'No risks on the board. Suspiciously calm.';
+      return gatedWhy(
+        risk,
+        `In one short sentence, why is "${risk.title}" my biggest risk right now? Only mention that task.`,
+        `Biggest risk: "${risk.title}" — ${focusReason(risk).toLowerCase()}. Handle it before it handles you.`,
+      );
     }
 
     if (intent?.kind === 'blocked') {
@@ -566,22 +590,11 @@ export function App() {
     if (intent?.kind === 'whats_next') {
       const top = rankFocusTasks(tasks)[0];
       if (!top) return "Your board's empty. I'm bored. Give me something.";
-      const fallback = `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`;
-      // Let the model phrase the "why" — but only if it's provably grounded + in character.
-      if (brain.status === 'ready') {
-        const reply = await brainRun(
-          buildChatMessages({
-            mood: companion.mood,
-            context: companionContext,
-            memory: memorySummary,
-            persona: personaText,
-            notes: notesText,
-            history: [{ role: 'user', content: `In one short sentence, why should I do "${top.title}" next? Only mention that task.` }],
-          }),
-        );
-        if (reply && acceptExplanation(reply, top)) return reply;
-      }
-      return fallback;
+      return gatedWhy(
+        top,
+        `In one short sentence, why should I do "${top.title}" next? Only mention that task.`,
+        `Next: "${top.title}" — ${focusReason(top).toLowerCase()}. Stop reading, start doing.`,
+      );
     }
 
     if (intent?.kind === 'overdue') {

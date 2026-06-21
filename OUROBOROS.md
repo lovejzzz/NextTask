@@ -14,7 +14,12 @@ done — genuinely intelligent, with real personality, that operates your board 
 plain language and improves itself, where **every claim is proven, not asserted.**
 
 We're very good (8/9 dimensions CI-proven 5/5). "Very good" → "best" is gated by
-four honest gaps, and the loop climbs them in this order:
+four honest gaps, and the loop climbs them in this order.
+
+**Priority:** the **AI/brain is the focus** — it's the genuinely unique thing
+here (a free, private, in-browser companion that operates the board and improves
+itself; the kanban is table stakes). Gaps #1 and #2 lead; craft and refactor
+fill in around them, not ahead of them.
 
 1. **Prove and raise the model.** Conversation quality is still an asterisk — and
    "best" can't sit on an asterisk. Make it measurable and high: richer self-test
