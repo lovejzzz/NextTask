@@ -663,7 +663,11 @@ export function App() {
 
   async function aiPlanForItself() {
     notify('success', `${LOOP_NAME}: planning my own upgrades…`);
-    const proposals = proposeImprovements(Date.now(), 3);
+    const proposals = proposeImprovements(Date.now(), 3, tasks.map((task) => task.title));
+    if (!proposals.length) {
+      flashCompanion(`${LOOP_NAME}: I've already filed everything on my wishlist — ship those first.`);
+      return;
+    }
     const createdIds: string[] = [];
     try {
       for (const proposal of proposals) {

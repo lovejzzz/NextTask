@@ -26,6 +26,18 @@ describe('proposeImprovements', () => {
     expect(proposeImprovements(999, 99).length).toBeGreaterThan(0);
   });
 
+  it('skips ideas already on the board (no re-filing its own work)', () => {
+    const all = proposeImprovements(0, 8);
+    const existing = [`🤖 ${all[0].title}`]; // already filed, with the marker
+    const next = proposeImprovements(0, 8, existing);
+    expect(next.some((p) => p.title === all[0].title)).toBe(false);
+  });
+
+  it('returns nothing when the whole wishlist is already queued', () => {
+    const everything = proposeImprovements(0, 99).map((p) => p.title);
+    expect(proposeImprovements(0, 3, everything)).toEqual([]);
+  });
+
   it('every proposal has a title, description, and valid priority', () => {
     for (const p of proposeImprovements(3, 5)) {
       expect(p.title.length).toBeGreaterThan(0);

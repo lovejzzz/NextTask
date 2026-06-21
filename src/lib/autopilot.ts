@@ -7,6 +7,7 @@
  * is the AI side of that loop — a curated, rotating wishlist of genuine NextTask
  * improvements, kept deterministic so it's reliable and testable.
  */
+import { matchScore } from './taskMatch';
 import type { TaskPriority } from './types';
 
 export const LOOP_NAME = 'Ouroboros';
@@ -57,14 +58,25 @@ const IDEAS: AutopilotProposal[] = [
   },
 ];
 
+/** Is this idea already represented by something on the board? */
+function alreadyOnBoard(ideaTitle: string, existingTitles: string[]): boolean {
+  return existingTitles.some((raw) => {
+    const existing = stripOuroborosPrefix(raw);
+    return Math.max(matchScore(existing, ideaTitle), matchScore(ideaTitle, existing)) >= 55;
+  });
+}
+
 /**
- * Pick `count` proposals, rotating deterministically by `seed` so repeated runs
- * walk through the whole backlog instead of repeating the same ideas.
+ * Pick `count` proposals, rotating deterministically by `seed` and skipping any
+ * idea already on the board (incl. previously filed 🤖 tickets) so the loop never
+ * re-files its own work. Returns [] when the whole wishlist is already queued.
  */
-export function proposeImprovements(seed: number, count = 3): AutopilotProposal[] {
-  const n = Math.max(1, Math.min(count, IDEAS.length));
-  const start = ((Math.floor(seed) % IDEAS.length) + IDEAS.length) % IDEAS.length;
-  return Array.from({ length: n }, (_, i) => IDEAS[(start + i) % IDEAS.length]);
+export function proposeImprovements(seed: number, count = 3, existingTitles: string[] = []): AutopilotProposal[] {
+  const pool = IDEAS.filter((idea) => !alreadyOnBoard(idea.title, existingTitles));
+  if (!pool.length) return [];
+  const n = Math.max(1, Math.min(count, pool.length));
+  const start = ((Math.floor(seed) % pool.length) + pool.length) % pool.length;
+  return Array.from({ length: n }, (_, i) => pool[(start + i) % pool.length]);
 }
 
 export const AUTOPILOT_PREFIX = '🤖 ';
