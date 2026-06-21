@@ -5,6 +5,7 @@ import {
   buildChatMessages,
   buildSystemPrompt,
   cleanLine,
+  FEW_SHOT,
   MODELS,
   modelLabel,
   nextModelId,
@@ -73,11 +74,12 @@ describe('buildChatMessages', () => {
     expect(messages.at(-1)?.content).toContain('overdue ones');
   });
 
-  it('trims history to the last 8 turns', () => {
+  it('includes few-shot style anchors plus the trimmed history', () => {
     const history = Array.from({ length: 20 }, (_, i) => ({ role: 'user' as const, content: `m${i}` }));
     const messages = buildChatMessages({ ...parts, history });
-    expect(messages.length).toBe(1 + 8); // system + 8 turns
+    expect(messages.length).toBe(1 + FEW_SHOT.length + 8); // system + anchors + last 8 turns
     expect(messages.at(-1)?.content).toBe('m19');
+    expect(messages).toEqual(expect.arrayContaining(FEW_SHOT));
   });
 });
 

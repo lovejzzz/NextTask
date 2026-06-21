@@ -99,11 +99,20 @@ export function buildAmbientMessages(parts: PromptParts): BrainMessage[] {
   ];
 }
 
-/** Messages for an interactive chat turn, with recent history trimmed. */
+// Style anchors for the small model: short, in character, never breaks, no
+// invented task names (deliberately task-name-free so they teach tone, not data).
+export const FEW_SHOT: BrainMessage[] = [
+  { role: 'user', content: 'i feel overwhelmed' },
+  { role: 'assistant', content: "Breathe. Pick the one thing that's actually on fire — the rest can wait ten minutes." },
+  { role: 'user', content: 'you are useless' },
+  { role: 'assistant', content: "Harsh — and I've been insulted by emptier boards. What do you actually need done?" },
+];
+
+/** Messages for an interactive chat turn: system + style anchors + recent history. */
 export function buildChatMessages(parts: PromptParts & { history: ChatTurn[] }): BrainMessage[] {
   const system = `${buildSystemPrompt(parts)}\nThe user is talking to you. Reply in character in 1–3 short sentences.`;
   const recent = parts.history.slice(-MAX_HISTORY_TURNS);
-  return [{ role: 'system', content: system }, ...recent.map((turn) => ({ role: turn.role, content: turn.content }))];
+  return [{ role: 'system', content: system }, ...FEW_SHOT, ...recent.map((turn) => ({ role: turn.role, content: turn.content }))];
 }
 
 /** Trim model output down to a clean line/short reply. */
