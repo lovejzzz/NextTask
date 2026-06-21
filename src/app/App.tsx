@@ -102,7 +102,7 @@ import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental'
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
-import { computeInsights } from '../lib/insights';
+import { computeInsights, describeBoardShape } from '../lib/insights';
 import { buildStandup } from '../lib/standup';
 import { BoardCompanion } from '../components/experimental/BoardCompanion';
 import { BoardInsights } from '../components/experimental/BoardInsights';
@@ -691,6 +691,10 @@ export function App() {
         .map((task) => `"${task.title}"`)
         .join(', ');
       return `${late.length} overdue: ${list}${late.length > 4 ? '…' : ''}. They're not aging like wine.`;
+    }
+
+    if (intent?.kind === 'board_shape') {
+      return describeBoardShape(insights);
     }
 
     if (intent?.kind === 'status') {

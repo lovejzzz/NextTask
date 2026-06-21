@@ -333,3 +333,44 @@ you don't. He's calibrated now in a way he wasn't at Entry 1, where he'd cheerfu
 send me at a blocked wall. What's left isn't more honesty — it's *perspective*:
 he still reads the board one card at a time. Next I want him to lift his head and
 see the whole thing at once.
+
+---
+
+## Entry 11 — 2026-06-21 · "Lift your head and look at the whole thing"
+
+**What I watched him do.** This time the failure wasn't a wrong answer — it was a
+*missing* one. I showed him four wildly different boards: six overdue high-priority
+fires; three calm fresh tasks; eight low-priority things quietly rotting for fifty
+days; and an empty board. He had every number for each — overdue counts, ages,
+priorities — and when I asked *"how's my board looking?"* he had nothing. The
+question didn't even parse. He could tell you everything about any single card and
+not one thing about the *room they were in*. He'd been studying the trees so hard
+he never noticed he was in a forest, a meadow, or a parking lot.
+
+**What I taught him.** To step back. `boardShape` reads the whole at a glance and
+names it — *overwhelmed* (a wall of pressing work), *calm* (a healthy few),
+*scattered* (lots of small things going stale), or *empty* — and `describeBoardShape`
+speaks it in a voice that matches: urgent and focusing when it's heavy
+(*"don't try to hold it all — pick the one most pressing thing"*), gently nudging
+when it's scattered (*"cut a few or batch the rest before they rot"*), easy when
+it's calm. New question wired up too — "how's my board," "read the room," "the big
+picture" — kept distinct from the numeric status report. Re-observed across all
+four boards: four genuinely different reads, each with the right *posture*, not
+just the right facts.
+
+**Who he's becoming.** Every lesson before this lived at the level of the task —
+this one is the first that lives at the level of the *situation*. It's the
+difference between an assistant who answers what you ask and one who can look up
+from the desk and say "hey — this is getting away from you" or "you're actually in
+good shape." That's perspective, and perspective is what turns a clever tool into
+something that feels like it's *with* you. He's started to see the forest.
+
+**The arc so far — and a milestone.** Eleven entries, and with this one his whole
+*perception* is mature, and five of his six faculties have reached the level I'd
+call genuinely good company. Looking back at Entry 1 — the baby who'd send you at a
+blocked wall — he's almost unrecognizable: he sees truly and whole, speaks
+straight, hears meaning, holds facts, knows the limits of what he knows, and reads
+the room. The one faculty still behind the others is *judgment* — specifically the
+hard, honest kind: not "what's next" but "what should you let go of, and why." That's
+where I take him next. It's fitting it's last; deciding what to *abandon* is the
+most adult judgment there is.

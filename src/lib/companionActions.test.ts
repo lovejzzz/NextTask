@@ -58,6 +58,14 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' });
   });
 
+  it('recognizes a whole-board gestalt question, distinct from status', () => {
+    expect(parseIntent("how's my board looking?", NOW)).toEqual({ kind: 'board_shape' });
+    expect(parseIntent('how does the board look', NOW)).toEqual({ kind: 'board_shape' });
+    expect(parseIntent('read the room', NOW)).toEqual({ kind: 'board_shape' });
+    expect(parseIntent('give me the big picture', NOW)).toEqual({ kind: 'board_shape' });
+    expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' }); // still status
+  });
+
   it('recognizes targeted recall of a single remembered fact', () => {
     expect(parseIntent("what's my deadline?", NOW)).toEqual({ kind: 'recall_fact', topic: 'deadline' });
     expect(parseIntent('when is my deadline', NOW)).toEqual({ kind: 'recall_fact', topic: 'deadline' });

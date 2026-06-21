@@ -33,6 +33,7 @@ export type CompanionIntent =
   | { kind: 'ouroboros_backlog' }
   | { kind: 'whats_next' }
   | { kind: 'overdue' }
+  | { kind: 'board_shape' }
   | { kind: 'status' };
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -167,6 +168,15 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(overdue|late|behind)\b/.test(lower) && /\b(what|any|anything|show|list|i have|are|is)\b/.test(lower)) {
     return { kind: 'overdue' };
+  }
+  // Whole-board gestalt ("how's my board", "read the room") — distinct from the
+  // numeric status report and checked first so "board" isn't read as progress.
+  if (
+    /\b(?:how(?:'?s| is| does)?\s+(?:my |the )?board\b|read the room|big picture|what shape (?:is|of)|board shape|the (?:overall|whole) (?:picture|board))/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'board_shape' };
   }
   if (/\b(how am i doing|my (?:progress|stats|streak)|how'?s it going|status report|how many)\b/.test(lower)) {
     return { kind: 'status' };

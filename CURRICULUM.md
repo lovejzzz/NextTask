@@ -19,12 +19,12 @@ root, not the symptom; show the abstraction once; verify; move on.
 - ✓ Feel a deadline as a commitment (due-today ≈ overdue) — *Entry 4*
 - ✓ Notice neglect / staleness over time — *Entry 5*
 - ✓ Honest status & summaries — overdue truth before cheer — `honestStatus` — *Entry 6*
-- → **Sense board *shape*** — overwhelm vs calm vs empty — beyond per-task mood
+- ✓ Sense board *shape* — overwhelmed/calm/scattered/empty gestalt — `boardShape` — *Entry 11*
 
 ## Unit 2 — Judgment (choose well)
 - ✓ Don't send anyone at a wall — pick the *actionable* next thing — *Entry 1*
 - ✓ Urgency vs importance — *Entry 4*
-- ◐ Triage honestly — cut the *right* things, and say why
+- → **Triage honestly** — cut the *right* things, and say why
 - ○ Quick wins that build real momentum (not just the nearest task)
 
 ## Unit 3 — Language & understanding
@@ -53,15 +53,15 @@ root, not the symptom; show the abstraction once; verify; move on.
 
 ## Current focus
 
-→ **Unit 1: Sense board *shape*.** Humility landed (*Entry 10*) — on a flat board
-he now says "nothing really jumps out, these are about even" instead of faking a
-confident pick. That's per-*decision* awareness. The next reach is per-*board*
-awareness: stepping back from individual tasks to read the whole at a glance —
-*overwhelmed* (a wall of overdue/high-priority work), *calm* (a healthy few),
-*empty* (nothing to do), *scattered* (lots of small stale things). He reasons task
-by task; teach him to feel the gestalt, so his tone and advice can match the
-*situation*, not just the next card.
+→ **Unit 2: Triage honestly.** Board-shape sensing landed (*Entry 11*) — he can
+now read the whole at a glance (overwhelmed / calm / scattered / empty), which
+completes Unit 1. With his perception, language, memory, collaboration, and
+character all matured, the one underdeveloped unit left is **Judgment**. He can
+pick the next thing well, but when he's asked what to *drop*, his triage just
+ranks the bottom of the focus order and presents it — it doesn't say *why* each
+one is safe to cut. Teach him to cut the *right* things and explain the cut, so a
+"what should I drop" answer is something you'd actually trust.
 
-After that: the deeper judgment items (Unit 2 — honest triage, real-momentum quick
-wins). The loop teaches the next **→**, verifies it, marks it ✓ here, updates the
-report card, and writes the entry.
+After that: real-momentum quick wins (the last open item), then the deeper L5
+"mastery" reaches across units. The loop teaches the next **→**, verifies it,
+marks it ✓ here, updates the report card, and writes the entry.
