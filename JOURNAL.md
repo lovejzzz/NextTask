@@ -261,3 +261,37 @@ together they're the whole of Unit 5 and most of what makes something *pleasant 
 share a board with*. What's missing next isn't manners but *mind*: he does routines
 but knows no facts. He can't yet remember a thing you told him and answer for it
 later. That's the next reach — give him something to actually know.
+
+---
+
+## Entry 9 — 2026-06-21 · "Know a thing, not just do a thing"
+
+**What I watched him do.** I told him three things about myself — *"my deadline is
+friday," "I'm focusing on the redesign," "my goal is ship v2"* — and he tucked them
+away neatly: *Deadline: Friday. Focusing on the redesign. Goal: Ship v2.* Lovely
+filing. Then I asked the simplest possible follow-up: *"what's my deadline?"* And
+he had nothing — the question didn't even parse. He could recite the whole notebook
+if asked, but he couldn't answer *one question* from it. He had the fact and no way
+to reach for it. Memory you can't query isn't really knowing; it's hoarding.
+
+**What I taught him.** To look something up. `recallFact` lets him answer a
+*targeted* question — deadline, focus, goal, priority — by finding the right note
+instead of dumping all of them, and the parser now hears "what's my deadline,"
+"when's my deadline," "what am I focusing on" as the questions they are. The part I
+care about most: when he *wasn't* told, he doesn't make something up — he says *"you
+haven't told me your priority yet."* Re-observed: three questions answered straight
+from memory, and the fourth met with an honest shrug.
+
+**Who he's becoming.** Everything before this lived in the *present* — the board in
+front of him, the command just spoken. This is the first time he carries something
+*about you* and can produce it on demand: a small, real piece of *knowing you*. It's
+the difference between a tool that does what you say and a companion that remembers
+what you care about. Still tiny — four topics, a handful of facts — but it's the
+first semantic thread, and those weave.
+
+**The arc so far.** Nine entries. He learned to see time, tell the truth, ask when
+unsure, hold back when crowded — and now to *know* a few things and admit the rest.
+That honest "you haven't told me" is the thread into what's next: making *I'm not
+sure* something he'll volunteer everywhere, not just about a missing note. He's got
+the manners and the beginnings of a mind. Humility about the edges of that mind is
+the climb from here.

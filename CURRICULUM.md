@@ -36,7 +36,7 @@ root, not the symptom; show the abstraction once; verify; move on.
 - ✓ Persistent experience across sessions — `useCommandHistory`
 - ✓ Acquire skills from repetition — `detectRepeatedSequence`
 - ✓ Retrieve a skill when its moment returns — `suggestSkillContinuation`
-- → **Hold structured knowledge** — facts & preferences he can query
+- ✓ Hold structured knowledge — query a fact by topic — `recallFact` — *Entry 9*
 
 ## Unit 5 — Collaboration (work *with* the human)
 - ✓ Propose, don't impose — Boardy's Desk
@@ -47,20 +47,21 @@ root, not the symptom; show the abstraction once; verify; move on.
 ## Unit 6 — Character (who he is)
 - ✓ Honesty in self-measurement — the self-test, the rubric ethos
 - ✓ Reversibility — every action he takes can be undone
-- ○ Humility — say "I'm not sure" instead of confidently guessing
+- → **Humility** — say "I'm not sure" instead of confidently guessing
 
 ---
 
 ## Current focus
 
-→ **Unit 4: Hold structured knowledge.** Restraint landed (*Entry 8*) — his Desk
-caps the asks and his own wants yield to yours. He's now socially well-behaved.
-The next gap is the one in his *head*: he replays routines (skills) but holds no
-**facts**. He can't answer "what did I tell you my deadline was" or remember a
-stable preference and act on it. He has episodic habit but no semantic memory.
-Teach him to hold a small store of facts/preferences he can query — the
-beginning of actually *knowing* things about you, not just doing.
+→ **Unit 6: Humility — "I'm not sure".** Structured knowledge landed (*Entry 9*) —
+he can now answer "what's my deadline?" from memory, and honestly say "you haven't
+told me" when he wasn't. That admission is the seed of the lesson that's left:
+make *not knowing* a first-class answer everywhere, not just in recall. When the
+board is genuinely thin on signal — no due dates, no priorities, nothing pressing
+— he should be willing to say "I genuinely don't have a strong read here" instead
+of manufacturing a confident pick. The hardest thing to teach a confident mind is
+to volunteer its own uncertainty.
 
-After that: humility — "I'm not sure" (Unit 6), then board-shape sensing
-(Unit 1). The loop teaches the next **→**, verifies it, marks it ✓ here, updates
-the report card, and writes the entry.
+After that: board-shape sensing (Unit 1), then the deeper judgment items (Unit 2).
+The loop teaches the next **→**, verifies it, marks it ✓ here, updates the report
+card, and writes the entry.

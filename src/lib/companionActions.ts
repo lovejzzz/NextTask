@@ -23,6 +23,7 @@ export type CompanionIntent =
   | { kind: 'undo' }
   | { kind: 'remember'; note: string }
   | { kind: 'recall' }
+  | { kind: 'recall_fact'; topic: string }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -112,6 +113,17 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(what do you (?:remember|know)(?: about me)?|what did i tell you|what'?s in your memory)\b/.test(lower)) {
     return { kind: 'recall' };
+  }
+  // Targeted recall of a single fact, e.g. "what's my deadline", "what am I focusing on".
+  let factQ: RegExpMatchArray | null;
+  if ((factQ = lower.match(/\bwhat(?:'?s| is| was| are)?\s+my\s+(deadline|focus|goal|priorit(?:y|ies))\b/))) {
+    return { kind: 'recall_fact', topic: factQ[1].startsWith('priorit') ? 'priority' : factQ[1] };
+  }
+  if (/\bwhen(?:'?s| is| was)?\s+my\s+(?:deadline|due date)\b/.test(lower)) {
+    return { kind: 'recall_fact', topic: 'deadline' };
+  }
+  if (/\bwhat am i (?:focusing|working) on\b/.test(lower)) {
+    return { kind: 'recall_fact', topic: 'focus' };
   }
   const fact = parseRememberable(raw);
   if (fact) return { kind: 'remember', note: fact };

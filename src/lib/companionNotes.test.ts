@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { addNote, formatNotes, parseRememberable, type CompanionNote } from './companionNotes';
+import { addNote, formatNotes, parseRememberable, recallFact, type CompanionNote } from './companionNotes';
 
 describe('parseRememberable', () => {
   it('captures explicit remember/note statements', () => {
@@ -37,6 +37,33 @@ describe('addNote', () => {
     for (let i = 0; i < 12; i++) notes = addNote(notes, `fact ${i}`, i);
     expect(notes.length).toBeLessThanOrEqual(8);
     expect(notes.at(-1)?.text).toBe('fact 11');
+  });
+});
+
+describe('recallFact', () => {
+  const notes: CompanionNote[] = [
+    { text: 'Deadline: Friday', at: 1 },
+    { text: 'Focusing on the redesign', at: 2 },
+    { text: 'Goal: Ship v2', at: 3 },
+  ];
+
+  it('answers a targeted question from stored facts', () => {
+    expect(recallFact(notes, 'deadline')).toBe('Deadline: Friday');
+    expect(recallFact(notes, 'focus')).toBe('Focusing on the redesign');
+    expect(recallFact(notes, 'goal')).toBe('Goal: Ship v2');
+  });
+
+  it('returns null when he was never told (so the caller can admit it)', () => {
+    expect(recallFact(notes, 'priority')).toBeNull();
+    expect(recallFact([], 'deadline')).toBeNull();
+  });
+
+  it('prefers the most recent fact on a topic', () => {
+    const updated: CompanionNote[] = [
+      { text: 'Deadline: Friday', at: 1 },
+      { text: 'Deadline: Monday', at: 2 },
+    ];
+    expect(recallFact(updated, 'deadline')).toBe('Deadline: Monday');
   });
 });
 

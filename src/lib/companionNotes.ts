@@ -52,3 +52,32 @@ export function formatNotes(notes: CompanionNote[]): string {
   if (!notes.length) return '';
   return notes.map((note) => note.text).join('; ');
 }
+
+// Which stored notes answer a given topic — semantic, not just episodic. His
+// notes come out of parseRememberable already shaped ("Deadline: …", "Goal: …",
+// "Focusing on …"), so a topic maps to the words those notes contain.
+const TOPIC_MATCHERS: Record<string, RegExp> = {
+  deadline: /\b(deadline|due)\b/i,
+  focus: /\b(focus|focusing|working on)\b/i,
+  goal: /\b(goal)\b/i,
+  priority: /\b(priorit(?:y|ies))\b/i,
+};
+
+/** The set of topics Boardy can be asked about directly. */
+export function knownFactTopics(): string[] {
+  return Object.keys(TOPIC_MATCHERS);
+}
+
+/**
+ * Answer a targeted question from memory: the most recent note about `topic`,
+ * or null if he was never told. This is the difference between replaying a
+ * notebook and actually *knowing* a thing you can ask him for.
+ */
+export function recallFact(notes: CompanionNote[], topic: string): string | null {
+  const matcher = TOPIC_MATCHERS[topic.toLowerCase()];
+  if (!matcher) return null;
+  for (let i = notes.length - 1; i >= 0; i -= 1) {
+    if (matcher.test(notes[i].text)) return notes[i].text;
+  }
+  return null;
+}

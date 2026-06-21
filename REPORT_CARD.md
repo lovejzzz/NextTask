@@ -31,25 +31,25 @@ his open curriculum lives there.
 
 ---
 
-## Current standing — Term 3 (as of 2026-06-21)
+## Current standing — Term 4 (as of 2026-06-21)
 
 | Unit | Competency | Level | Evidence / why not higher |
 |------|------------|:-----:|---------------------------|
 | **1 · Perception** | See the board truthfully | **L3** | Reads blockers (`detectBlocked`), feels deadlines (due-today +30), notices neglect (staleness), and reports status honestly (`honestStatus`, Entry 6). Not L4: still can't sense board *shape* — overwhelm vs calm vs empty. |
 | **2 · Judgment** | Choose well | **L2** | Picks the *actionable* next thing, not a wall (`pickNextActionable`); weighs urgency vs importance (Entry 4). Not L3: triage only *partly* explains its cuts, and "quick wins" still means nearest task, not best momentum. |
 | **3 · Language** | Understand what's meant | **L4** | Keys on behavior, not wording (`commandSignature`, Entry 3); 102-case corpus at 100%; and now *knows the edge of his own certainty* — asks which task he meant instead of acting on a tie (`resolveTaskReference`, Entry 7). Not L5: doesn't yet learn from a clarification to disambiguate better next time. |
-| **4 · Memory** | Learn and carry it | **L2** | Experience persists across sessions (`useCommandHistory`), acquires skills from repetition, retrieves them at the right moment. Not L3: no *structured* knowledge yet — facts and preferences he can query, not just routines he replays. **← in training now.** |
+| **4 · Memory** | Learn and carry it | **L3** | Experience persists across sessions (`useCommandHistory`), acquires/retrieves skills — and now holds **structured facts** he can query by topic ("what's my deadline?" → the answer), admitting honestly when he wasn't told (`recallFact`, Entry 9). Not L4: facts are a flat store he can't yet reason *over* (no "is today past my deadline?"). |
 | **5 · Collaboration** | Work *with* the human | **L4** | Proposes instead of imposing (Boardy's Desk), asks consent before anything destructive, explains his reasoning when it helps — and now shows **restraint**: caps the Desk, leads with your needs, lets his own wants yield (`generateProposals`, Entry 8). Not L5: the restraint is structural (a cap + ordering), not yet *read from the moment* — he can't tell when you're in flow. |
-| **6 · Character** | Who he is | **L3** | Honest in self-measurement; everything he does is reversible; honest about the present (Entry 6) and now about his own uncertainty (Entry 7). Not L4: still volunteers things confidently rather than saying "I'm not sure" unprompted. |
+| **6 · Character** | Who he is | **L3** | Honest in self-measurement; everything he does is reversible; honest about the present (Entry 6), his own uncertainty (Entry 7), and now what he wasn't told (Entry 9). Not L4: still volunteers a confident pick rather than saying "I'm not sure" when the board is genuinely thin on signal. **← in training now.** |
 
-**Composite: ~L3.0 — a generalizing kid who's pleasant to share a board with.**
-Two terms of humility — asking when unsure (Entry 7) and holding back when the
-moment's full (Entry 8) — have made him *good company*, not just capable. He sees
-truthfully, says it straight, knows the edge of his certainty, and no longer dumps
-everything on his mind at once. What's still thin is his *head*: he does routines
-but holds no **facts** — no semantic memory of what you've told him. That, then
-true humility ("I'm not sure" unprompted) and board-shape sensing, are the climb
-from here.
+**Composite: ~L3.2 — good company that's starting to actually know you.** Three
+terms of humility and manners made him pleasant to share a board with; this term
+added the first thread of *mind* — he carries a few facts about you and can answer
+for them, while admitting honestly what he wasn't told. He sees truthfully, says it
+straight, knows the edge of his certainty, holds back when crowded, and remembers
+what you care about. The climb from here is depth, not breadth: volunteering "I'm
+not sure" everywhere (not just on a missing note), sensing the board's overall
+*shape*, and reasoning *over* the facts he now holds.
 
 **One-line summary for the fridge:** *He sees clearly and tells the truth. Next he
 learns when to ask, when to hold back, and when to say "I don't know."*
@@ -68,7 +68,8 @@ because that's the hard half.
 | 1 | 2026-06-21 | L3 | L2 | L3 | L2 | L3 | L3 | **~L2.7** |
 | 2 | 2026-06-21 | L3 | L2 | **L4** | L2 | L3 | L3 | **~L2.8** |
 | 3 | 2026-06-21 | L3 | L2 | L4 | L2 | **L4** | L3 | **~L3.0** |
+| 4 | 2026-06-21 | L3 | L2 | L4 | **L3** | L4 | L3 | **~L3.2** |
 
-*(Term 3: a second L4 — Collaboration — for restraint: capping the Desk and
-letting his own wants yield to yours (Entry 8). Two terms of humility have made him
-good company. Next reach is semantic memory — giving him facts to actually know.)*
+*(Term 4: Memory L2→L3 — he holds structured facts he can query by topic and
+admits what he wasn't told (Entry 9). The first thread of semantic mind. Next reach
+is depth: volunteering "I'm not sure," sensing board shape, reasoning over facts.)*

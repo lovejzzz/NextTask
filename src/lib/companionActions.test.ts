@@ -57,6 +57,14 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('what is overdue?', NOW)).toEqual({ kind: 'overdue' });
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' });
   });
+
+  it('recognizes targeted recall of a single remembered fact', () => {
+    expect(parseIntent("what's my deadline?", NOW)).toEqual({ kind: 'recall_fact', topic: 'deadline' });
+    expect(parseIntent('when is my deadline', NOW)).toEqual({ kind: 'recall_fact', topic: 'deadline' });
+    expect(parseIntent('what is my goal', NOW)).toEqual({ kind: 'recall_fact', topic: 'goal' });
+    expect(parseIntent('what are my priorities', NOW)).toEqual({ kind: 'recall_fact', topic: 'priority' });
+    expect(parseIntent('what am I focusing on', NOW)).toEqual({ kind: 'recall_fact', topic: 'focus' });
+  });
 });
 
 describe('parseIntent — robustness (synonyms, pleasantries, dates)', () => {

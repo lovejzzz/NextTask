@@ -95,7 +95,7 @@ import {
 } from '../lib/autopilot';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
-import { formatNotes } from '../lib/companionNotes';
+import { formatNotes, recallFact } from '../lib/companionNotes';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
@@ -580,6 +580,12 @@ export function App() {
       if (!companionNotes.notes.length) return "You haven't told me anything to remember yet. I'm an open notebook.";
       const lines = companionNotes.notes.map((note) => `- ${note.text}`).join('\n');
       return `Here's what I'm holding onto:\n${lines}`;
+    }
+
+    if (intent?.kind === 'recall_fact') {
+      const fact = recallFact(companionNotes.notes, intent.topic);
+      if (fact) return `${fact}. (You told me that one.)`;
+      return `You haven't told me your ${intent.topic} yet — say so and I'll hold onto it.`;
     }
 
     if (intent?.kind === 'undo') {
