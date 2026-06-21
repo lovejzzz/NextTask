@@ -15,12 +15,11 @@ export const LOOP_NAME = 'Ouroboros';
 export type AutopilotProposal = { title: string; description: string; priority: TaskPriority };
 
 // Real upgrades the board would want, drawn from RUBRIC.md / LAB.md backlogs.
+// Items are retired from this list once the curriculum delivers them, so Boardy's
+// self-authored asks reflect who he actually is now — not toys he already owns.
+// (Retired as built: LLM intent-fallback, staleness in the focus ranking, and
+// signature-based skill detection — see JOURNAL entries 3 & 5 and intentFallback.)
 const IDEAS: AutopilotProposal[] = [
-  {
-    title: 'Add an LLM intent-fallback for phrasings the parser misses',
-    description: 'When the rule-based parser returns no intent, ask the local model to classify it, graded against the eval corpus.',
-    priority: 'high',
-  },
   {
     title: 'Multi-turn, self-correcting reasoning for the companion',
     description: 'Let the board revise its plan across turns ("given X is blocked, replan") instead of one-shot answers.',
@@ -42,11 +41,6 @@ const IDEAS: AutopilotProposal[] = [
     priority: 'normal',
   },
   {
-    title: 'Add task age / staleness to the focus ranking',
-    description: 'Nudge tasks that have sat untouched too long up the priority list and into proactive lines.',
-    priority: 'normal',
-  },
-  {
     title: 'A Zen / focus mode that hides everything but the spotlight',
     description: 'One keystroke to strip the UI down to the single most important task.',
     priority: 'low',
@@ -59,11 +53,6 @@ const IDEAS: AutopilotProposal[] = [
   {
     title: 'Extract the companion chat-intent handlers out of App.tsx',
     description: 'App.tsx is ~2.3k lines; move the chat action/answer handlers into a dedicated module to slim the component and make them unit-testable.',
-    priority: 'normal',
-  },
-  {
-    title: 'Key skill-pattern detection on intent signatures, not raw text',
-    description: 'detectRepeatedSequence compares raw command strings, so "clear overdue" and "clear my overdue" miss as the same pattern. Key the experience log on the parsed intent (kind + normalized params) so Boardy learns the behavior, not the wording.',
     priority: 'normal',
   },
 ];
