@@ -24,6 +24,13 @@ do it, and feel the streak. New ideas should reinforce that, not sprawl.
 | 9 | **Shortcuts cheat sheet** — `?` | `components/experimental/ShortcutsHelp.tsx` |
 | 10 | **The Board Has Feelings** ⭐ — a deterministic mood engine (no LLM) gives the board a face + raw personality that reacts to how you actually work | `components/experimental/BoardCompanion.tsx`, `hooks/useCompanion.ts`, `lib/companion.ts` |
 
+**Board Autopilot** 🤖 — the companion plans work *for itself*. Palette → "AI:
+file its own upgrade tickets" makes the board file real NextTask improvement
+tickets (from the RUBRIC/LAB backlog) onto its own board, marked 🤖 and undoable.
+Those tickets become the dev backlog → the coding agent implements them → the
+board sees its own upgrades land. The AI side of a self-improvement loop.
+(`lib/autopilot.ts`)
+
 ⭐ = the "revolutionary / raw" headline. The board gloats when you ship, panics
 about overdue piles, calls out fidgeting (recoloring instead of doing), and
 dozes off when neglected. Behavioural signals (idle time, fidgets, pokes) blend
