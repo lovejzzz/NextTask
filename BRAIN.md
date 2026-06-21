@@ -50,8 +50,11 @@ Experimental mode is Boardy's playground, and he learns from experience — a sa
 take on Voyager's skill library and Hermes Agent's automated skill creation:
 
 - **Skill library** = tools/macros (`tools.ts`).
+- **Experience** = `useCommandHistory` logs recognized commands and **persists
+  them across sessions** (alleviating catastrophic forgetting), so learning
+  compounds instead of resetting each visit.
 - **Skill acquisition** = when Boardy notices he keeps running the same command
-  sequence (`detectRepeatedSequence` over recent history), he offers to **save it
+  sequence (`detectRepeatedSequence` over his experience), he offers to **save it
   as a skill** on Boardy's Desk; accept → it's in his library, reusable via
   "run <name>". Procedural memory, earned from use — composition only, no codegen.
 - **Self-verification** = the brain self-test (`brainEval.ts`).

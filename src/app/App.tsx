@@ -66,6 +66,7 @@ import { useAccent } from '../hooks/useAccent';
 import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
+import { useCommandHistory } from '../hooks/useCommandHistory';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useTools } from '../hooks/useTools';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
@@ -227,7 +228,7 @@ export function App() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [boardyDeskOpen, setBoardyDeskOpen] = useState(false);
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const experience = useCommandHistory();
   const [goal, setGoal] = useState<number>(() => {
     try {
       const value = Number(window.localStorage.getItem('next-task:goal'));
@@ -382,7 +383,7 @@ export function App() {
     }
 
     // Remember recognized commands so Boardy can learn repeated patterns into skills.
-    if (intent) setCommandHistory((current) => [...current, text.trim()].slice(-24));
+    if (intent) experience.record(text);
 
     if (intent?.kind === 'create_task') {
       try {
@@ -758,13 +759,13 @@ export function App() {
     const overdue = tasks.filter((task) => dueTone(task) === 'overdue').length;
     const ideas = proposeImprovements(0, 2, tasks.map((task) => task.title));
     // A learned pattern Boardy could save as a skill — unless he already has it.
-    const repeated = detectRepeatedSequence(commandHistory);
+    const repeated = detectRepeatedSequence(experience.history);
     const learned =
       repeated && !toolbox.tools.some((tool) => tool.steps.join('|').toLowerCase() === repeated.join('|').toLowerCase())
         ? repeated
         : null;
     return generateProposals({ overdue, ideas, learned }).filter((proposal) => !dismissedProposals.has(proposal.id));
-  }, [tasks, dismissedProposals, commandHistory, toolbox.tools]);
+  }, [tasks, dismissedProposals, experience.history, toolbox.tools]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {

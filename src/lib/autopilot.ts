@@ -61,6 +61,11 @@ const IDEAS: AutopilotProposal[] = [
     description: 'App.tsx is ~2.3k lines; move the chat action/answer handlers into a dedicated module to slim the component and make them unit-testable.',
     priority: 'normal',
   },
+  {
+    title: 'Key skill-pattern detection on intent signatures, not raw text',
+    description: 'detectRepeatedSequence compares raw command strings, so "clear overdue" and "clear my overdue" miss as the same pattern. Key the experience log on the parsed intent (kind + normalized params) so Boardy learns the behavior, not the wording.',
+    priority: 'normal',
+  },
 ];
 
 /** Is this idea already represented by something on the board? */
