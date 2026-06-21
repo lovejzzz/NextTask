@@ -36,13 +36,13 @@ root, not the symptom; show the abstraction once; verify; move on.
 - ✓ Persistent experience across sessions — `useCommandHistory`
 - ✓ Acquire skills from repetition — `detectRepeatedSequence`
 - ✓ Retrieve a skill when its moment returns — `suggestSkillContinuation`
-- ○ Hold structured knowledge — facts & preferences he can query
+- → **Hold structured knowledge** — facts & preferences he can query
 
 ## Unit 5 — Collaboration (work *with* the human)
 - ✓ Propose, don't impose — Boardy's Desk
 - ✓ Consent before anything destructive — accept/dismiss, undo
 - ✓ Explain his reasoning when it helps — gated "why"
-- → **Restraint** — know when to stay quiet; don't nag
+- ✓ Restraint — cap the asks, lead with your needs, his wants yield — `generateProposals` — *Entry 8*
 
 ## Unit 6 — Character (who he is)
 - ✓ Honesty in self-measurement — the self-test, the rubric ethos
@@ -53,14 +53,14 @@ root, not the symptom; show the abstraction once; verify; move on.
 
 ## Current focus
 
-→ **Unit 5: Restraint.** Ask-when-ambiguous landed (*Entry 7*) — he no longer
-deletes one of two matching tasks on a coin-flip; he asks which one. That was the
-first half of humility (*asking*). Restraint is the other half: knowing when to
-say *nothing at all*. He proposes on his Desk and explains himself well, but he
-doesn't yet sense when a nudge is unwelcome — when the user is in flow, when he
-just spoke, when there's genuinely nothing worth interrupting for. Teach him the
-quiet.
+→ **Unit 4: Hold structured knowledge.** Restraint landed (*Entry 8*) — his Desk
+caps the asks and his own wants yield to yours. He's now socially well-behaved.
+The next gap is the one in his *head*: he replays routines (skills) but holds no
+**facts**. He can't answer "what did I tell you my deadline was" or remember a
+stable preference and act on it. He has episodic habit but no semantic memory.
+Teach him to hold a small store of facts/preferences he can query — the
+beginning of actually *knowing* things about you, not just doing.
 
-After that: structured knowledge (Unit 4), then humility — "I'm not sure"
-(Unit 6). The loop teaches the next **→**, verifies it, marks it ✓ here, updates
+After that: humility — "I'm not sure" (Unit 6), then board-shape sensing
+(Unit 1). The loop teaches the next **→**, verifies it, marks it ✓ here, updates
 the report card, and writes the entry.

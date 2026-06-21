@@ -45,4 +45,31 @@ describe('generateProposals', () => {
     expect(proposals[0].kind).toBe('save_skill');
     expect(proposals[0].summary).toContain('save it as a skill');
   });
+
+  it('shows restraint: never piles on more than three asks at once', () => {
+    const proposals = generateProposals({
+      overdue: 3,
+      ideas,
+      learned: ['clear overdue', 'plan my day'],
+      continuation: { name: 'morning', firstStep: 'clear overdue', remaining: ['plan my day'] },
+    });
+    expect(proposals.length).toBeLessThanOrEqual(3);
+  });
+
+  it("leads with the human's needs and lets his own wants yield when the Desk is busy", () => {
+    const proposals = generateProposals({
+      overdue: 3,
+      ideas,
+      learned: ['clear overdue', 'plan my day'],
+      continuation: { name: 'morning', firstStep: 'clear overdue', remaining: ['plan my day'] },
+    });
+    // Crowded Desk → his self-serving upgrade asks are the first to be dropped.
+    expect(proposals.some((p) => p.kind === 'upgrade')).toBe(false);
+    expect(proposals[0].kind).toBe('run_skill'); // finishing your flow comes first
+    expect(proposals.map((p) => p.kind)).toContain('clear_overdue');
+  });
+
+  it('respects a tighter limit when asked to stay especially quiet', () => {
+    expect(generateProposals({ overdue: 3, ideas, learned: ['a', 'b'] }, 1)).toHaveLength(1);
+  });
 });

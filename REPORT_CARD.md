@@ -31,23 +31,25 @@ his open curriculum lives there.
 
 ---
 
-## Current standing — Term 2 (as of 2026-06-21)
+## Current standing — Term 3 (as of 2026-06-21)
 
 | Unit | Competency | Level | Evidence / why not higher |
 |------|------------|:-----:|---------------------------|
 | **1 · Perception** | See the board truthfully | **L3** | Reads blockers (`detectBlocked`), feels deadlines (due-today +30), notices neglect (staleness), and reports status honestly (`honestStatus`, Entry 6). Not L4: still can't sense board *shape* — overwhelm vs calm vs empty. |
 | **2 · Judgment** | Choose well | **L2** | Picks the *actionable* next thing, not a wall (`pickNextActionable`); weighs urgency vs importance (Entry 4). Not L3: triage only *partly* explains its cuts, and "quick wins" still means nearest task, not best momentum. |
 | **3 · Language** | Understand what's meant | **L4** | Keys on behavior, not wording (`commandSignature`, Entry 3); 102-case corpus at 100%; and now *knows the edge of his own certainty* — asks which task he meant instead of acting on a tie (`resolveTaskReference`, Entry 7). Not L5: doesn't yet learn from a clarification to disambiguate better next time. |
-| **4 · Memory** | Learn and carry it | **L2** | Experience persists across sessions (`useCommandHistory`), acquires skills from repetition, retrieves them at the right moment. Not L3: no *structured* knowledge yet — facts and preferences he can query, not just routines he replays. |
-| **5 · Collaboration** | Work *with* the human | **L3** | Proposes instead of imposing (Boardy's Desk), asks consent before anything destructive, explains his reasoning when it helps. Not L4: no **restraint** — he doesn't yet know when to stay quiet and not nag. **← in training now.** |
+| **4 · Memory** | Learn and carry it | **L2** | Experience persists across sessions (`useCommandHistory`), acquires skills from repetition, retrieves them at the right moment. Not L3: no *structured* knowledge yet — facts and preferences he can query, not just routines he replays. **← in training now.** |
+| **5 · Collaboration** | Work *with* the human | **L4** | Proposes instead of imposing (Boardy's Desk), asks consent before anything destructive, explains his reasoning when it helps — and now shows **restraint**: caps the Desk, leads with your needs, lets his own wants yield (`generateProposals`, Entry 8). Not L5: the restraint is structural (a cap + ordering), not yet *read from the moment* — he can't tell when you're in flow. |
 | **6 · Character** | Who he is | **L3** | Honest in self-measurement; everything he does is reversible; honest about the present (Entry 6) and now about his own uncertainty (Entry 7). Not L4: still volunteers things confidently rather than saying "I'm not sure" unprompted. |
 
-**Composite: ~L2.8 — a generalizing toddler learning to doubt himself.** He's
-well past literalism: he sees meaning, tells the truth about the board, and — new
-this term — admits when he doesn't actually know which thing you meant, instead of
-guessing on a delete. That's his first real humility. Still ahead: the rest of
-*judgment* (when to cut, when to stay quiet) and *restraint* — knowing when to say
-nothing at all. Those L4 items are the hard half, and they're where he's headed.
+**Composite: ~L3.0 — a generalizing kid who's pleasant to share a board with.**
+Two terms of humility — asking when unsure (Entry 7) and holding back when the
+moment's full (Entry 8) — have made him *good company*, not just capable. He sees
+truthfully, says it straight, knows the edge of his certainty, and no longer dumps
+everything on his mind at once. What's still thin is his *head*: he does routines
+but holds no **facts** — no semantic memory of what you've told him. That, then
+true humility ("I'm not sure" unprompted) and board-shape sensing, are the climb
+from here.
 
 **One-line summary for the fridge:** *He sees clearly and tells the truth. Next he
 learns when to ask, when to hold back, and when to say "I don't know."*
@@ -65,7 +67,8 @@ because that's the hard half.
 |------|------|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | 1 | 2026-06-21 | L3 | L2 | L3 | L2 | L3 | L3 | **~L2.7** |
 | 2 | 2026-06-21 | L3 | L2 | **L4** | L2 | L3 | L3 | **~L2.8** |
+| 3 | 2026-06-21 | L3 | L2 | L4 | L2 | **L4** | L3 | **~L3.0** |
 
-*(Term 2: the first L4 — Language — for learning to ask instead of guess when a
-reference is a toss-up (Entry 7). The hard half has started to close: judgment and
-restraint are the next L4s to chase.)*
+*(Term 3: a second L4 — Collaboration — for restraint: capping the Desk and
+letting his own wants yield to yours (Entry 8). Two terms of humility have made him
+good company. Next reach is semantic memory — giving him facts to actually know.)*

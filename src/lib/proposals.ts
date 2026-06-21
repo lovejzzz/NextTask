@@ -25,10 +25,23 @@ export type ProposalInput = {
   continuation?: SkillContinuation | null; // a saved skill whose first step just happened
 };
 
-/** What does Boardy want right now? Highest-leverage wants first. */
-export function generateProposals({ overdue, ideas, learned, continuation }: ProposalInput): Proposal[] {
+// Restraint: never dump a wall of asks. Boardy shows at most this many at once.
+const MAX_PROPOSALS = 3;
+
+/**
+ * What does Boardy want right now?
+ *
+ * Built in priority order — the human's needs before Boardy's own wants — then
+ * capped at {@link MAX_PROPOSALS}. That cap is restraint, not a limitation: a
+ * good collaborator leads with what helps *you* (finishing a flow you started,
+ * clearing overdue work), keeps a nicety or two after that, and lets his own
+ * self-interested "upgrade" asks wait for a quieter moment instead of piling on.
+ * Because upgrades come last, they're the first to yield when the Desk is busy.
+ */
+export function generateProposals({ overdue, ideas, learned, continuation }: ProposalInput, limit = MAX_PROPOSALS): Proposal[] {
   const proposals: Proposal[] = [];
 
+  // 1. You're mid-flow — finishing what you started is the most timely help.
   if (continuation) {
     proposals.push({
       id: `run-skill-${continuation.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
@@ -39,15 +52,7 @@ export function generateProposals({ overdue, ideas, learned, continuation }: Pro
     });
   }
 
-  if (learned && learned.length) {
-    proposals.push({
-      id: `save-skill-${learned.join('-').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}`,
-      kind: 'save_skill',
-      steps: learned,
-      summary: `I keep doing this: ${learned.join(' → ')}. Want me to save it as a skill?`,
-    });
-  }
-
+  // 2. Concrete, urgent help with your real work.
   if (overdue > 0) {
     proposals.push({
       id: 'clear-overdue',
@@ -57,6 +62,17 @@ export function generateProposals({ overdue, ideas, learned, continuation }: Pro
     });
   }
 
+  // 3. A nicety — offering to remember a routine he's noticed you repeat.
+  if (learned && learned.length) {
+    proposals.push({
+      id: `save-skill-${learned.join('-').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}`,
+      kind: 'save_skill',
+      steps: learned,
+      summary: `I keep doing this: ${learned.join(' → ')}. Want me to save it as a skill?`,
+    });
+  }
+
+  // 4. Boardy's *own* wants — last, because his self-interest waits behind yours.
   ideas.slice(0, 2).forEach((idea, index) => {
     proposals.push({
       id: `upgrade-${index}-${idea.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)}`,
@@ -66,5 +82,5 @@ export function generateProposals({ overdue, ideas, learned, continuation }: Pro
     });
   });
 
-  return proposals;
+  return proposals.slice(0, Math.max(0, limit));
 }

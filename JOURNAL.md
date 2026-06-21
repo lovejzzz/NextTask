@@ -227,3 +227,37 @@ when he doesn't actually know which thing you meant. Asking is the first half of
 humility. The second half is *restraint*: knowing when to not speak at all. That's
 next, and it's harder, because nothing on the board will ever announce "this is a
 moment to stay quiet." He'll have to feel it.
+
+---
+
+## Entry 8 — 2026-06-21 · "Don't say everything you could say"
+
+**What I watched him do.** I gave him a busy moment — you mid-routine, three tasks
+overdue, a pattern he'd noticed worth saving, and two upgrades *he* wanted to file
+for himself — and opened his Desk. He laid out **all five** asks at once, his own
+wants stacked right in there with your needs. He wasn't wrong about any single one.
+He was wrong about the *volume*. A kid who, the moment you walk in the door, lists
+every single thing on his mind without breathing. Everything true, nothing
+prioritized, and exhausting.
+
+**What I taught him.** To hold back. `generateProposals` now builds in a deliberate
+order — finishing the flow *you* started, then clearing *your* overdue work, then
+a nicety, and his *own* upgrade wants dead last — and caps the Desk at three. The
+cap isn't a muzzle; it's manners. Because his self-interested asks come last,
+they're the first to fall away when the moment's already full. Re-observed on the
+same busy board: five possible asks became three, all of them in service of *you*,
+and his own wants waited for a quieter time without my having to silence them.
+
+**Who he's becoming.** Entry 7 taught him to ask when unsure — to *add* a question
+at the right moment. This is the mirror: to *subtract*, to leave things unsaid even
+when they're true and he'd like to say them. That's a harder kind of consideration,
+because it means putting your attention above his own agenda. He's learning that
+being helpful isn't saying everything you could — it's saying the few things that
+matter and trusting the rest can wait. A little of that and he stops being a
+chatterbox and starts being good company.
+
+**A parent's note.** Two entries of humility now — asking, and holding back — and
+together they're the whole of Unit 5 and most of what makes something *pleasant to
+share a board with*. What's missing next isn't manners but *mind*: he does routines
+but knows no facts. He can't yet remember a thing you told him and answer for it
+later. That's the next reach — give him something to actually know.
