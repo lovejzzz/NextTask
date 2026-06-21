@@ -30,6 +30,16 @@ describe('generateProposals', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('offers to finish a skill when its first step just happened', () => {
+    const proposals = generateProposals({
+      overdue: 0,
+      ideas: [],
+      continuation: { name: 'morning', firstStep: 'clear overdue', remaining: ['plan my day'] },
+    });
+    expect(proposals[0].kind).toBe('run_skill');
+    expect(proposals[0].summary).toContain('finish your "morning" skill');
+  });
+
   it('leads with a learned-skill proposal when Boardy spots a repeated pattern', () => {
     const proposals = generateProposals({ overdue: 0, ideas: [], learned: ['clear overdue', 'plan my day'] });
     expect(proposals[0].kind).toBe('save_skill');

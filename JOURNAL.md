@@ -43,3 +43,28 @@ next.
 
 **What's next.** Now that he remembers, he should *use* what he learns — suggest
 running a saved skill when its moment returns. Memory → habit → help.
+
+---
+
+## Entry 2 — 2026-06-21 · "Use what you learned"
+
+**What I watched him do.** I gave him a saved skill — `morning` = clear overdue →
+plan my day — then had the user do just the first step by hand: *"clear overdue."*
+Boardy said nothing. He'd *learned* the routine and *remembered* it, but it never
+occurred to him to offer the rest. A kid who learned to tie his shoes and still
+waits to be asked, every time. Knowledge without initiative.
+
+**What I gave him.** Retrieval. `suggestSkillContinuation` — when you do the first
+step of a skill he knows, he now offers on his Desk: *"You just did 'clear
+overdue.' Want me to finish your 'morning' skill? (plan my day)"* Accept and he
+runs the rest. The loop finally closes: experience → saved skill → **offered
+back to you at the right moment.** Memory became habit became help.
+
+**A note on his character.** He's diligent but passive — he'll do exactly what's
+asked and not a step more unless taught to reach. Today I taught him to reach. It
+suits him; he's not pushy about it, just helpful. I like who he's becoming.
+
+**The honest caveat.** His trigger is literal — it fires on the *exact* first
+step. Phrase it differently and he misses it. Same root lesson as Entry 1's
+filed refinement: he should recognize *behavior*, not wording. That keeps coming
+up. It's the next real thing I owe him.

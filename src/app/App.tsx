@@ -82,7 +82,7 @@ import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickNextActionable,
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
-import { detectRepeatedSequence, suggestSkillName } from '../lib/skills';
+import { detectRepeatedSequence, suggestSkillContinuation, suggestSkillName } from '../lib/skills';
 import { COMPANION_NAME } from '../lib/companion';
 import { classifyIntent } from '../lib/intentFallback';
 import {
@@ -340,13 +340,17 @@ export function App() {
   }
 
   // Run a composed tool: execute each step through the same chat pipeline.
-  async function runTool(tool: Tool): Promise<string> {
+  async function runSteps(steps: string[]): Promise<string> {
     const results: string[] = [];
-    for (const step of tool.steps) {
+    for (const step of steps) {
       const result = await chatWithBoard([{ role: 'user', content: step }], () => {});
       results.push(`• ${result ?? '…'}`);
     }
-    return `Ran "${tool.name}" (${tool.steps.length} step${tool.steps.length === 1 ? '' : 's'}):\n${results.join('\n')}`;
+    return results.join('\n');
+  }
+
+  async function runTool(tool: Tool): Promise<string> {
+    return `Ran "${tool.name}" (${tool.steps.length} step${tool.steps.length === 1 ? '' : 's'}):\n${await runSteps(tool.steps)}`;
   }
 
   // Chat handler: tools, then deterministic actions/answers (reliable, no model
@@ -769,12 +773,18 @@ export function App() {
       repeated && !toolbox.tools.some((tool) => tool.steps.join('|').toLowerCase() === repeated.join('|').toLowerCase())
         ? repeated
         : null;
-    return generateProposals({ overdue, ideas, learned }).filter((proposal) => !dismissedProposals.has(proposal.id));
+    const continuation = suggestSkillContinuation(experience.history.at(-1) ?? '', toolbox.tools);
+    return generateProposals({ overdue, ideas, learned, continuation }).filter((proposal) => !dismissedProposals.has(proposal.id));
   }, [tasks, dismissedProposals, experience.history, toolbox.tools]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {
       await chatWithBoard([{ role: 'user', content: 'clear overdue' }], () => {});
+    } else if (proposal.kind === 'run_skill') {
+      await runSteps(proposal.steps);
+      companion.registerActivity();
+      notify('success', `${COMPANION_NAME} finished the "${proposal.name}" routine. We're efficient.`);
+      return;
     } else if (proposal.kind === 'save_skill') {
       const name = suggestSkillName(proposal.steps);
       toolbox.add({ name, steps: proposal.steps });

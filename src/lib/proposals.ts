@@ -12,18 +12,32 @@ import type { AutopilotProposal } from './autopilot';
 
 export type Proposal =
   | { id: string; kind: 'clear_overdue'; count: number; summary: string }
+  | { id: string; kind: 'run_skill'; name: string; steps: string[]; summary: string }
   | { id: string; kind: 'save_skill'; steps: string[]; summary: string }
   | { id: string; kind: 'upgrade'; idea: AutopilotProposal; summary: string };
+
+export type SkillContinuation = { name: string; firstStep: string; remaining: string[] };
 
 export type ProposalInput = {
   overdue: number; // count of overdue tasks
   ideas: AutopilotProposal[]; // Ouroboros upgrade ideas (already deduped vs board)
   learned?: string[] | null; // a repeated command sequence worth saving as a skill
+  continuation?: SkillContinuation | null; // a saved skill whose first step just happened
 };
 
 /** What does Boardy want right now? Highest-leverage wants first. */
-export function generateProposals({ overdue, ideas, learned }: ProposalInput): Proposal[] {
+export function generateProposals({ overdue, ideas, learned, continuation }: ProposalInput): Proposal[] {
   const proposals: Proposal[] = [];
+
+  if (continuation) {
+    proposals.push({
+      id: `run-skill-${continuation.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      kind: 'run_skill',
+      name: continuation.name,
+      steps: continuation.remaining,
+      summary: `You just did "${continuation.firstStep}". Want me to finish your "${continuation.name}" skill? (${continuation.remaining.join(' → ')})`,
+    });
+  }
 
   if (learned && learned.length) {
     proposals.push({

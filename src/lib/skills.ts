@@ -29,6 +29,25 @@ export function detectRepeatedSequence(history: string[], minRepeat = 2): string
   return null;
 }
 
+/**
+ * Skill retrieval: if the user just did the first step of a saved multi-step
+ * skill, offer to finish the rest. Boardy using what he learned, not just
+ * hoarding it.
+ */
+export function suggestSkillContinuation(
+  lastCommand: string,
+  tools: { name: string; steps: string[] }[],
+): { name: string; firstStep: string; remaining: string[] } | null {
+  const last = lastCommand.trim().toLowerCase();
+  if (!last) return null;
+  for (const tool of tools) {
+    if (tool.steps.length > 1 && tool.steps[0].trim().toLowerCase() === last) {
+      return { name: tool.name, firstStep: tool.steps[0], remaining: tool.steps.slice(1) };
+    }
+  }
+  return null;
+}
+
 /** A short, readable, kebab name for a learned skill, derived from its steps. */
 export function suggestSkillName(steps: string[]): string {
   const words = steps
