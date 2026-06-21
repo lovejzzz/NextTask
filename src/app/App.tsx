@@ -67,6 +67,7 @@ import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
+import { useTools } from '../hooks/useTools';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
 import { useMomentum } from '../hooks/useMomentum';
 import { useTaskMutations } from '../hooks/useTaskMutations';
@@ -78,6 +79,7 @@ import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTur
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, pickBiggestRisk, pickDropCandidates, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
+import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
@@ -283,6 +285,7 @@ export function App() {
   const brain = useBoardBrain(experimental.enabled);
   const memory = useCompanionMemory(experimental.enabled);
   const companionNotes = useCompanionNotes();
+  const toolbox = useTools();
   const companionContext = useMemo(
     () => ({
       active: insights.active,
@@ -328,10 +331,40 @@ export function App() {
     return reply && acceptExplanation(reply, task) ? reply : fallback;
   }
 
-  // Chat handler: deterministic actions/answers first (reliable, no model needed),
-  // then fall through to the LLM for open conversation.
+  // Run a composed tool: execute each step through the same chat pipeline.
+  async function runTool(tool: Tool): Promise<string> {
+    const results: string[] = [];
+    for (const step of tool.steps) {
+      const result = await chatWithBoard([{ role: 'user', content: step }], () => {});
+      results.push(`• ${result ?? '…'}`);
+    }
+    return `Ran "${tool.name}" (${tool.steps.length} step${tool.steps.length === 1 ? '' : 's'}):\n${results.join('\n')}`;
+  }
+
+  // Chat handler: tools, then deterministic actions/answers (reliable, no model
+  // needed), then fall through to the LLM for open conversation.
   async function chatWithBoard(history: ChatTurn[], onToken: (chunk: string) => void): Promise<string | null> {
     const text = history[history.length - 1]?.content ?? '';
+
+    // Tool composition + multi-step execution (checked first so "create a tool…"
+    // isn't mistaken for "create a task").
+    const newTool = parseToolDefinition(text);
+    if (newTool) {
+      toolbox.add(newTool);
+      companion.registerActivity();
+      return `New tool "${newTool.name}" — ${newTool.steps.length} step${newTool.steps.length === 1 ? '' : 's'}: ${newTool.steps.join(' → ')}. Say "run ${newTool.name}" anytime.`;
+    }
+    const toRun = parseToolInvocation(text, toolbox.names);
+    if (toRun) {
+      const tool = toolbox.get(toRun);
+      if (tool) return runTool(tool);
+    }
+    if (isToolListRequest(text)) {
+      return toolbox.tools.length
+        ? `My tools:\n${toolbox.tools.map((t) => `• ${t.name}: ${t.steps.join(' → ')}`).join('\n')}`
+        : 'No tools yet. Make one: "create a tool called morning that clear overdue then plan my day".';
+    }
+
     let intent = parseIntent(text);
 
     // Rules missed but the brain is on → let the model classify, restricted to

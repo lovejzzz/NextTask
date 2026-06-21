@@ -21,6 +21,26 @@ here (a free, private, in-browser companion that operates the board and improves
 itself; the kanban is table stakes). Gaps #1 and #2 lead; craft and refactor
 fill in around them, not ahead of them.
 
+### From companion → agent
+
+The arc: the board doesn't just *talk*, it *acts* — and it can grow its own
+abilities. Three layers, each safe and verifiable:
+
+1. **Uses the website as a tool.** Natural-language commands drive real board
+   mutations (create / complete / label / assign / reschedule / bulk / undo).
+2. **Solves multi-step problems.** Composed **tools** (macros) run a sequence of
+   commands — "create a tool called morning that clear overdue then plan my day",
+   then "run morning". Every step must parse to a real intent, so a tool can only
+   do things the board already knows how to do.
+3. **Creates more tools — two ways, both safe.** (a) *Composition:* the AI/user
+   mints new named tools from vetted primitives (no code generation — a 0.5B
+   model writing live code is unsafe and unreliable). (b) *New primitives:*
+   Ouroboros files tickets for genuinely new capabilities → the dev agent
+   implements them → the toolbox grows.
+
+What we will **not** do: execute model-generated code at runtime. Tools are
+compositions of audited primitives; new primitives go through the loop.
+
 1. **Prove and raise the model.** Conversation quality is still an asterisk — and
    "best" can't sit on an asterisk. Make it measurable and high: richer self-test
    (grounding, concision, persona-shift, helpfulness), recommend/default the
