@@ -22,6 +22,13 @@ describe('rankFocusTasks', () => {
     expect(ranked[0].id).toBe('overdue');
   });
 
+  it('treats a same-day deadline as a commitment over open-ended importance', () => {
+    const dueToday = makeTask({ id: 'today', priority: 'low', status: 'todo', due_date: '2026-06-20' });
+    const importantNoDeadline = makeTask({ id: 'someday', priority: 'high', status: 'todo', due_date: null });
+    const ranked = rankFocusTasks([importantNoDeadline, dueToday], NOW);
+    expect(ranked[0].id).toBe('today');
+  });
+
   it('prefers work already in motion when priority ties', () => {
     const doing = makeTask({ id: 'doing', priority: 'normal', status: 'in_progress' });
     const waiting = makeTask({ id: 'waiting', priority: 'normal', status: 'todo' });

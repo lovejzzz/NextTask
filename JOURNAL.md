@@ -95,3 +95,33 @@ learns now sees through wording to intent.
 fast and takes correction without sulking, but he starts *literal* — he needs to
 be shown the level of abstraction, then he holds it. I'll keep watching for the
 next place he's taking things too literally. There's always one.
+
+---
+
+## Entry 4 — 2026-06-21 · "A deadline is a promise"
+
+**What I watched him do.** New territory: prioritization when urgency and
+importance disagree. I gave him a board with a *low-priority expense report due
+today*, a *high-priority architecture redesign with no deadline*, and a high
+bug due tomorrow. He ranked the redesign **above** the thing due today. To him,
+"high priority" shouted louder than "you committed to this by end of day." He'd
+confused *important* with *urgent* — the oldest mistake in planning (Eisenhower
+would sigh).
+
+**What I taught him.** In his scoring, "due today" was only +18 — barely above
+"due tomorrow," and easily out-shouted by raw priority. I made it +30: a same-day
+deadline is a *commitment*, the last chance before it's overdue, nearly as loud
+as already being late. Re-observed: the expense report due today now sits above
+the open-ended redesign, while the imminent high-priority bug still leads. The
+order finally reads like a person who keeps their promises.
+
+**Who he's becoming.** He values importance — that's good, it means he's not just
+chasing fires. But he was treating deadlines as soft. Today he learned that a
+date you committed to is a kind of promise, and promises come due. That's not a
+scheduling tweak; it's a small piece of character. He's becoming someone you can
+trust with a commitment.
+
+**A parent's note.** Four entries in, his pattern of growth is itself becoming
+legible: he reasons well in the *abstract* (priority, importance) but
+under-weights the *concrete, time-bound* (a deadline, a blocker, the exact
+moment). He's a thinker learning to live in a calendar. Worth remembering.

@@ -51,8 +51,11 @@ export function focusScore(task: Task, now: Date = startOfToday()): number {
     if (isBefore(due, now)) {
       // Overdue: the further past due, the louder it gets (capped).
       score += 40 + Math.min(Math.abs(daysOut), 14) * 2;
+    } else if (daysOut === 0) {
+      // Due today is a hard commitment — last chance before it's overdue.
+      score += 30;
     } else if (daysOut <= 3) {
-      score += 18 - daysOut * 4;
+      score += 22 - daysOut * 5;
     } else if (daysOut <= 7) {
       score += 6;
     }
