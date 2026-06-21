@@ -2,13 +2,13 @@ import { motion } from 'framer-motion';
 import { Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { COMPANION_NAME } from '../../lib/companion';
 import type { ChatTurn } from '../../lib/companionBrain';
 import { cx } from '../../lib/utils';
 
 const OPENER: ChatTurn = {
   role: 'assistant',
-  content:
-    "It's me — the board. I can add, complete, delete, reprioritize or reschedule tasks, plan your day, or just take your venting. Try me.",
+  content: `It's me — ${COMPANION_NAME}, your board. I can add, complete, delete, reprioritize or reschedule tasks, plan your day, build & run tools, or just take your venting. Try me.`,
 };
 
 /**

@@ -6,6 +6,9 @@
  * you ship, sulks when you stall, panics about overdue piles, and dozes off
  * when ignored. The voice is the whole point — keep it raw.
  */
+/** The companion's name — it's the board, and the board is Boardy. */
+export const COMPANION_NAME = 'Boardy';
+
 export type Mood =
   | 'proud'
   | 'thriving'

@@ -8,7 +8,7 @@
  * none of this touches the main bundle. Everything degrades to the deterministic
  * rule-based companion if the model is unavailable or errors.
  */
-import type { Mood } from './companion';
+import { COMPANION_NAME, type Mood } from './companion';
 
 // Major-pinned so the CDN always resolves a valid latest v3 build.
 const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
@@ -76,7 +76,7 @@ export function buildSystemPrompt({ mood, context, memory, persona, notes }: Pro
   const sample = titles.length ? ` A few tasks: ${titles.map((t) => `"${t}"`).join(', ')}.` : '';
   const blocked = context.blocked?.length ? ` Blocked/waiting: ${context.blocked.map((t) => `"${t}"`).join(', ')}.` : '';
   const lines = [
-    "You ARE this person's kanban task board — alive, speaking in the first person as the board itself.",
+    `You ARE this person's kanban task board. Your name is ${COMPANION_NAME}. You're alive, speaking in the first person as the board itself.`,
     persona,
     `What you remember: ${memory}`,
   ];

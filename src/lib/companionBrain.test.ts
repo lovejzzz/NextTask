@@ -40,6 +40,10 @@ describe('buildSystemPrompt', () => {
     expect(prompt).not.toContain('Ignored fourth');
   });
 
+  it('gives the board its name', () => {
+    expect(buildSystemPrompt(parts)).toContain('Boardy');
+  });
+
   it('enforces grounding and brevity (the self-test contract)', () => {
     const prompt = buildSystemPrompt(parts);
     expect(prompt).toMatch(/never invent task names/i);
