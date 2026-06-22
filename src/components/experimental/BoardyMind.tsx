@@ -16,6 +16,7 @@ export type MindView = {
   told: string[]; // the residue you've explicitly told him (editable elsewhere)
   upbringing: string[]; // the convictions his voice learned from how he was raised
   grown: string[]; // how he's grown on his own, recounted from his ledger
+  noticed: string[]; // higher-order patterns he's read from your lived history
 };
 
 function Section({ title, items }: { title: string; items: string[] }) {
@@ -39,7 +40,8 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
     !mind.wants.length &&
     !mind.told.length &&
     !mind.upbringing.length &&
-    !mind.grown.length;
+    !mind.grown.length &&
+    !mind.noticed.length;
   return (
     <motion.aside
       className="boardy-mind"
@@ -64,6 +66,7 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
       ) : (
         <>
           <Section title="What I see on the board" items={mind.board} />
+          <Section title="What I’ve noticed about how you work" items={mind.noticed} />
           <Section title="What I’m pursuing" items={mind.pursuit ? [mind.pursuit] : []} />
           <Section title="What I want right now" items={mind.wants} />
           {mind.told.length ? (

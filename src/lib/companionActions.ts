@@ -28,6 +28,7 @@ export type CompanionIntent =
   | { kind: 'self_intent' }
   | { kind: 'self_describe' }
   | { kind: 'self_growth' }
+  | { kind: 'reflect' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -186,6 +187,15 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   // Honest self-description ("what are you / what can you do") — distinct from
   // "what are you working on" (ouroboros_backlog, above) and "what do you want"
   // (self_intent). The negative lookahead keeps activity questions out.
+  // What he's noticed about how you work — higher-order patterns from his history,
+  // distinct from the current-state board read (board_shape) and the event recap.
+  if (
+    /\b(?:what have you noticed|notice(?:d)? (?:anything|any patterns?)|any patterns?|what (?:do|have) you (?:notice|see|observe)|what'?s your (?:read|take) on (?:how i|me)|patterns? (?:in|about) (?:my|how i))\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'reflect' };
+  }
   // How he's grown / what he's learned — answered from his growth ledger (a real
   // trail), distinct from "what are you" (self_describe). Checked first so "how have
   // you grown" isn't swallowed by a broader self pattern.

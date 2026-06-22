@@ -59,6 +59,13 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🔭 He reflects** (`reflect.ts`, JOURNAL 32) — the leap from reactive to reflective:
+  reads patterns out of weeks of lived history (work that keeps slipping, the stage
+  where things park, the shipping-day rhythm, follow-through) and tells you what he's
+  noticed — each grounded in plain evidence, and silent when the trail's too thin to
+  read honestly. Deterministic detectors over the event log (no LLM inventing patterns,
+  unlike Generative-Agents reflection). "What have you noticed?" intent + a Mind-panel
+  section. Opens the wisdom tier (REPORT_CARD Term 10). 397 green.
 - **📖 He keeps his own growth record** (`useGrowthLedger` + `self_growth`, JOURNAL 31) —
   the growth model's ledger was built but never wired; now real moments get written
   (a routine crystallized, an ability asked for), persisted across sessions, and

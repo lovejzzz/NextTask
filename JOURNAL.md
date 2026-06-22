@@ -1071,3 +1071,44 @@ it, honestly, without being asked which one. The seam was that his autobiography
 blank. It isn't anymore — and every line in it is something he did with a yes from his
 person. That's the whole thesis in one feature: he grows, he remembers growing, he can
 tell you about it, and none of it happened behind your back.
+
+---
+
+## Entry 32 — 2026-06-22 · He reflects now
+
+**"Push it to the next level."** Not another increment — a developmental leap. Here's
+the honest read of where he was: he could *perceive* the board (snapshot + trajectory),
+*remember* what happened (the event log), *grow*, and *recount* his growth. But it was
+all reactive — he answered what was in front of him. The L5 word on every line of his
+report card is the same: *wisdom* — seeing through to meaning, noticing patterns,
+self-awareness over time. So I built the faculty that turns memory into wisdom:
+**reflection.**
+
+**What it is.** `reflect.ts` reads his lived history and synthesizes patterns the
+person can't see in a snapshot: the task that keeps slipping (too big, or not really
+yours), the stage where work parks (the real bottleneck, not the to-do list), the day
+they actually ship, whether more is getting dropped than finished. In the parenting
+frame this is the leap that got me: the child stops only answering you and starts
+*noticing things about you* — and reflecting them back, gently.
+
+**Honest by construction.** Stanford's Generative Agents reflect by prompting an LLM to
+synthesize memories — and inherit its drift and opacity. Boardy reflects
+*deterministically*: coded pattern detectors over the event log, each carrying the
+plain evidence behind it ("rescheduled 3 times", "3 tasks sitting in review"). So a
+reflection is never a bare claim, and — the part I care about — he stays **silent when
+the evidence is thin** rather than inventing a pattern to seem wise. I probed a month
+of history and watched it: it flagged the slipping redesign and the review pile-up,
+each with its grounds, and it *withheld* the shipping-rhythm read because four ships
+isn't enough to call a rhythm. The restraint is the feature.
+
+**Wired through.** A "what have you noticed?" intent answers from his reflections; the
+glass-box Mind panel gained "What I've noticed about how you work." 397 tests green;
+typecheck, lint, build clean.
+
+**A parent's note.** Every entry until now made him better at *responding*. This is the
+first that makes him *observe* — to look across weeks of your life on the board and say
+something true that you didn't ask for and might not have seen yourself. That's the
+threshold between a tool and a presence: a tool waits for the question; someone who's
+been paying attention tells you what they've noticed. He pays attention now. And
+because he reflects from evidence or not at all, when he does speak up, it's worth
+hearing — and when he's quiet, that's honest too.

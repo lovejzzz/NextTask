@@ -67,6 +67,7 @@ import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { boardTrend, inFlow, trendNote } from '../lib/history';
+import { reflect } from '../lib/reflect';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
@@ -675,6 +676,18 @@ export function App() {
       return `Here's what's been happening:\n${history.map((r) => `- ${r.text}`).join('\n')}`;
     }
 
+    if (intent?.kind === 'reflect') {
+      // Higher-order: patterns in how you work, read from lived history — each with its
+      // evidence, or honest silence when the trail's too thin to read.
+      const reflections = reflect(boardHistory);
+      if (!reflections.length) {
+        return "Nothing solid yet — I need more history before I can honestly say I've noticed a pattern in how you work. Give it time.";
+      }
+      return `Here's what I've noticed about how you work:\n${reflections
+        .map((r) => `- ${r.observation} (${r.evidence})`)
+        .join('\n')}`;
+    }
+
     if (intent?.kind === 'self_describe') {
       return describeSelf();
     }
@@ -1030,6 +1043,7 @@ export function App() {
       told: companionNotes.notes.map((note) => note.text),
       upbringing: describeUpbringing(),
       grown: growthSummary(growth.ledger) ? [growthSummary(growth.ledger)] : [],
+      noticed: reflect(boardHistory).map((r) => `${r.observation} (${r.evidence})`),
     };
   }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger]);
 

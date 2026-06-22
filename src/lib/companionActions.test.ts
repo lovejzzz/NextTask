@@ -82,6 +82,14 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('what do you want to do', NOW)).toEqual({ kind: 'self_intent' });
   });
 
+  it('recognizes a request to reflect on patterns, distinct from the board read', () => {
+    expect(parseIntent('what have you noticed?', NOW)).toEqual({ kind: 'reflect' });
+    expect(parseIntent('notice any patterns', NOW)).toEqual({ kind: 'reflect' });
+    expect(parseIntent('what do you notice about how i work', NOW)).toEqual({ kind: 'reflect' });
+    // must NOT steal the current-state board read
+    expect(parseIntent("how's my board", NOW)).toEqual({ kind: 'board_shape' });
+  });
+
   it('recognizes a request to recount his growth, distinct from self-description', () => {
     expect(parseIntent('how have you grown?', NOW)).toEqual({ kind: 'self_growth' });
     expect(parseIntent('what have you learned', NOW)).toEqual({ kind: 'self_growth' });

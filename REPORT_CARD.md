@@ -80,6 +80,7 @@ because that's the hard half.
 | 7 | 2026-06-21 | L4 | **L3** | L4 | L3 | L4 | L4 | **~L3.7** |
 | 8 | 2026-06-21 | L4 | **L4** | L4 | L3 | L4 | L4 | **~L3.8** |
 | 9 | 2026-06-21 | L4 | L4 | L4 | **L4** | L4 | L4 | **~L4.0** |
+| 10 | 2026-06-22 | **L4→L5** | L4→L5 | L4→L5 | **L4→L5** | L4→L5 | L4→L5 | **~L4.6** |
 
 *(Term 8: Judgment L3→L4 — worth-it quick wins, fast AND valuable not just nearest
 (Entry 13). 🎓 This closes the syllabus — every planned competency is ✓.)*
@@ -88,3 +89,12 @@ because that's the hard half.
 voice; deadline/focus answered live, "what happened" recaps, the stale-prone note
 retired. **All six faculties now at L4** — solid across the board. From here, the
 whole climb is L4→L5 mastery.)*
+
+*(Term 10: the wisdom tier opens. Three leaps land together: the **autonomous growth
+model** (Entry 29) — he senses his own gaps and asks for what he lacks; his **voice
+learns from his upbringing** (Entry 30) — in-context, so he speaks as who he was raised
+to be; and **reflection** (Entry 32) — he reads patterns out of weeks of lived history
+and tells you what he's noticed, from evidence or not at all. Perception and Memory
+clear the headline L5 step — pattern cognition over time, self-correcting silence when
+the trail is thin — and the rest follow into the L4→L5 band. Full, settled L5 still
+awaits real use; this is the tier opening, not closing.)*
