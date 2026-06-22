@@ -207,6 +207,14 @@ describe('pickDropCandidatesWithReasons', () => {
     expect(drop.reason).toMatch(/untouched \d+ days/);
   });
 
+  it('never suggests dropping blocked/waiting work (unblock it, don\'t abandon it)', () => {
+    const tasks = [
+      makeTask({ id: 'blocked', status: 'todo', priority: 'low', title: 'Launch (depends on the API)' }),
+      makeTask({ id: 'waiting', status: 'todo', priority: 'low', title: 'Write copy (waiting on legal)' }),
+    ];
+    expect(pickDropCandidatesWithReasons(tasks, NOW)).toEqual([]);
+  });
+
   it('returns nothing when the whole board is load-bearing', () => {
     const allUrgent = [
       makeTask({ status: 'todo', priority: 'high', due_date: '2026-06-10' }),

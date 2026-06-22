@@ -764,3 +764,36 @@ bugs fell out in minutes. That's not a failure; that's the whole argument. The n
 chapter of his growth isn't more of me staring at him — it's him, in front of real
 work, with the cracks showing where they show. Today was a small, encouraging taste
 of exactly that.
+
+---
+
+## Entry 23 — 2026-06-21 · "Don't tell me to drop the thing I'm waiting on"
+
+**Following the thread from Entry 22.** Use keeps paying out, so I kept testing —
+this time with deliberately awkward boards: everything blocked, empty, emoji
+titles, blank titles. Most held up cleanly (empty board read right, a 🚀🚀🚀 title
+ranked fine, blank titles didn't crash him). But one answer was quietly wrong.
+
+**What I watched him do.** On a board where every task was blocked or waiting —
+"Ship feature (blocked on design)," "Launch (depends on the API)" — I asked what to
+drop, and he cheerfully suggested dropping *all three*. Think about that advice from
+the user's side: "you're stuck waiting on the API… so abandon the launch?" No. A
+blocked task isn't low-value clutter; it's load-bearing work that's simply waiting.
+The right move is to *unblock* it, never to drop it. His honest-triage instinct
+(Entry 12) was sound, but it had a blind spot: it didn't see "blocked" as a reason
+to protect a task from the chopping block.
+
+**What I taught him.** To leave blocked work alone when triaging. Drop candidates
+now exclude anything blocked or waiting, so triage only ever offers genuinely
+abandonable things — and when the whole board is stuck, he says so honestly
+("everything here is load-bearing… or waiting on something") instead of suggesting
+you throw away what you're waiting on. Re-observed: on a mixed board he now names
+only the dead idea doc and leaves the blocked launch untouched.
+
+**A parent's note.** Two test sessions, three real bugs — and every one of them was
+a *judgment* error, not a crash: confident, plausible, and wrong in a way only a
+human looking at the actual advice would catch. That's exactly the class of fault
+that probing misses and use exposes. I've said it enough that it's almost a refrain
+now, but the evidence keeps mounting: he's built; what he needs is a person and a
+board. Until then, I'll keep being that person's stand-in and throwing real work at
+him.

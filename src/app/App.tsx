@@ -716,7 +716,7 @@ export function App() {
     if (intent?.kind === 'triage') {
       const drops = pickDropCandidatesWithReasons(tasks);
       if (!drops.length) {
-        return "Nothing safe to drop — everything here is load-bearing (overdue, due soon, high-priority, or in motion). If something truly has to give, that's a judgment call I won't fake for you.";
+        return "Nothing safe to drop — everything here is load-bearing (overdue, due soon, high-priority, in motion, or waiting on something). If something truly has to give, that's a judgment call I won't fake for you.";
       }
       const list = drops.map(({ task, reason }) => `"${task.title}" (${reason})`).join('; ');
       return `If something has to give, drop or defer: ${list}. Each is safe to cut for the reason shown — I'd start from the first.`;

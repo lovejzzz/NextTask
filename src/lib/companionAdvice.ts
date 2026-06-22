@@ -53,7 +53,10 @@ function dropReason(task: Task, now: Date): string {
  */
 export function pickDropCandidatesWithReasons(tasks: Task[], now?: Date, limit = 3): DropCandidate[] {
   const ref = now ?? new Date();
-  const droppable = rankFocusTasks(tasks, now).filter((task) => isDroppable(task, ref));
+  // Never suggest dropping blocked/waiting work — its right move is to unblock it,
+  // not abandon it. "Drop the thing you're waiting on" is bad advice.
+  const blockedIds = new Set(detectBlocked(tasks).map((task) => task.id));
+  const droppable = rankFocusTasks(tasks, now).filter((task) => !blockedIds.has(task.id) && isDroppable(task, ref));
   // rankFocusTasks is most-deserving first, so the safest cuts are at the tail.
   return droppable
     .slice(-limit)

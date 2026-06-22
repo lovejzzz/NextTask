@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Triage no longer suggests dropping blocked work** (JOURNAL 23) — on an
+  all-blocked board it was advising "drop the thing you're waiting on." Blocked
+  tasks are now excluded from drop candidates (unblock them, don't abandon them).
+  Found by an adversarial edge-board probe; regression-tested.
 - **Two bugs fixed from an end-to-end test** (JOURNAL 22) — a created task titled
   "To call the bank" (cleanTitle stripped filler before the lingering "task" noun),
   and `unblockCount` crediting the wrong task when two consumers both name the
