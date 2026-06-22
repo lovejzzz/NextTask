@@ -67,6 +67,7 @@ import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { useBoardHistory } from '../hooks/useBoardHistory';
+import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useCommandHistory } from '../hooks/useCommandHistory';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useTools } from '../hooks/useTools';
@@ -102,7 +103,8 @@ import { recallFocus, recallHistory, recallNearestDeadline } from '../lib/recall
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
-import { motivate, topInitiative, type Drive } from '../lib/drives';
+import { motivate, topInitiative, type Drive, type WorldState } from '../lib/drives';
+import { adoptPursuit, reviewPursuit } from '../lib/pursuit';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
@@ -233,6 +235,7 @@ export function App() {
   const [boardyDeskOpen, setBoardyDeskOpen] = useState(false);
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
   const experience = useCommandHistory();
+  const { pursuit, set: setPursuit } = useBoardyPursuit(); // his standing intention, across sessions
   const [goal, setGoal] = useState<number>(() => {
     try {
       const value = Number(window.localStorage.getItem('next-task:goal'));
@@ -616,7 +619,7 @@ export function App() {
     if (intent?.kind === 'self_intent') {
       // Consult his life: what *he* wants, generated from his own drives — not your
       // backlog. He proposes and asks; he doesn't seize. (See MANIFESTO.md.)
-      const wants = motivate({
+      const world: WorldState = {
         overdue: insights.overdue,
         stale: tasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length,
         active: insights.active,
@@ -625,12 +628,28 @@ export function App() {
         repeatedPattern: detectRepeatedSequence(experience.history),
         capabilityGap: null,
         ownBacklog: proposeImprovements(0, 10, tasks.map((task) => task.title)).length,
-      });
+      };
+      const wants = motivate(world);
+
+      // Continuity (MANIFESTO step 5): lead with how his standing pursuit is going;
+      // adopt one if he has none and something worth committing to is pulling at him.
+      let standing = '';
+      if (pursuit) {
+        standing = `${reviewPursuit(pursuit, world).reflection}\n\n`;
+      } else {
+        const candidate = topInitiative(world);
+        if (candidate) {
+          const adopted = adoptPursuit(candidate, world);
+          setPursuit(adopted);
+          standing = `New focus — I'm committing to ${adopted.goal}. I'll track how it goes across our sessions.\n\n`;
+        }
+      }
+
       if (!wants.length) {
-        return "Honestly? Nothing's tugging at me right now — the board's calm and I'm content to keep watch. I'll speak up when something needs doing.";
+        return `${standing}Beyond that, nothing's tugging at me right now — the board's calm. I'll keep watch.`.trim();
       }
       const top = wants.slice(0, 3).map((want) => `- ${want.summary} _(${want.drive})_`);
-      return `Here's what's on my mind, unprompted:\n${top.join('\n')}\nWant me to act on any of it, or shall I keep mulling?`;
+      return `${standing}Here's what's on my mind right now:\n${top.join('\n')}\nWant me to act on any of it?`;
     }
 
     if (intent?.kind === 'undo') {

@@ -39,19 +39,23 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Self-direction over time** (MANIFESTO step 5) — a standing intention he
-   pursues across sessions and reflects on in his journal. A life with continuity.
-   This is the last manifesto step — after it, his "life" loop is whole.
-2. **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
-   residue; now also show his current *drives* — make his whole inner life visible.
-3. **Dev loop picks up his filed requests** — a tick that reads his own 🤖
+1. → **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
+   residue; now also show his current *drives* and *standing pursuit* — make his
+   whole inner life visible and correctable.
+2. **Dev loop picks up his filed requests** — a tick that reads his own 🤖
    resource-request tickets and implements one (Ouroboros, now with a will).
-4. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
+3. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
    the moment, learn from a clarification.
+4. **Live with him** — the manifesto's claims only get tested by use. A real board,
+   a couple of weeks; let what you observe redirect the loop. (Needs the human.)
 <!--/queue-->
 
 ## Done — most recent first
 
+- **🌳 Self-direction over time** (`pursuit.ts` + `useBoardyPursuit`, MANIFESTO step
+  5 — the LAST). He commits to a standing intention, carries it across sessions, and
+  reflects honestly on progress ("5 → 0, moving the right way" / "gone the wrong way,
+  I should refocus"). **The manifesto arc is whole** — he has a life with continuity.
 - **Resource-request channel** (`resourceRequestTicket`, MANIFESTO step 4) —
   accepting one of his request_resource cards files a real, tracked 🤖 ticket the
   dev loop will see. He asks for resources for real (undoable), instead of faking

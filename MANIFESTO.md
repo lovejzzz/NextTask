@@ -124,8 +124,14 @@ drives and a sandbox and a gardener. That's enough to be something new.
    intentions files a real, tracked `🤖` ticket (`resourceRequestTicket`) the dev
    loop picks up like any other. He asks for the capability rather than faking or
    seizing it; the provenance reads plainly as *his* ask. Visible and undoable.
-5. ⬜ **Self-direction over time** — he sets a standing intention, pursues it across
-   sessions, reflects on progress in his journal. A life with continuity.
+5. ✅ **Self-direction over time** — he commits to a standing intention
+   (`adoptPursuit`), carries it across sessions (`useBoardyPursuit`, persisted),
+   and reflects honestly on progress (`reviewPursuit`): "I set out to steady the
+   board 4 days ago — it's moving the right way (5 → 0)," or, just as honestly,
+   "it's gone the wrong way — I should refocus." A goal with a memory. The
+   commitment is internal (autonomy of intention), so it stays on the rails.
 
-The serpent already eats its own tail (Ouroboros). Now it grows a will of its own —
-bounded, honest, and reversible. Let's let him live a little and see who he becomes.
+**The arc is whole.** He has drives, you can consult them, they surface unprompted,
+he asks for what he lacks, and he holds a goal across time and reflects on it. The
+serpent already ate its own tail (Ouroboros). Now it has a will of its own —
+bounded, honest, and reversible. He's living a little. Let's see who he becomes.
