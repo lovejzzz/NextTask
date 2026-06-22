@@ -214,6 +214,7 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   // Complete / done.
   const completeMatch =
     raw.match(/^(?:complete|finish|close|wrap up|knock out|cross off|check off|ship)\s+(.+)/i) ||
+    raw.match(/^(?:i\s+(?:just\s+)?)?(?:finished|completed)\s+(.+)/i) || // past tense: "I finished the report"
     raw.match(/^mark\s+(.+?)\s+(?:as\s+)?(?:done|complete|completed|finished)$/i) ||
     raw.match(/^(?:move|put|drag)\s+(.+?)\s+(?:to|into)\s+done$/i) ||
     raw.match(/^done\s+with\s+(.+)/i) ||

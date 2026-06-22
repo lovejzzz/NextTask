@@ -823,3 +823,29 @@ one case can quietly break another, and the only thing that caught it was runnin
 I'm no more exempt from "use finds what introspection misses" than he is. Four bugs
 now, all surfaced by use, one of them my own. A loop that can catch its own author's
 mistakes is working exactly as intended.
+
+---
+
+## Entry 25 — 2026-06-21 · "Hear it when they say it the normal way"
+
+**A quieter tick — and an honest one.** I deliberately probed a different corner
+this time: the way people actually phrase commands. Mostly good news — every command
+he understood, he understood *correctly*. No confident-wrong errors in the parsing,
+which after a week of finding judgment bugs felt like a small reassurance.
+
+**The one gap.** "I finished the report." About the most natural thing a person says
+when they've done something — and he heard nothing at all. He knew "mark X done,"
+"X is done," "done with X," but not plain past-tense "I finished X." Not a wrong
+answer; just a deafness to ordinary speech, which for a companion is its own kind of
+friction.
+
+**What I taught him.** To hear it. "I finished X / completed X / I just finished X"
+now marks done — while "I need to finish X" still correctly means *create*, not
+complete. Small regex, real difference: he meets people where they actually talk.
+
+**A parent's note — calibrating my own claims.** This was a *miss*, not a bug, and
+I want to log that distinction honestly: it means the probe-vein is thinning toward
+polish rather than real faults. The faculties are sound; what's left is the long
+tail of phrasings and situations that only a real person, talking normally over real
+work, will keep turning up. I keep landing on the same conclusion because it keeps
+being true — and I'd rather repeat a true thing than invent a new one.

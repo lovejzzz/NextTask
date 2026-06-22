@@ -59,6 +59,9 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Understands "I finished X"** (JOURNAL 25) — past-tense completion ("I finished
+  the report", "completed the login bug") now marks done; previously parsed to
+  nothing. A common-phrasing miss, not a wrong answer — parsing is otherwise solid.
 - **Finds a bottleneck that's itself blocked** (JOURNAL 24) — when the linchpin task
   is waiting on something off-board, `unblockCount` had stopped seeing it (said "no
   bottleneck"). Two-pass match: prefer a non-blocked provider, fall back to any

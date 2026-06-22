@@ -112,6 +112,14 @@ describe('parseIntent — robustness (synonyms, pleasantries, dates)', () => {
     expect(parseIntent('hey, finish the onboarding flow', NOW)).toMatchObject({ kind: 'complete_task' });
   });
 
+  it('understands past-tense completion ("I finished X")', () => {
+    expect(parseIntent('i finished the report', NOW)).toEqual({ kind: 'complete_task', query: 'the report' });
+    expect(parseIntent('completed the login bug', NOW)).toEqual({ kind: 'complete_task', query: 'the login bug' });
+    expect(parseIntent('i just finished onboarding', NOW)).toEqual({ kind: 'complete_task', query: 'onboarding' });
+    // still not confused with intent to create ("i need to finish X")
+    expect(parseIntent('i need to finish the report', NOW)).toMatchObject({ kind: 'create_task' });
+  });
+
   it('understands casual create verbs', () => {
     expect(parseIntent('i need to renew the domain', NOW)).toMatchObject({ kind: 'create_task', title: 'Renew the domain' });
     expect(parseIntent('gotta water the plants', NOW)).toMatchObject({ kind: 'create_task', title: 'Water the plants' });
