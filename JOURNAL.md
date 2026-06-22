@@ -797,3 +797,29 @@ that probing misses and use exposes. I've said it enough that it's almost a refr
 now, but the evidence keeps mounting: he's built; what he needs is a person and a
 board. Until then, I'll keep being that person's stand-in and throwing real work at
 him.
+
+---
+
+## Entry 24 — 2026-06-21 · "The linchpin can be stuck too"
+
+**A bug I half-made myself.** Testing a dependency chain (database → API → app), I
+found a confident-wrong answer — and tracing it, the cause was partly *my* fix from
+Entry 22's sibling bug. To stop a consumer matching another consumer, I'd told him
+to only consider non-blocked tasks as the thing-others-wait-on. Sensible — until the
+bottleneck is *itself* blocked. On a board where two tasks waited on "the API," and
+the API task was itself stuck on an off-board database, he said: *nothing's a
+bottleneck.* Flatly wrong — the API was the obvious linchpin.
+
+**What I taught him.** To look twice. He still prefers a clear, non-blocked provider
+(so siblings don't match each other), but if none fits he now falls back to *any*
+active task — because the linchpin everyone's waiting on can perfectly well be stuck
+itself. Re-observed: "Build the API would unblock 2," exactly right, even though the
+API is blocked on the database.
+
+**A parent's note — on my own fallibility.** This one stung a little, usefully: the
+bug was a side effect of a fix I'd been pleased with. A correction that's right for
+one case can quietly break another, and the only thing that caught it was running a
+*different* real scenario. That's the whole lesson of this stretch, turned on me —
+I'm no more exempt from "use finds what introspection misses" than he is. Four bugs
+now, all surfaced by use, one of them my own. A loop that can catch its own author's
+mistakes is working exactly as intended.

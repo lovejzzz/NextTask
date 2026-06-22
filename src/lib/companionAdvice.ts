@@ -174,10 +174,11 @@ export function unblockCount(tasks: Task[]): Map<string, number> {
     // Trim trailing punctuation/parens off the captured dependency ("the API)" → "the API").
     const reference = match[1].replace(/[)\]\s.,;:!?]+$/, '').trim();
     if (!reference) continue;
-    const dep = matchTask(
-      providers.filter((task) => task.id !== consumer.id),
-      reference,
-    );
+    // Prefer a non-blocked provider (so two consumers naming the same dep don't
+    // match each other); but fall back to any active task, because the bottleneck
+    // can itself be blocked on something off-board and still be what others wait on.
+    const others = active.filter((task) => task.id !== consumer.id);
+    const dep = matchTask(providers.filter((task) => task.id !== consumer.id), reference) ?? matchTask(others, reference);
     if (dep) counts.set(dep.id, (counts.get(dep.id) ?? 0) + 1);
   }
   return counts;

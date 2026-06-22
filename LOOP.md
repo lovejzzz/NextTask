@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Finds a bottleneck that's itself blocked** (JOURNAL 24) — when the linchpin task
+  is waiting on something off-board, `unblockCount` had stopped seeing it (said "no
+  bottleneck"). Two-pass match: prefer a non-blocked provider, fall back to any
+  active task. Found by a dependency-chain probe; regression-tested.
 - **Triage no longer suggests dropping blocked work** (JOURNAL 23) — on an
   all-blocked board it was advising "drop the thing you're waiting on." Blocked
   tasks are now excluded from drop candidates (unblock them, don't abandon them).

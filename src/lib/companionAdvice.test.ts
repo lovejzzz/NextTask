@@ -243,6 +243,17 @@ describe('unblockCount / pickUnblocker (second-order leverage)', () => {
     expect(pickUnblocker([makeTask({ title: 'A' }), makeTask({ title: 'B' })])).toBeNull();
   });
 
+  it('finds the bottleneck even when it is itself blocked on something off-board', () => {
+    const tasks = [
+      makeTask({ id: 'api', title: 'Build the API (blocked on the database)' }),
+      makeTask({ id: 'c1', title: 'Ship the app (blocked on the API)' }),
+      makeTask({ id: 'c2', title: 'Write the docs (blocked on the API)' }),
+    ];
+    const best = pickUnblocker(tasks);
+    expect(best?.task.id).toBe('api');
+    expect(best?.unblocks).toBe(2);
+  });
+
   it('attributes to the provider, not another consumer that mentions the dependency', () => {
     // Both consumers' titles contain "the API"; the unblocker must be the provider.
     const tasks = [
