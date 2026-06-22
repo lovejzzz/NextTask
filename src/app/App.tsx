@@ -82,7 +82,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
 import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins } from '../lib/companionAdvice';
+import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
@@ -758,16 +758,24 @@ export function App() {
       const top = pickNextActionable(tasks);
       if (top) {
         const reason = focusReason(top).toLowerCase();
+        // Second-order judgment: if a different task is a bottleneck others wait on,
+        // flag the leverage rather than just answering the surface pick.
+        const bottleneck = pickUnblocker(tasks);
+        const leverage =
+          bottleneck && bottleneck.task.id !== top.id
+            ? ` (Though "${bottleneck.task.title}" would unblock ${bottleneck.unblocks} other task${bottleneck.unblocks === 1 ? '' : 's'} — clearing that first might free up more.)`
+            : '';
         // Humility: when the top pick barely edges the rest, say it's a toss-up
         // rather than fake certainty.
         if (focusConfidence(tasks) === 'weak') {
-          return `Honestly? Nothing really jumps out — these are about even. If I had to pick, "${top.title}" (${reason}) — but trust your own read here as much as mine.`;
+          return `Honestly? Nothing really jumps out — these are about even. If I had to pick, "${top.title}" (${reason}) — but trust your own read here as much as mine.${leverage}`;
         }
-        return gatedWhy(
+        const answer = await gatedWhy(
           top,
           `In one short sentence, why should I do "${top.title}" next? Only mention that task.`,
           `Next: "${top.title}" — ${reason}. Stop reading, start doing.`,
         );
+        return answer + leverage;
       }
       // Nothing actionable — don't send you at a wall; name the blocker instead.
       const blocked = detectBlocked(tasks);

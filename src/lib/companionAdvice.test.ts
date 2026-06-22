@@ -11,6 +11,8 @@ import {
   pickNextActionable,
   pickQuickWin,
   pickQuickWins,
+  pickUnblocker,
+  unblockCount,
 } from './companionAdvice';
 
 const NOW = new Date(2026, 5, 20);
@@ -212,5 +214,34 @@ describe('pickDropCandidatesWithReasons', () => {
       makeTask({ status: 'todo', priority: 'high', due_date: '2026-06-22' }),
     ];
     expect(pickDropCandidatesWithReasons(allUrgent, NOW)).toEqual([]);
+  });
+});
+
+describe('unblockCount / pickUnblocker (second-order leverage)', () => {
+  it('counts how many tasks each task would unblock', () => {
+    const tasks = [
+      makeTask({ id: 'api', title: 'Build the API' }),
+      makeTask({ id: 'mobile', title: 'Ship mobile app (blocked on the API)' }),
+      makeTask({ id: 'mktg', title: 'Marketing page (waiting on the API)' }),
+      makeTask({ id: 'readme', title: 'Tidy the README' }),
+    ];
+    expect(unblockCount(tasks).get('api')).toBe(2);
+    const best = pickUnblocker(tasks);
+    expect(best?.task.id).toBe('api');
+    expect(best?.unblocks).toBe(2);
+  });
+
+  it('returns null when nothing depends on anything', () => {
+    expect(pickUnblocker([makeTask({ title: 'A' }), makeTask({ title: 'B' })])).toBeNull();
+  });
+
+  it('ignores dependencies on done work and never counts a task against itself', () => {
+    const tasks = [
+      makeTask({ id: 'api', title: 'Build the API', status: 'done' }),
+      makeTask({ id: 'mobile', title: 'Ship mobile (blocked on the API)' }),
+    ];
+    // The API is done, so it's not an active unblocker; the blocked task shouldn't
+    // count toward itself either.
+    expect(pickUnblocker(tasks)).toBeNull();
   });
 });

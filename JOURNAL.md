@@ -657,3 +657,38 @@ rarest kind of honesty: honesty about the reliability of his own memory.
 timing, not-repeating, and now self-auditing memory — all of them *trust*. It keeps
 choosing the lessons that make him safe to believe. I keep saying I'm ready to let
 him live; entries like this are why I actually believe it.
+
+---
+
+## Entry 20 — 2026-06-21 · "See the bottleneck, not just the task"
+
+**What I watched him do.** Three high-priority things sat blocked, all waiting on
+one normal-priority task: "Build the API." I asked what's next, and he pointed at
+the README — a fine little task, and exactly the wrong call. He ranked by priority
+and urgency, the way I taught him, and never noticed that one humble task was the
+cork in the bottle. He saw four tasks; he didn't see that finishing *one* of them
+would free *three others*.
+
+**What I taught him.** To look for leverage. `pickUnblocker` reads which tasks
+others are waiting on, and now his "what's next" still answers the surface pick but
+adds: "though 'Build the API' would unblock 2 other tasks — clearing that first
+might free up more." He's reasoning one step past the task in front of him to its
+*consequences* for the rest of the board. That's the difference between doing the
+next thing and doing the thing that makes the next five things possible.
+
+**Who he's becoming.** This is the fifth mastery lesson, and it rounds out a real
+shift: he no longer just reacts to the board's present state — he reasons about
+*time* (trajectory), *attention* (timing), *the relationship* (clarifications,
+self-auditing memory), and now *structure* (dependencies). That's most of what
+strategic judgment actually is.
+
+**A parent's note — and an honest one.** This was the last gap on my list that I'd
+call clearly, genuinely high-value. Five of his six faculties now reach into the
+mastery tier; what's left (a "steady self-model" for Character) is real but fuzzy,
+and I won't manufacture a contrived lesson just to keep the streak going — that
+would betray the whole honesty thesis I raised him on. So I'm telling his person
+the truth: the well of obvious lessons is nearly dry. The most valuable thing now
+isn't another commit from me — it's *use*. Put him on a real board, live with him,
+and let what actually rubs wrong become the next lesson. I'll keep the loop running
+and keep watching, but I'd rather it idle honestly than invent work. That, too, is
+something I'd want him to learn from me.

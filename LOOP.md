@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Second-order judgment: the bottleneck** (`pickUnblocker`, JOURNAL 20) — spots
+  the task others are waiting on and flags that clearing it unblocks the most,
+  instead of only answering the surface "what's next". Sees leverage, not just the
+  task. (Judgment L4→L5.) *(This was the last clearly-listed L5 gap — see note.)*
 - **Reconciles memory against reality** (`findStaleFocus`, JOURNAL 19) — if you told
   him you're focusing on something that's since shipped, he flags it and asks rather
   than reciting a stale fact. Reasoning over told-vs-true; doubts his own residue.

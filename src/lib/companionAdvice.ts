@@ -6,6 +6,7 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 
 import { focusScore, rankFocusTasks, taskAgeDays } from './experimental';
+import { matchTask } from './taskMatch';
 import type { Task, TaskStatus } from './types';
 
 // How close a status is to "done" — used to find low-effort wins.
@@ -145,6 +146,45 @@ export function detectBlocked(tasks: Task[]): Task[] {
         BLOCKED_RE.test(task.description ?? '') ||
         task.labels.some((label) => BLOCKED_LABEL_RE.test(label.name))),
   );
+}
+
+// The thing a blocked task is waiting on — captured so it can be matched to a task.
+const DEPENDS_RE = /\b(?:blocked on|blocked by|waiting on|waiting for|depends on)\s+(.+)/i;
+
+/**
+ * Second-order leverage: how many *other* active tasks are waiting on each task.
+ * Finishing a task that several others depend on clears a bottleneck — worth more
+ * than its own priority suggests. Maps task id → how many it would unblock.
+ */
+export function unblockCount(tasks: Task[]): Map<string, number> {
+  const active = tasks.filter((task) => task.status !== 'done');
+  const counts = new Map<string, number>();
+  for (const blocked of active) {
+    const text = `${blocked.title} ${blocked.description ?? ''}`;
+    const match = text.match(DEPENDS_RE);
+    if (!match) continue;
+    // Trim trailing punctuation/parens off the captured dependency ("the API)" → "the API").
+    const reference = match[1].replace(/[)\]\s.,;:!?]+$/, '').trim();
+    if (!reference) continue;
+    // Match the dependency against the *other* tasks, never the blocked one itself.
+    const dep = matchTask(
+      active.filter((task) => task.id !== blocked.id),
+      reference,
+    );
+    if (dep) counts.set(dep.id, (counts.get(dep.id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** The task whose completion would free the most other work, or null if none. */
+export function pickUnblocker(tasks: Task[]): { task: Task; unblocks: number } | null {
+  const counts = unblockCount(tasks);
+  let best: { task: Task; unblocks: number } | null = null;
+  for (const task of tasks) {
+    const unblocks = counts.get(task.id) ?? 0;
+    if (unblocks > 0 && (!best || unblocks > best.unblocks)) best = { task, unblocks };
+  }
+  return best;
 }
 
 export type StatusInput = {
