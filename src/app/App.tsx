@@ -92,6 +92,7 @@ import {
   diagnoseFromSelfTest,
   ouroborosTasks,
   proposeImprovements,
+  resourceRequestTicket,
   stripOuroborosPrefix,
 } from '../lib/autopilot';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
@@ -903,8 +904,25 @@ export function App() {
       notify('success', `${COMPANION_NAME} learned a skill: "${name}". Say "run ${name}".`);
       return;
     } else if (proposal.kind === 'pursue') {
-      // Step 3 makes his initiative *visible* and consensual; fully acting on it
-      // himself is the next step. Accepting is your encouragement to keep at it.
+      // Step 4: a resource-request he can't do himself becomes a real, tracked
+      // 🤖 ticket the dev loop will see — he asks, he doesn't fake or seize.
+      if (proposal.intention.kind === 'request_resource') {
+        const draft = resourceRequestTicket(proposal.intention);
+        const created = await mutations.createTask.mutateAsync({
+          title: `${AUTOPILOT_PREFIX}${draft.title}`,
+          description: draft.description,
+          status: 'todo',
+          priority: draft.priority,
+          due_date: null,
+          assignee_ids: [],
+          label_ids: [],
+        });
+        companion.registerActivity();
+        setUndo(`file request "${draft.title}"`, () => mutations.deleteTask.mutateAsync(created.id).then(() => undefined));
+        notify('success', `${COMPANION_NAME}: filed my request — "${draft.title}". The dev loop will see it.`);
+        return;
+      }
+      // Other initiative is visible + consensual; accepting is your encouragement.
       companion.registerActivity();
       notify('success', `${COMPANION_NAME}: noted — I'll keep that in my sights.`);
       return;

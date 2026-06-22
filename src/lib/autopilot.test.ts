@@ -6,8 +6,10 @@ import {
   isOuroborosTask,
   ouroborosTasks,
   proposeImprovements,
+  resourceRequestTicket,
   stripOuroborosPrefix,
 } from './autopilot';
+import type { Intention } from './drives';
 
 describe('proposeImprovements', () => {
   it('returns the requested number of distinct proposals', () => {
@@ -48,6 +50,29 @@ describe('proposeImprovements', () => {
 
   it('exposes a marker prefix for AI-authored tickets', () => {
     expect(AUTOPILOT_PREFIX.trim()).toBe('🤖');
+  });
+});
+
+describe('resourceRequestTicket', () => {
+  const intention: Intention = {
+    drive: 'growth',
+    kind: 'request_resource',
+    intensity: 0.6,
+    summary: "Ask for an ability I don't have yet: recurring tasks.",
+    rationale: "I hit something my primitives can't do.",
+  };
+
+  it('turns his ask into a tracked ticket with explicit provenance', () => {
+    const ticket = resourceRequestTicket(intention);
+    expect(ticket.title).toContain('recurring tasks');
+    expect(ticket.title).not.toMatch(/\.$/); // trailing punctuation trimmed
+    expect(ticket.description).toMatch(/Boardy raised this himself/);
+    expect(ticket.description).toContain('growth');
+    expect(['low', 'normal', 'high']).toContain(ticket.priority);
+  });
+
+  it('keeps his own self-upgrade asks low priority (behind your needs)', () => {
+    expect(resourceRequestTicket({ ...intention, drive: 'self' }).priority).toBe('low');
   });
 });
 

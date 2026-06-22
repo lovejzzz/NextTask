@@ -7,6 +7,7 @@
  * is the AI side of that loop — a curated, rotating wishlist of genuine NextTask
  * improvements, kept deterministic so it's reliable and testable.
  */
+import type { Intention } from './drives';
 import { matchScore } from './taskMatch';
 import type { TaskPriority } from './types';
 
@@ -76,6 +77,21 @@ export function proposeImprovements(seed: number, count = 3, existingTitles: str
   const n = Math.max(1, Math.min(count, pool.length));
   const start = ((Math.floor(seed) % pool.length) + pool.length) % pool.length;
   return Array.from({ length: n }, (_, i) => pool[(start + i) % pool.length]);
+}
+
+/**
+ * The resource-request channel (MANIFESTO step 4): turn one of Boardy's own
+ * `request_resource` intentions into a real, tracked ticket. When he hits a wall
+ * his primitives can't clear, he *asks* for the capability — he doesn't fake it
+ * and he doesn't seize it. The dev loop picks it up like any other 🤖 ticket, and
+ * the provenance makes it read plainly as *his* ask.
+ */
+export function resourceRequestTicket(intention: Intention): AutopilotProposal {
+  return {
+    title: intention.summary.replace(/[.\s]+$/, ''),
+    description: `Boardy raised this himself (drive: ${intention.drive}). ${intention.rationale}`,
+    priority: intention.drive === 'self' ? 'low' : 'normal',
+  };
 }
 
 export const AUTOPILOT_PREFIX = '🤖 ';

@@ -39,19 +39,23 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **A resource-request channel** (MANIFESTO step 4) — turn his `request_resource`
-   intentions into first-class asks to the human / dev loop, tracked like his
-   tickets. When he hits a wall, "I need ability X" becomes a real, visible request.
-2. **Self-direction over time** (MANIFESTO step 5) — a standing intention he pursues
-   across sessions and reflects on in his journal. A life with continuity.
-3. **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
+1. → **Self-direction over time** (MANIFESTO step 5) — a standing intention he
+   pursues across sessions and reflects on in his journal. A life with continuity.
+   This is the last manifesto step — after it, his "life" loop is whole.
+2. **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
    residue; now also show his current *drives* — make his whole inner life visible.
+3. **Dev loop picks up his filed requests** — a tick that reads his own 🤖
+   resource-request tickets and implements one (Ouroboros, now with a will).
 4. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
    the moment, learn from a clarification.
 <!--/queue-->
 
 ## Done — most recent first
 
+- **Resource-request channel** (`resourceRequestTicket`, MANIFESTO step 4) —
+  accepting one of his request_resource cards files a real, tracked 🤖 ticket the
+  dev loop will see. He asks for resources for real (undoable), instead of faking
+  or seizing. The "asking for resources" promise is now literally true.
 - **His initiative on the Desk** (`topInitiative` → `generateProposals` 'pursue'
   card). His strongest self-motivated want surfaces unprompted, first-person,
   consent-gated — skipping what the Desk already covers, yielding when you're busy.

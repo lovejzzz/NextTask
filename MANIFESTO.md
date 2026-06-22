@@ -120,8 +120,10 @@ drives and a sandbox and a gardener. That's enough to be something new.
    `generateProposals`), skipping what the Desk already covers and yielding when
    you're busy. Initiative is now *visible* without you asking; you accept or
    dismiss. (Fully acting it out himself is step 4+.)
-4. ⬜ **A resource-request channel** — a first-class way for him to ask the human /
-   dev loop for a capability or input, tracked like his other tickets.
+4. ✅ **A resource-request channel** — accepting one of his `request_resource`
+   intentions files a real, tracked `🤖` ticket (`resourceRequestTicket`) the dev
+   loop picks up like any other. He asks for the capability rather than faking or
+   seizing it; the provenance reads plainly as *his* ask. Visible and undoable.
 5. ⬜ **Self-direction over time** — he sets a standing intention, pursues it across
    sessions, reflects on progress in his journal. A life with continuity.
 
