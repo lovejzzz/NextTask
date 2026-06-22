@@ -158,17 +158,21 @@ const DEPENDS_RE = /\b(?:blocked on|blocked by|waiting on|waiting for|depends on
  */
 export function unblockCount(tasks: Task[]): Map<string, number> {
   const active = tasks.filter((task) => task.status !== 'done');
+  // Providers = active tasks that aren't themselves blocked. Matching a dependency
+  // only against providers stops a consumer's "the API" from wrongly resolving to
+  // *another* consumer whose title also mentions "the API".
+  const blockedIds = new Set(detectBlocked(tasks).map((task) => task.id));
+  const providers = active.filter((task) => !blockedIds.has(task.id));
   const counts = new Map<string, number>();
-  for (const blocked of active) {
-    const text = `${blocked.title} ${blocked.description ?? ''}`;
+  for (const consumer of active) {
+    const text = `${consumer.title} ${consumer.description ?? ''}`;
     const match = text.match(DEPENDS_RE);
     if (!match) continue;
     // Trim trailing punctuation/parens off the captured dependency ("the API)" → "the API").
     const reference = match[1].replace(/[)\]\s.,;:!?]+$/, '').trim();
     if (!reference) continue;
-    // Match the dependency against the *other* tasks, never the blocked one itself.
     const dep = matchTask(
-      active.filter((task) => task.id !== blocked.id),
+      providers.filter((task) => task.id !== consumer.id),
       reference,
     );
     if (dep) counts.set(dep.id, (counts.get(dep.id) ?? 0) + 1);

@@ -85,8 +85,8 @@ function resolvePriority(text: string): { priority: TaskPriority; rest: string }
 function cleanTitle(text: string): string {
   const title = text
     .replace(/\b(by|on|due|to)\s*$/i, ' ')
-    .replace(/^\s*(?:to|that|a)\s+/i, '') // strip leading filler
-    .replace(/^\s*task\b[\s:]*/i, '') // strip a lingering "task" noun (e.g. "urgent task X" → "X")
+    .replace(/^\s*task\b[\s:]*/i, '') // strip a lingering "task" noun first ("urgent task X" → "X")
+    .replace(/^\s*(?:to|that|a)\s+/i, '') // then strip leading filler ("task to call X" → "call X")
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/[\s,;:.!]+$/, '')
     .replace(/\s{2,}/g, ' ')

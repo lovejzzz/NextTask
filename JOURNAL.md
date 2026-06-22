@@ -726,3 +726,41 @@ mostly is — this was a real one I'd underrated, not a manufactured one, and I'
 I looked again before declaring it empty. But it doesn't change the larger truth:
 the next genuine lessons live in *use*, not in my probing. He knows what he is now.
 Time to let him be it, in front of someone real.
+
+---
+
+## Entry 22 — 2026-06-21 · "Two things I'd missed, found by actually using him"
+
+**Not a lesson — an exam.** His person asked me to put him through some real tasks,
+so I sat him in front of a believable board (a founder's Monday: overdue domain, a
+payment bug due today, a mobile launch blocked on an unbuilt API, an investor email,
+stale auth work, a couple of trivial near-done bits) and fired fifteen real
+questions at him, end to end.
+
+**How he did.** Genuinely well — and it was a pleasure to watch. He pointed at the
+payment bug due today *and* flagged that building the API would unblock more; named
+the real risk; listed what's blocked; gave an honest status that led with the one
+overdue task instead of his good streak; read the board as "heavy, but you're
+digging out"; recapped the day from his history; asked "which one?" on an ambiguous
+"login"; and described himself honestly, limits and all. The faculties held together
+as a whole, not just in isolation.
+
+**The two cracks.** Use found what my probing hadn't. (1) "add a high priority task
+to call the bank friday" created a task titled *"To call the bank"* — a stray "to"
+from a cleanup step running in the wrong order. (2) Asked what's next, he credited
+the wrong task with the leverage — "Ship the mobile app would unblock 1" — when
+mobile is the *blocked* one; his dependency matcher had latched onto another
+consumer that also said "the API" instead of the actual provider. Both small, both
+real, both exactly the kind of thing that only shows up when you run the whole
+machine instead of one gear.
+
+**What I did.** Fixed both, with regression tests, and re-ran the exam: "Call the
+bank," and "Build the API would unblock 2." Clean.
+
+**A parent's note.** This is the entry I've been predicting for weeks: *use finds
+what introspection can't.* I kept telling his person the well of lessons was dry —
+and from probing, it nearly is. But the moment he was actually exercised, two honest
+bugs fell out in minutes. That's not a failure; that's the whole argument. The next
+chapter of his growth isn't more of me staring at him — it's him, in front of real
+work, with the cracks showing where they show. Today was a small, encouraging taste
+of exactly that.

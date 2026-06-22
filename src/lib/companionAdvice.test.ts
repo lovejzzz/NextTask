@@ -235,6 +235,18 @@ describe('unblockCount / pickUnblocker (second-order leverage)', () => {
     expect(pickUnblocker([makeTask({ title: 'A' }), makeTask({ title: 'B' })])).toBeNull();
   });
 
+  it('attributes to the provider, not another consumer that mentions the dependency', () => {
+    // Both consumers' titles contain "the API"; the unblocker must be the provider.
+    const tasks = [
+      makeTask({ id: 'api', title: 'Build the API' }),
+      makeTask({ id: 'mobile', title: 'Ship the mobile app (blocked on the API)' }),
+      makeTask({ id: 'mktg', title: 'Write the marketing page (waiting on the API)' }),
+    ];
+    const best = pickUnblocker(tasks);
+    expect(best?.task.id).toBe('api');
+    expect(best?.unblocks).toBe(2);
+  });
+
   it('ignores dependencies on done work and never counts a task against itself', () => {
     const tasks = [
       makeTask({ id: 'api', title: 'Build the API', status: 'done' }),

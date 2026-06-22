@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Two bugs fixed from an end-to-end test** (JOURNAL 22) — a created task titled
+  "To call the bank" (cleanTitle stripped filler before the lingering "task" noun),
+  and `unblockCount` crediting the wrong task when two consumers both name the
+  dependency (now matches only against non-blocked *providers*). Both regression-tested.
 - **Steady self-model** (`describeSelf`, JOURNAL 21) — asked what he is, he answers
   plainly and humbly: coded brain + small voice, what he can do, and his limits
   stated as frankly as his abilities. The sixth L4→L5; **every faculty now reaches

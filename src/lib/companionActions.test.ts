@@ -38,6 +38,12 @@ describe('parseIntent — create task', () => {
     expect(intent.title).toBe('Prep the deck');
   });
 
+  it('strips a lingering "task to" so the title is clean, not "To call the bank"', () => {
+    const intent = parseIntent('add a high priority task to call the bank friday', NOW);
+    expect(intent).toMatchObject({ kind: 'create_task', title: 'Call the bank', priority: 'high' });
+    expect((intent as { due_date: string }).due_date > '2026-06-20').toBe(true);
+  });
+
   it('supports the "task:" shorthand', () => {
     expect(parseIntent('task: write the changelog', NOW)).toMatchObject({ title: 'Write the changelog' });
   });
