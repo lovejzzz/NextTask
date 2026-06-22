@@ -4,6 +4,9 @@
  * redesign") and carries them across sessions, weaving them into its prompt and
  * recalling them on request. Pure + tested; persisted by a hook.
  */
+import { matchTask } from './taskMatch';
+import type { Task } from './types';
+
 export type CompanionNote = { text: string; at: number };
 
 const MAX_NOTES = 8;
@@ -51,6 +54,26 @@ export function addNote(notes: CompanionNote[], fact: string, at: number = Date.
 export function formatNotes(notes: CompanionNote[]): string {
   if (!notes.length) return '';
   return notes.map((note) => note.text).join('; ');
+}
+
+export type StaleFact = { note: CompanionNote; subject: string };
+
+/**
+ * Facts that have likely gone stale because the board moved on — e.g. you told him
+ * you're "focusing on X" but X is already shipped. Reconciling his stored memory
+ * against the live board, so he questions his own residue instead of reciting it
+ * blindly. (Reasoning over two facts: what he was told vs. what's true now.)
+ */
+export function findStaleFocus(notes: CompanionNote[], tasks: Task[]): StaleFact[] {
+  const stale: StaleFact[] = [];
+  for (const note of notes) {
+    const match = note.text.match(/^focusing on\s+(.+)/i);
+    if (!match) continue;
+    const subject = match[1].replace(/[.\s]+$/, '');
+    const task = matchTask(tasks, subject);
+    if (task && task.status === 'done') stale.push({ note, subject });
+  }
+  return stale;
 }
 
 // Which stored notes answer a given topic — semantic, not just episodic. His

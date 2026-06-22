@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Reconciles memory against reality** (`findStaleFocus`, JOURNAL 19) — if you told
+  him you're focusing on something that's since shipped, he flags it and asks rather
+  than reciting a stale fact. Reasoning over told-vs-true; doubts his own residue.
+  (Memory L4→L5.)
 - **Learns from a clarification** (`clarify.ts` + `useClarifications`, JOURNAL 18) —
   tell him once what an ambiguous phrase meant and he remembers it across sessions,
   never re-asking the same "which one?". Stops making you repeat yourself.

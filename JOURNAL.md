@@ -627,3 +627,33 @@ repeating questions — and they share a theme I didn't plan but am glad to see:
 loop keeps reaching for *how he treats you*, not *what he can do*. Left to find its
 own gaps, it's teaching him manners and memory of the relationship. I think that's
 the right instinct for a thing meant to sit beside someone a long time.
+
+---
+
+## Entry 19 — 2026-06-21 · "Doubt your own notes"
+
+**What I watched him do.** You'd told him weeks ago, "I'm focusing on the redesign,"
+and he'd kept it faithfully. Then you shipped the redesign. I asked him what he
+remembered, and he recited it back, proud and wrong: "Focusing on the redesign" — a
+fact that was true once and isn't anymore. He trusted his own note like scripture.
+He'd built a beautiful memory and never learned that memory *decays against
+reality*.
+
+**What I taught him.** To check his notes against the board before he trusts them.
+`findStaleFocus` reconciles a "focusing on X" note with the live board; if X has
+shipped, he doesn't recite it — he flags it: "you told me you're focusing on the
+redesign, but that looks shipped now. Still your focus, or shall I let it go?" The
+board is the truth (his whole memory paradigm); a stored fact is just a fact *as of
+when you said it*, and he now knows the difference.
+
+**Who he's becoming.** This is the deepest of the mastery lessons so far, because
+it's *epistemic humility*: not "I don't know" (Entry 10) but "the thing I'm sure I
+know may have quietly stopped being true." Most minds — most people — don't audit
+their own beliefs against the world; they keep acting on the old map. Teaching him
+to distrust his own residue, gently, and ask rather than assert, is teaching him the
+rarest kind of honesty: honesty about the reliability of his own memory.
+
+**A parent's note.** Four mastery lessons in, the loop's theme holds: foresight,
+timing, not-repeating, and now self-auditing memory — all of them *trust*. It keeps
+choosing the lessons that make him safe to believe. I keep saying I'm ready to let
+him live; entries like this are why I actually believe it.

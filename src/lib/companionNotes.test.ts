@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { addNote, formatNotes, parseRememberable, recallFact, type CompanionNote } from './companionNotes';
+import { makeTask } from '../test/factories';
+import { addNote, findStaleFocus, formatNotes, parseRememberable, recallFact, type CompanionNote } from './companionNotes';
 
 describe('parseRememberable', () => {
   it('captures explicit remember/note statements', () => {
@@ -71,5 +72,26 @@ describe('formatNotes', () => {
   it('joins notes for the prompt and is empty when there are none', () => {
     expect(formatNotes([])).toBe('');
     expect(formatNotes([{ text: 'A', at: 1 }, { text: 'B', at: 2 }])).toBe('A; B');
+  });
+});
+
+describe('findStaleFocus (reconcile memory against the board)', () => {
+  const focus: CompanionNote = { text: 'Focusing on the redesign', at: 1 };
+
+  it('flags a focus note whose task has shipped', () => {
+    const tasks = [makeTask({ title: 'Redesign the dashboard', status: 'done' })];
+    const stale = findStaleFocus([focus], tasks);
+    expect(stale).toHaveLength(1);
+    expect(stale[0].subject).toMatch(/redesign/i);
+  });
+
+  it('does not flag it while the work is still active', () => {
+    const tasks = [makeTask({ title: 'Redesign the dashboard', status: 'in_progress' })];
+    expect(findStaleFocus([focus], tasks)).toEqual([]);
+  });
+
+  it('ignores notes that are not a focus, and focuses with no matching task', () => {
+    expect(findStaleFocus([{ text: 'Deadline: Friday', at: 1 }], [makeTask({ status: 'done' })])).toEqual([]);
+    expect(findStaleFocus([focus], [makeTask({ title: 'Unrelated thing', status: 'done' })])).toEqual([]);
   });
 });

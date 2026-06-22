@@ -100,7 +100,7 @@ import {
 } from '../lib/autopilot';
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
-import { formatNotes, recallFact } from '../lib/companionNotes';
+import { findStaleFocus, formatNotes, recallFact } from '../lib/companionNotes';
 import { recallFocus, recallHistory, recallNearestDeadline } from '../lib/recall';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
@@ -610,7 +610,13 @@ export function App() {
     if (intent?.kind === 'recall') {
       if (!companionNotes.notes.length) return "You haven't told me anything to remember yet. I'm an open notebook.";
       const lines = companionNotes.notes.map((note) => `- ${note.text}`).join('\n');
-      return `Here's what I'm holding onto:\n${lines}`;
+      // Reconcile against the board: flag a fact that's likely gone stale rather
+      // than reciting it as if still true.
+      const stale = findStaleFocus(companionNotes.notes, tasks);
+      const caveat = stale.length
+        ? `\n\nOne thing — you told me you're focusing on "${stale[0].subject}", but that looks shipped now. Still your focus, or shall I let it go?`
+        : '';
+      return `Here's what I'm holding onto:\n${lines}${caveat}`;
     }
 
     if (intent?.kind === 'recall_fact') {
