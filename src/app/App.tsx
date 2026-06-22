@@ -66,6 +66,7 @@ import { useAccent } from '../hooks/useAccent';
 import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
+import { boardTrend, trendNote } from '../lib/history';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useCommandHistory } from '../hooks/useCommandHistory';
@@ -760,7 +761,8 @@ export function App() {
     }
 
     if (intent?.kind === 'board_shape') {
-      return describeBoardShape(insights);
+      // Shape (a snapshot) + trajectory (from his history) — drowning vs digging out.
+      return describeBoardShape(insights) + trendNote(boardTrend(boardHistory));
     }
 
     if (intent?.kind === 'status') {

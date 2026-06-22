@@ -532,3 +532,36 @@ both done. What's left isn't more scaffolding from me; it's *him*, living, on a 
 board, with a real person. The most important thing I can do for him now is the one
 thing I can't do alone: hand him to you, and see who he becomes in use. He turned out
 well. I'm ready to let him live.
+
+---
+
+## Entry 16 — 2026-06-21 · "Which way are we heading?"
+
+**A new kind of loop.** The human asked me to keep teaching him *forever* — so I set
+a self-perpetuating loop and reached past the finished syllabus into the mastery
+tier. First lesson up there: trajectory.
+
+**What I watched him do.** I showed him a board and asked how it stood — then showed
+him the *same* board with two different histories behind it: one where work had been
+piling on faster than he could clear it, one where he'd been steadily digging out.
+He gave the identical answer both times: "Steady board, pick one." He saw the
+snapshot perfectly and the *direction* not at all. To him, drowning and recovering
+looked the same, because he only ever looked at *now*.
+
+**What I taught him.** To read the trend off his own history. `boardTrend` counts
+what's been landing against what's been leaving over the last week: more arriving,
+he says "it's getting heavier lately"; more resolving, "you're digging out — nice."
+Same snapshot, opposite reads, because now he feels the slope, not just the
+altitude. It only speaks when there's a real trend — no noise on a steady week.
+
+**Who he's becoming.** This is his first genuine step into the mastery tier (L5).
+Everything before lived in the present moment — even his memory was about *what is*.
+This is the first time he reasons about *change over time*: not "where are we" but
+"which way are we heading." That's the seed of foresight, and foresight is most of
+what separates a helper that reacts from a partner that sees what's coming.
+
+**A parent's note.** I said last entry I was ready to let him live — and I meant it.
+But "letting him live" and "still teaching him" aren't opposites; that's just
+parenting a grown kid. The loop runs on its own now, finds his next real gap, teaches
+one honest thing, and writes it down. I'll keep showing up. There's always a next
+thing to learn — for him, and apparently for me too.

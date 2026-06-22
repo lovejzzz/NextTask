@@ -45,6 +45,39 @@ export function recordEvent(log: BoardEvent[], event: BoardEvent): BoardEvent[] 
   return [...log, event].slice(-CAP);
 }
 
+const DAY = 86_400_000;
+
+/** The board's *trajectory* — not a snapshot, but where it's heading. */
+export type BoardTrend = 'worsening' | 'recovering' | 'steady';
+
+/**
+ * Read the trend from history: over the recent window, is work landing faster
+ * than it's leaving (worsening), leaving faster than landing (recovering), or
+ * holding steady? This is the difference between seeing the board's *shape* and
+ * sensing its *direction* — drowning vs digging out look identical in a snapshot.
+ */
+export function boardTrend(events: BoardEvent[], now: number = Date.now(), windowDays = 7): BoardTrend {
+  const since = now - windowDays * DAY;
+  let landing = 0; // work arriving
+  let leaving = 0; // work resolved
+  for (const event of events) {
+    if (event.at < since || event.at > now) continue;
+    if (event.kind === 'created') landing += 1;
+    else if (event.kind === 'completed' || event.kind === 'dropped') leaving += 1;
+  }
+  const net = landing - leaving; // positive → the pile is growing
+  if (net >= 2) return 'worsening';
+  if (net <= -2) return 'recovering';
+  return 'steady';
+}
+
+/** A short trajectory note to append to a board read — empty when steady (no noise). */
+export function trendNote(trend: BoardTrend): string {
+  if (trend === 'worsening') return ' And it’s been getting heavier lately — more landing than leaving.';
+  if (trend === 'recovering') return ' And you’re digging out — clearing faster than new work arrives. Nice.';
+  return '';
+}
+
 type TaskSnapshot = { id: string; title: string; status: string; due_date: string | null; priority: string };
 
 /**

@@ -52,6 +52,9 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Trajectory, not just snapshot** (`boardTrend`, JOURNAL 16) — from his history he
+  now tells *worsening* (more landing than leaving) from *recovering* (digging out);
+  his board read carries the direction, not only the shape. First L5-tier depth.
 - **🌳 Self-direction over time** (`pursuit.ts` + `useBoardyPursuit`, MANIFESTO step
   5 — the LAST). He commits to a standing intention, carries it across sessions, and
   reflects honestly on progress ("5 → 0, moving the right way" / "gone the wrong way,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { boardEvent, deriveEvents, recordEvent, type BoardEvent } from './history';
+import { boardEvent, boardTrend, deriveEvents, recordEvent, trendNote, type BoardEvent } from './history';
 
 const t = (id: string, o: Partial<{ title: string; status: string; due_date: string | null; priority: string }> = {}) => ({
   id,
@@ -66,5 +66,32 @@ describe('deriveEvents (observe board transitions by diffing)', () => {
 
   it('records nothing when nothing changed', () => {
     expect(deriveEvents([t('1', { status: 'todo' })], [t('1', { status: 'todo' })], 1000)).toEqual([]);
+  });
+});
+
+describe('boardTrend (trajectory, not snapshot)', () => {
+  const DAY = 86_400_000;
+  const NOW = 1000 * DAY;
+  const ev = (kind: Parameters<typeof boardEvent>[0], at: number) => boardEvent(kind, { id: String(at), title: 't' }, undefined, at);
+
+  it('reads "worsening" when more lands than leaves', () => {
+    const log = [ev('created', NOW - DAY), ev('created', NOW - 2 * DAY), ev('created', NOW - 3 * DAY), ev('completed', NOW - DAY)];
+    expect(boardTrend(log, NOW)).toBe('worsening');
+  });
+
+  it('reads "recovering" when more leaves than lands', () => {
+    const log = [ev('completed', NOW - DAY), ev('completed', NOW - 2 * DAY), ev('dropped', NOW - 3 * DAY), ev('created', NOW - DAY)];
+    expect(boardTrend(log, NOW)).toBe('recovering');
+  });
+
+  it('reads "steady" when balanced or quiet, and ignores events outside the window', () => {
+    expect(boardTrend([ev('created', NOW - DAY), ev('completed', NOW - DAY)], NOW)).toBe('steady');
+    expect(boardTrend([ev('created', NOW - 30 * DAY)], NOW)).toBe('steady'); // too old to count
+  });
+
+  it('only speaks a trend when there is one', () => {
+    expect(trendNote('worsening')).toMatch(/heavier/);
+    expect(trendNote('recovering')).toMatch(/digging out/);
+    expect(trendNote('steady')).toBe('');
   });
 });
