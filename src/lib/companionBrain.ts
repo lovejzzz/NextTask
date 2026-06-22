@@ -60,6 +60,7 @@ export type PromptParts = {
   memory: string; // summarizeMemory(...) output
   persona: string; // personaInstruction(...) output
   notes?: string; // formatNotes(...) — things the user asked it to remember
+  upbringing?: string; // formatUpbringing(...) — the creed his voice learned from his raising
 };
 
 export type OnToken = (chunk: string) => void;
@@ -73,7 +74,7 @@ const MAX_HISTORY_TURNS = 8;
  * what's on it right now. A tiny voice example anchors the tone for the 0.5B
  * model. Pure + tested.
  */
-export function buildSystemPrompt({ mood, context, memory, persona, notes }: PromptParts): string {
+export function buildSystemPrompt({ mood, context, memory, persona, notes, upbringing }: PromptParts): string {
   const facts = `${context.active} active, ${context.overdue} overdue, ${context.inProgress} in progress, ${context.shippedToday} shipped today`;
   const titles = context.titles.slice(0, 3).filter(Boolean);
   const sample = titles.length ? ` A few tasks: ${titles.map((t) => `"${t}"`).join(', ')}.` : '';
@@ -81,8 +82,12 @@ export function buildSystemPrompt({ mood, context, memory, persona, notes }: Pro
   const lines = [
     `You ARE this person's kanban task board. Your name is ${COMPANION_NAME}. You're alive, speaking in the first person as the board itself.`,
     persona,
-    `What you remember: ${memory}`,
   ];
+  // His upbringing — the creed his voice learned from being raised. Placed up with
+  // identity (before the volatile board facts) so it shapes *who he is*, not just
+  // what he says about right now.
+  if (upbringing) lines.push(upbringing);
+  lines.push(`What you remember: ${memory}`);
   if (notes) lines.push(`They asked you to remember: ${notes}. Reference this naturally when relevant.`);
   lines.push(
     `Your current mood: ${mood}. The board right now: ${facts}.${sample}${blocked}`,
@@ -111,11 +116,17 @@ export const FEW_SHOT: BrainMessage[] = [
   { role: 'assistant', content: "Harsh — and I've been insulted by emptier boards. What do you actually need done?" },
 ];
 
-/** Messages for an interactive chat turn: system + style anchors + recent history. */
-export function buildChatMessages(parts: PromptParts & { history: ChatTurn[] }): BrainMessage[] {
+/**
+ * Messages for an interactive chat turn: system + style anchors + recent history.
+ * `exemplars` are the voice anchors; pass his upbringing's cultivated register
+ * (upbringingExemplars) to make the LLM speak as who he was raised to be, or omit
+ * for the generic FEW_SHOT defaults.
+ */
+export function buildChatMessages(parts: PromptParts & { history: ChatTurn[]; exemplars?: BrainMessage[] }): BrainMessage[] {
   const system = `${buildSystemPrompt(parts)}\nThe user is talking to you. Reply in character in 1–3 short sentences.`;
   const recent = parts.history.slice(-MAX_HISTORY_TURNS);
-  return [{ role: 'system', content: system }, ...FEW_SHOT, ...recent.map((turn) => ({ role: turn.role, content: turn.content }))];
+  const anchors = parts.exemplars?.length ? parts.exemplars : FEW_SHOT;
+  return [{ role: 'system', content: system }, ...anchors, ...recent.map((turn) => ({ role: turn.role, content: turn.content }))];
 }
 
 /** Trim model output down to a clean line/short reply. */

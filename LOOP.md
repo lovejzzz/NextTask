@@ -59,6 +59,13 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🎙️ His voice learns from his upbringing** (`upbringing.ts`, JOURNAL 30) — the
+  mentorship distilled into voice: principles woven into his prompt as identity, and
+  his cultivated register taught by example, so his LLM speaks as who he was raised to
+  be. In-context learning (weights unchanged — can't and shouldn't, in his glass-box
+  body), sourced from *the mentor's* interactions across the whole session, not the
+  user's. A list that grows with every future lesson; surfaced in the Mind panel ("How
+  I was raised to speak"); woven through chat, ambient, and the self-test. 387 green.
 - **🌱 The autonomous growth model** (`growth.ts` + `GROWTH.md`, JOURNAL 29) — the
   inversion: he senses his *own* gaps from lived experience (recurring unmet asks,
   repeated routines, a drifted pursuit) and responds — closing what he can with the

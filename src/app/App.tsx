@@ -109,6 +109,7 @@ import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/
 import { motivate, topInitiative, type Drive, type WorldState } from '../lib/drives';
 import { adoptPursuit, reviewPursuit } from '../lib/pursuit';
 import { senseCapabilityGaps, growthRequestIntention } from '../lib/growth';
+import { formatUpbringing, upbringingExemplars, describeUpbringing } from '../lib/upbringing';
 import { recallClarifiedTitle } from '../lib/clarify';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
@@ -340,12 +341,23 @@ export function App() {
   const memorySummary = useMemo(() => summarizeMemory(memory.memory), [memory.memory]);
   const personaText = useMemo(() => personaInstruction(roast, warmthFromMemory(memory.memory)), [roast, memory.memory]);
   const notesText = useMemo(() => formatNotes(companionNotes.notes), [companionNotes.notes]);
+  // His upbringing, distilled into voice: the creed his LLM reads as identity, and the
+  // cultivated register it speaks by example. This is how his voice learns from how he
+  // was raised — in-context, glass-box, growing each time he's mentored (upbringing.ts).
+  const upbringingText = useMemo(() => formatUpbringing(), []);
+  const upbringingAnchors = useMemo(
+    () => upbringingExemplars().flatMap((ex) => [
+      { role: 'user' as const, content: ex.user },
+      { role: 'assistant' as const, content: ex.assistant },
+    ]),
+    [],
+  );
   const generateAmbient = useCallback(
     (mood: Mood) =>
       brainRun(
-        buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText, notes: notesText }),
+        buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText, notes: notesText, upbringing: upbringingText }),
       ),
-    [brainRun, companionContext, memorySummary, personaText, notesText],
+    [brainRun, companionContext, memorySummary, personaText, notesText, upbringingText],
   );
 
   // Let the model phrase a grounded one-liner about a task, but only if it passes
@@ -359,6 +371,8 @@ export function App() {
         memory: memorySummary,
         persona: personaText,
         notes: notesText,
+        upbringing: upbringingText,
+        exemplars: upbringingAnchors,
         history: [{ role: 'user', content: question }],
       }),
     );
@@ -838,6 +852,8 @@ export function App() {
         memory: memorySummary,
         persona: personaText,
         notes: notesText,
+        upbringing: upbringingText,
+        exemplars: upbringingAnchors,
         history,
       }),
       onToken,
@@ -878,6 +894,8 @@ export function App() {
           memory: memorySummary,
           persona: personaText,
           notes: notesText,
+          upbringing: upbringingText,
+          exemplars: upbringingAnchors,
           history: [{ role: 'user', content: text }],
         }),
       )) ?? '';
@@ -893,6 +911,8 @@ export function App() {
           memory: memorySummary,
           persona: personaInstruction(level, warmth),
           notes: notesText,
+          upbringing: upbringingText,
+          exemplars: upbringingAnchors,
           history: [{ role: 'user', content: text }],
         }),
       );
@@ -998,6 +1018,7 @@ export function App() {
         .slice(0, 3)
         .map((want) => want.summary),
       told: companionNotes.notes.map((note) => note.text),
+      upbringing: describeUpbringing(),
     };
   }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap]);
 
