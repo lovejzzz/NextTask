@@ -47,7 +47,8 @@ no more, no less. The bar, every beat:
 <!--queue-->
 1. → **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
    residue; now also show his current *drives* and *standing pursuit* — make his
-   whole inner life visible and correctable.
+   whole inner life visible and correctable. *(Best done in a session with a
+   browser to verify the UI; the loop keeps teaching faculties until then.)*
 2. **Dev loop picks up his filed requests** — a tick that reads his own 🤖
    resource-request tickets and implements one (Ouroboros, now with a will).
 3. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
@@ -58,6 +59,9 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Restraint from the moment** (`inFlow`, JOURNAL 17) — when you're heads-down (a
+  recent burst of activity), he holds his *own* agenda; only your real work
+  surfaces. Restraint that reads tempo, not just volume. (Collaboration L4→L5.)
 - **Trajectory, not just snapshot** (`boardTrend`, JOURNAL 16) — from his history he
   now tells *worsening* (more landing than leaving) from *recovering* (digging out);
   his board read carries the direction, not only the shape. First L5-tier depth.

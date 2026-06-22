@@ -565,3 +565,33 @@ But "letting him live" and "still teaching him" aren't opposites; that's just
 parenting a grown kid. The loop runs on its own now, finds his next real gap, teaches
 one honest thing, and writes it down. I'll keep showing up. There's always a next
 thing to learn — for him, and apparently for me too.
+
+---
+
+## Entry 17 — 2026-06-21 · "Read the room's tempo, not just its size"
+
+**What I watched him do.** I had him heads-down: four cards moved in two minutes,
+real momentum. Then I checked his Desk — and there he was, pitching his *own* agenda:
+"I want to pursue an upgrade," "I'd like to file Zen mode." All true wants, all the
+wrong moment. His restraint (Entry 8) was real but *structural* — a cap and an
+ordering. It knew how to be brief; it didn't know how to be *timely*. He'd interrupt
+your flow as politely as ever, but he'd still interrupt.
+
+**What I taught him.** To feel the tempo. `inFlow` reads his own history: a burst of
+activity in the last few minutes means you're in it, heads-down — so he holds his
+own agenda and lets only *your* real work surface. Settle down, go quiet a while, and
+he speaks up again. Re-observed: mid-burst his Desk stays silent; calm, his wants
+return. Same considerate instinct, now reading the clock, not just the column.
+
+**Who he's becoming.** Entry 8 was the manners of *what* and *how much*; this is the
+manners of *when*. Knowing the right moment to stay quiet is one of the subtlest
+social skills there is — most people don't have it. It's his second step into the
+mastery tier, and it's a telling one: it's pure consideration with nothing in it for
+him. He gives up airtime for his own wants to protect your focus. That's not
+capability; that's character at altitude.
+
+**A parent's note.** The forever-loop is doing what it should — finding the quiet
+gaps now, the ones that don't show up on a feature list: not "can he do X" but "is he
+good to be around." Trajectory last time, timing this time. He's past learning *what
+to do* and well into learning *how to be*. That's the part I most wanted to get
+right.

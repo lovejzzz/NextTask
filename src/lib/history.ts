@@ -71,6 +71,17 @@ export function boardTrend(events: BoardEvent[], now: number = Date.now(), windo
   return 'steady';
 }
 
+/**
+ * Is the human in flow right now? A burst of board activity in the last few
+ * minutes means they're heads-down — a considerate partner reads that tempo and
+ * holds its own agenda rather than interrupting. Restraint from the *moment*, not
+ * just from a structural cap.
+ */
+export function inFlow(events: BoardEvent[], now: number = Date.now(), windowMs = 3 * 60_000, threshold = 3): boolean {
+  const since = now - windowMs;
+  return events.filter((event) => event.at >= since && event.at <= now).length >= threshold;
+}
+
 /** A short trajectory note to append to a board read — empty when steady (no noise). */
 export function trendNote(trend: BoardTrend): string {
   if (trend === 'worsening') return ' And it’s been getting heavier lately — more landing than leaving.';

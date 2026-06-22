@@ -66,7 +66,7 @@ import { useAccent } from '../hooks/useAccent';
 import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
-import { boardTrend, trendNote } from '../lib/history';
+import { boardTrend, inFlow, trendNote } from '../lib/history';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useCommandHistory } from '../hooks/useCommandHistory';
@@ -886,29 +886,35 @@ export function App() {
         ? repeated
         : null;
     const continuation = suggestSkillContinuation(experience.history.at(-1) ?? '', toolbox.tools);
+    // Restraint from the moment: if you're in flow (a recent burst of activity),
+    // he holds his *own* agenda — his initiative and upgrade asks wait. Your real
+    // work (clearing overdue, finishing a flow you started) still surfaces.
+    const flow = inFlow(boardHistory);
     // His own self-motivated initiative (from his drives), surfaced unprompted —
     // but only for drives the Desk doesn't already cover, so he never says it twice.
     const exclude: Drive[] = [];
     if (overdue > 0) exclude.push('order');
     if (learned) exclude.push('growth');
     if (ideas.length) exclude.push('self');
-    const initiative = topInitiative(
-      {
-        overdue,
-        stale: tasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length,
-        active: tasks.filter((task) => task.status !== 'done').length,
-        shippedRecently: momentum.shippedToday,
-        idleDays: momentum.shippedToday > 0 ? 0 : 1,
-        repeatedPattern: repeated,
-        capabilityGap: null,
-        ownBacklog: ideas.length,
-      },
-      exclude,
-    );
-    return generateProposals({ overdue, ideas, learned, continuation, initiative }).filter(
+    const initiative = flow
+      ? null
+      : topInitiative(
+          {
+            overdue,
+            stale: tasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length,
+            active: tasks.filter((task) => task.status !== 'done').length,
+            shippedRecently: momentum.shippedToday,
+            idleDays: momentum.shippedToday > 0 ? 0 : 1,
+            repeatedPattern: repeated,
+            capabilityGap: null,
+            ownBacklog: ideas.length,
+          },
+          exclude,
+        );
+    return generateProposals({ overdue, ideas: flow ? [] : ideas, learned, continuation, initiative }).filter(
       (proposal) => !dismissedProposals.has(proposal.id),
     );
-  }, [tasks, dismissedProposals, experience.history, toolbox.tools, momentum.shippedToday]);
+  }, [tasks, dismissedProposals, experience.history, toolbox.tools, momentum.shippedToday, boardHistory]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {

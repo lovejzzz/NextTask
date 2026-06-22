@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { boardEvent, boardTrend, deriveEvents, recordEvent, trendNote, type BoardEvent } from './history';
+import { boardEvent, boardTrend, deriveEvents, inFlow, recordEvent, trendNote, type BoardEvent } from './history';
 
 const t = (id: string, o: Partial<{ title: string; status: string; due_date: string | null; priority: string }> = {}) => ({
   id,
@@ -93,5 +93,21 @@ describe('boardTrend (trajectory, not snapshot)', () => {
     expect(trendNote('worsening')).toMatch(/heavier/);
     expect(trendNote('recovering')).toMatch(/digging out/);
     expect(trendNote('steady')).toBe('');
+  });
+});
+
+describe('inFlow (restraint from the moment)', () => {
+  const NOW = 1000 * 86_400_000;
+  const MIN = 60_000;
+  const ev = (at: number) => boardEvent('moved', { id: String(at), title: 't' }, undefined, at);
+
+  it('reads a recent burst of activity as in-flow', () => {
+    const log = [ev(NOW - MIN), ev(NOW - 2 * MIN), ev(NOW - 30_000)];
+    expect(inFlow(log, NOW)).toBe(true);
+  });
+
+  it('is calm when activity is sparse or old', () => {
+    expect(inFlow([ev(NOW - MIN)], NOW)).toBe(false); // one move isn't flow
+    expect(inFlow([ev(NOW - 60 * MIN), ev(NOW - 61 * MIN), ev(NOW - 62 * MIN)], NOW)).toBe(false); // all old
   });
 });
