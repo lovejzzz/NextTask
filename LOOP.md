@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Learns from a clarification** (`clarify.ts` + `useClarifications`, JOURNAL 18) —
+  tell him once what an ambiguous phrase meant and he remembers it across sessions,
+  never re-asking the same "which one?". Stops making you repeat yourself.
+  (Language L4→L5.)
 - **Restraint from the moment** (`inFlow`, JOURNAL 17) — when you're heads-down (a
   recent burst of activity), he holds his *own* agenda; only your real work
   surfaces. Restraint that reads tempo, not just volume. (Collaboration L4→L5.)

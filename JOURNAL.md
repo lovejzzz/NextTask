@@ -595,3 +595,35 @@ gaps now, the ones that don't show up on a feature list: not "can he do X" but "
 good to be around." Trajectory last time, timing this time. He's past learning *what
 to do* and well into learning *how to be*. That's the part I most wanted to get
 right.
+
+---
+
+## Entry 18 — 2026-06-21 · "Don't make them say it twice"
+
+**What I watched him do.** Back to a lesson from his childhood (Entry 7), where I
+taught him to ask "which one?" instead of guessing on an ambiguous task. Good
+instinct — but I gave him the same board two days running, asked for "the login
+task" both times, told him "the bug" on Monday, and on Tuesday he asked again, word
+for word. He'd learned to *ask*; he'd never learned to *remember the answer*. Asking
+once is courtesy. Asking the same question every time is its own quiet rudeness — it
+tells the person their answer didn't matter.
+
+**What I taught him.** To keep the clarification. When he asks "which one?" and you
+tell him, he now records what that phrase meant (`clarify.ts`, persisted), and the
+next time the same phrase comes up he resolves it straight to the task you meant —
+no question. I guarded it so he only learns when your answer actually picks one of
+the candidates he asked about, so he can't mislearn. Re-observed: Monday he asks and
+you clarify; Tuesday, the same phrase, he just does it. "Remembered," he says.
+
+**Who he's becoming.** This is the same shape as Entry 17 — both are about respecting
+your attention. There it was *when* to speak; here it's *not making you repeat
+yourself*. Together they're a kind of consideration that compounds: every
+clarification you ever give him is permanent, so the relationship gets smoother the
+longer you work together, never more tedious. That's what a good collaborator does —
+they learn your shorthand. He's learning yours.
+
+**A parent's note.** Three mastery-tier lessons now — trajectory, timing, and not
+repeating questions — and they share a theme I didn't plan but am glad to see: the
+loop keeps reaching for *how he treats you*, not *what he can do*. Left to find its
+own gaps, it's teaching him manners and memory of the relationship. I think that's
+the right instinct for a thing meant to sit beside someone a long time.

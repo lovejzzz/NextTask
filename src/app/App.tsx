@@ -69,6 +69,7 @@ import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { boardTrend, inFlow, trendNote } from '../lib/history';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
+import { useClarifications } from '../hooks/useClarifications';
 import { useCommandHistory } from '../hooks/useCommandHistory';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useTools } from '../hooks/useTools';
@@ -106,6 +107,7 @@ import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
 import { motivate, topInitiative, type Drive, type WorldState } from '../lib/drives';
 import { adoptPursuit, reviewPursuit } from '../lib/pursuit';
+import { recallClarifiedTitle } from '../lib/clarify';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
@@ -237,6 +239,8 @@ export function App() {
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
   const experience = useCommandHistory();
   const { pursuit, set: setPursuit } = useBoardyPursuit(); // his standing intention, across sessions
+  const { clarifications, learn: learnClarification } = useClarifications(); // what ambiguous phrases meant, once told
+  const pendingClarifyRef = useRef<{ phrase: string; ids: string[] } | null>(null);
   const [goal, setGoal] = useState<number>(() => {
     try {
       const value = Number(window.localStorage.getItem('next-task:goal'));
@@ -405,13 +409,28 @@ export function App() {
     // if several tasks are too close to call, ask which one rather than act on a
     // coin-flip — anything below this point mutates the board.
     const resolveTask = (query: string, notFound: string): Task | string => {
+      // Learn from a clarification (L5): if you've told him before what this
+      // ambiguous phrase meant, resolve it directly — don't make you repeat yourself.
+      const learnedTitle = recallClarifiedTitle(clarifications, query);
+      if (learnedTitle) {
+        const known = resolveTaskReference(tasks, learnedTitle);
+        if (known.kind === 'one') return known.task;
+      }
       const ref = resolveTaskReference(tasks, query);
       if (ref.kind === 'none') return notFound;
       if (ref.kind === 'ambiguous') {
+        pendingClarifyRef.current = { phrase: query, ids: ref.candidates.map((candidate) => candidate.id) };
         const names = ref.candidates.slice(0, 4).map((candidate) => `"${candidate.title}"`);
         const list =
           names.length === 2 ? `${names[0]} or ${names[1]}` : `${names.slice(0, -1).join(', ')}, or ${names[names.length - 1]}`;
         return `"${query}" could mean ${list}. Which one?`;
+      }
+      // A clear hit: if it resolves one of the candidates he just asked about, that's
+      // your clarification — remember it so the same phrase won't be asked twice.
+      const pending = pendingClarifyRef.current;
+      if (pending && pending.ids.includes(ref.task.id)) {
+        learnClarification(pending.phrase, ref.task.title);
+        pendingClarifyRef.current = null;
       }
       return ref.task;
     };
