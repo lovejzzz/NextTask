@@ -25,6 +25,7 @@ export type CompanionIntent =
   | { kind: 'recall' }
   | { kind: 'recall_fact'; topic: string }
   | { kind: 'recap' }
+  | { kind: 'self_intent' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -115,6 +116,14 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(what do you (?:remember|know)(?: about me)?|what did i tell you|what'?s in your memory)\b/.test(lower)) {
     return { kind: 'recall' };
+  }
+  // Consult his life — what *he* wants, from his own drives (not your backlog).
+  if (
+    /\b(what do you want(?: to do)?|what'?s on your mind|what would you do|what do you feel like|anything you want to do|your (?:move|call)|what'?re you thinking)\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'self_intent' };
   }
   // Episodic recap — "what happened", reconstructed from the board's history log.
   if (

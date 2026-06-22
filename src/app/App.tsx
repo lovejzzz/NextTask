@@ -100,7 +100,8 @@ import { formatNotes, recallFact } from '../lib/companionNotes';
 import { recallFocus, recallHistory, recallNearestDeadline } from '../lib/recall';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
-import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
+import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
+import { motivate } from '../lib/drives';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
@@ -609,6 +610,26 @@ export function App() {
       const history = recallHistory(boardHistory);
       if (!history.length) return "Nothing's happened on the board yet that I've seen. Make a move and I'll remember it.";
       return `Here's what's been happening:\n${history.map((r) => `- ${r.text}`).join('\n')}`;
+    }
+
+    if (intent?.kind === 'self_intent') {
+      // Consult his life: what *he* wants, generated from his own drives — not your
+      // backlog. He proposes and asks; he doesn't seize. (See MANIFESTO.md.)
+      const wants = motivate({
+        overdue: insights.overdue,
+        stale: tasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length,
+        active: insights.active,
+        shippedRecently: momentum.shippedToday,
+        idleDays: momentum.shippedToday > 0 ? 0 : 1,
+        repeatedPattern: detectRepeatedSequence(experience.history),
+        capabilityGap: null,
+        ownBacklog: proposeImprovements(0, 10, tasks.map((task) => task.title)).length,
+      });
+      if (!wants.length) {
+        return "Honestly? Nothing's tugging at me right now — the board's calm and I'm content to keep watch. I'll speak up when something needs doing.";
+      }
+      const top = wants.slice(0, 3).map((want) => `- ${want.summary} _(${want.drive})_`);
+      return `Here's what's on my mind, unprompted:\n${top.join('\n')}\nWant me to act on any of it, or shall I keep mulling?`;
     }
 
     if (intent?.kind === 'undo') {

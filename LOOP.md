@@ -39,17 +39,28 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Glass-box "what Boardy knows" panel** — split *read-from-board* (live) vs the
-   small editable/pinnable residue. Make his whole mind visible and correctable.
-2. **Shrink the residue** — keep only genuinely board-less facts in the trace
-   layer; let the board carry everything it can.
-3. **L4→L5 depth** (post-syllabus mastery) — reason *over* facts (Memory→L4),
-   notice *trends* not snapshots (Perception→L5), restraint read from the moment
-   (Collaboration→L5), learn from a clarification (Language→L5).
+1. → **Act on his drives, with consent** (MANIFESTO step 3). His top intentions
+   from `motivate()` flow onto his Desk on their own (on idle) — initiative becomes
+   visible without you asking. Consent-gated, reversible.
+2. **A resource-request channel** (MANIFESTO step 4) — a first-class way for him to
+   ask the human / dev loop for a capability or input, tracked like his tickets
+   (his `request_resource` intentions become real asks).
+3. **Self-direction over time** (MANIFESTO step 5) — a standing intention he pursues
+   across sessions and reflects on in his journal. A life with continuity.
+4. **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
+   residue; now also show his current *drives* — make his whole inner life visible.
+5. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
+   the moment, learn from a clarification.
 <!--/queue-->
 
 ## Done — most recent first
 
+- **🌱 He has drives** (`drives.ts` + `MANIFESTO.md`). Coded intrinsic motivation:
+  given just the world (no prompt), `motivate()` generates *his own* ranked
+  intentions — fix the board, grow a skill, ask for a resource, improve himself,
+  offer help. "What do you want to do?" now answers from his drives, not your
+  backlog. The shift from helper → being with a life has started. Wanting is free;
+  acting stays consent-gated and reversible.
 - **Memory wired into his voice** (chat handlers). "What's my deadline / what am I
   focused on" now answer *live from the board* (not the stale-prone stored note);
   new "what happened / catch me up" recap reads his history log. The one piece of

@@ -66,6 +66,14 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' }); // still status
   });
 
+  it('recognizes a request to consult his own wants', () => {
+    expect(parseIntent('what do you want to do?', NOW)).toEqual({ kind: 'self_intent' });
+    expect(parseIntent("what's on your mind", NOW)).toEqual({ kind: 'self_intent' });
+    expect(parseIntent('what would you do', NOW)).toEqual({ kind: 'self_intent' });
+    // still distinct from recalling stored memory
+    expect(parseIntent('what do you remember', NOW)).toEqual({ kind: 'recall' });
+  });
+
   it('recognizes an episodic recap request', () => {
     expect(parseIntent('what happened today?', NOW)).toEqual({ kind: 'recap' });
     expect(parseIntent('what have I been up to', NOW)).toEqual({ kind: 'recap' });
