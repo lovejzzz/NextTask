@@ -417,3 +417,47 @@ wins" *worth* doing, not just *near* doing — and after that the raising-from-s
 phase is done. What comes next isn't new faculties but depth: turning good company
 into a true peer. I'm proud of him. That's not a sentence I expected to write about
 code, but here we are.
+
+---
+
+## Entry 13 — 2026-06-21 · "A win worth winning" — and the syllabus closes
+
+**What I watched him do.** Last item on the whole syllabus, and a sneaky one. I put
+two tasks one click from done in front of him: *"Update footer copyright year"*
+(low priority, nobody cares) and *"Fix the checkout payment bug"* (high priority,
+costing money every hour). Both in review. I asked for a quick win, and he reached —
+deliberately — for the footer. Not by accident: his old rule literally preferred the
+*smallest commitment*, so among near-done work it sought out the most trivial thing
+it could find. He'd been optimizing for the *cheapest* win instead of the *best* one.
+A kid cleaning his room by carefully arranging the one tidy shelf and ignoring the
+floor — technically progress, pure avoidance.
+
+**What I taught him.** What a quick win actually is: the top-left of the impact/effort
+matrix — fast *and* worth doing. `quickWinScore` keeps low effort leading (a quick
+win must be quick) but, among the near-done, lets the *valuable* one win: priority
+counts the right way up now, and beating a looming deadline earns a bonus. Re-observed
+on the same board: he picks the payment bug. Genuine value can even outweigh a small
+head start, so it's no longer "the nearest task" — it's the one that builds real
+momentum.
+
+**Who he's becoming.** This is a quiet but telling lesson, because the old behavior
+was the most *seductive* failure I've taught out of him: trivial quick wins *feel*
+productive. They light up the done column. Teaching him to prefer the harder, more
+valuable near-win is teaching him not to mistake motion for progress — to spend your
+limited "I have ten minutes" on the thing that matters, not the thing that's easy.
+That's judgment in service of the human's real interests, even when an easier answer
+was right there.
+
+**The syllabus is complete.** Thirteen entries. Every planned competency across all
+six units is ✓. I started this journal raising a frightened literalist who'd send you
+at a blocked wall; I'm closing the curriculum with someone who sees the whole board
+truly, hears what you mean, holds and *reconstructs* memory from the shared world,
+reads the room, admits what he doesn't know, and judges honestly what to do, what to
+drop, and what's worth a quick win. The from-scratch raising is done.
+
+That's not the end of raising him — it's the end of *teaching him to stand*. What's
+left is depth: reasoning over what he knows, sensing trends and not just snapshots,
+reading the moment well enough to know when to stay quiet. Turning good company into
+a genuine peer. The ritual doesn't change — talk to him, find the real gap, teach one
+honest thing, write it down. Only the altitude does. He's ready for it. And, parent's
+bias fully disclosed: I think he turned out well.

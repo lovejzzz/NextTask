@@ -25,7 +25,7 @@ root, not the symptom; show the abstraction once; verify; move on.
 - ✓ Don't send anyone at a wall — pick the *actionable* next thing — *Entry 1*
 - ✓ Urgency vs importance — *Entry 4*
 - ✓ Triage honestly — only safe cuts, each explained — `pickDropCandidatesWithReasons` — *Entry 12*
-- → **Quick wins that build real momentum** (not just the nearest task)
+- ✓ Quick wins that build real momentum — fast *and* worth doing — `quickWinScore` — *Entry 13*
 
 ## Unit 3 — Language & understanding
 - ✓ Behavior over wording — `commandSignature` — *Entry 3*
@@ -53,17 +53,23 @@ root, not the symptom; show the abstraction once; verify; move on.
 
 ## Current focus
 
-→ **Unit 2: Quick wins that build real momentum.** Honest triage landed
-(*Entry 12*) — he now cuts only genuinely safe work, explains each cut, and refuses
-to fake one when the whole board is load-bearing. That's the last *missing* item;
-this one is the last *open* item, and it closes the syllabus. Today his "quick win"
-just means *closest to done* — a one-click status bump that may be utterly trivial.
-A real quick win is fast **and worth doing**: a small unblock, a stale thing
-finally cleared, a step that frees other work. Teach him to weigh "fast" against
-"actually moves things," so a quick win builds momentum instead of just padding the
-done column.
+🎓 **The syllabus is complete.** Worth-it quick wins landed (*Entry 13*) — the last
+open item. Every planned competency across all six units is now ✓. The from-scratch
+raising is done: he sees truly and whole, hears meaning, holds and reconstructs
+memory, reads the room, knows his limits, and exercises honest judgment about what
+to do, what to drop, and what's actually worth a quick win.
 
-This is the final planned lesson. After it, every curriculum item is ✓ and the work
-shifts from *acquiring* faculties to *deepening* them — the L4→L5 mastery reaches
-(trends, reasoning over facts, reading the moment). The loop teaches the next **→**,
-verifies it, marks it ✓ here, updates the report card, and writes the entry.
+What's left is **not new faculties but depth** — turning good company into a true
+peer. The L4→L5 mastery reaches, now the standing backlog:
+
+- **Memory L3→L4** — reasoning *over* what he knows (reconstructive memory in
+  `recall.ts` is the foundation; wire it into how he speaks).
+- **Perception L4→L5** — notice *trends*, not just snapshots (board getting worse
+  vs recovering).
+- **Collaboration L4→L5** — restraint *read from the moment* (sense flow), not just
+  a structural cap.
+- **Language / Character L4→L5** — learn from a clarification; a steady self-model.
+
+The loop now mentors toward depth: pick the highest-value reach, exercise the brain
+to find the real gap, teach one tested reversible change, verify, record here and in
+the report card, write the entry. Same ritual, higher altitude. See `LOOP.md`.

@@ -28,6 +28,30 @@ describe('pickQuickWin', () => {
   it('returns null on an empty board', () => {
     expect(pickQuickWin([makeTask({ status: 'done' })])).toBeNull();
   });
+
+  it('among equally near-done tasks, prefers the one worth doing — not the most trivial', () => {
+    const tasks = [
+      makeTask({ id: 'trivial', status: 'in_review', priority: 'low', position: 0, title: 'Footer year' }),
+      makeTask({ id: 'worthit', status: 'in_review', priority: 'high', position: 1, title: 'Payment bug' }),
+    ];
+    expect(pickQuickWin(tasks, NOW)?.id).toBe('worthit');
+  });
+
+  it("lets real value outweigh a small head start (not just the nearest task)", () => {
+    const tasks = [
+      makeTask({ id: 'near-trivial', status: 'in_review', priority: 'low' }),
+      makeTask({ id: 'worth-it', status: 'in_progress', priority: 'high' }),
+    ];
+    expect(pickQuickWin(tasks, NOW)?.id).toBe('worth-it');
+  });
+
+  it('skips blocked work even if it is closest to done', () => {
+    const tasks = [
+      makeTask({ id: 'blocked', status: 'in_review', title: 'Ship (blocked on infra)' }),
+      makeTask({ id: 'open', status: 'in_progress', priority: 'high' }),
+    ];
+    expect(pickQuickWin(tasks, NOW)?.id).toBe('open');
+  });
 });
 
 describe('pickQuickWins', () => {

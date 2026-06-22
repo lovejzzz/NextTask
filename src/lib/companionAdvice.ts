@@ -60,28 +60,41 @@ export function pickDropCandidatesWithReasons(tasks: Task[], now?: Date, limit =
     .map((task) => ({ task, reason: dropReason(task, ref) }));
 }
 
-const PRIORITY_WEIGHT: Record<string, number> = { low: 3, normal: 2, high: 1 };
+const WORTH: Record<string, number> = { high: 3, normal: 2, low: 1 };
 
-// Fastest first: closest to done, then smallest commitment, then board order.
-function byQuickness(a: Task, b: Task): number {
-  return (
-    CLOSENESS[b.status] - CLOSENESS[a.status] ||
-    PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority] ||
-    a.position - b.position
-  );
+/** A small bonus when finishing this also beats a looming deadline. */
+function dueSoonBoost(task: Task, now: Date): number {
+  if (!task.due_date) return 0;
+  return differenceInCalendarDays(parseISO(`${task.due_date}T00:00:00`), now) <= 2 ? 1.5 : 0;
 }
 
-/** The N fastest things to finish, skipping anything blocked. */
-export function pickQuickWins(tasks: Task[], limit = 2): Task[] {
+/**
+ * A real quick win lives in the top-left of the impact/effort matrix: fast to
+ * finish AND worth finishing. Closeness (low effort) leads, but among near-done
+ * work the *valuable* task wins — not the most trivial. This is the fix for the
+ * old "smallest commitment" rule, which did the exact opposite and steered you to
+ * busywork.
+ */
+export function quickWinScore(task: Task, now: Date = new Date()): number {
+  return CLOSENESS[task.status] * 6 + (WORTH[task.priority] + dueSoonBoost(task, now)) * 4;
+}
+
+function byWorthwhileQuickness(now: Date) {
+  return (a: Task, b: Task): number => quickWinScore(b, now) - quickWinScore(a, now) || a.position - b.position;
+}
+
+/** The N best quick wins — fast *and* worth doing — skipping anything blocked. */
+export function pickQuickWins(tasks: Task[], limit = 2, now: Date = new Date()): Task[] {
   const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
   const active = tasks.filter((task) => task.status !== 'done' && !blocked.has(task.id));
-  return [...active].sort(byQuickness).slice(0, limit);
+  return [...active].sort(byWorthwhileQuickness(now)).slice(0, limit);
 }
 
-/** The single fastest thing to finish: closest to done, then smallest commitment. */
-export function pickQuickWin(tasks: Task[]): Task | null {
-  const active = tasks.filter((task) => task.status !== 'done');
-  return active.length ? [...active].sort(byQuickness)[0] : null;
+/** The single best quick win: near-done and genuinely worth finishing. */
+export function pickQuickWin(tasks: Task[], now: Date = new Date()): Task | null {
+  const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
+  const active = tasks.filter((task) => task.status !== 'done' && !blocked.has(task.id));
+  return active.length ? [...active].sort(byWorthwhileQuickness(now))[0] : null;
 }
 
 /** The most pressing task — the focus ranking already weights overdue + priority. */
