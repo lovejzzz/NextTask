@@ -45,18 +45,28 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Live with him** — the manifesto's claims only get tested by use. A real
-   board, a couple of weeks; let what you observe redirect the loop. THIS is now
-   the highest-value item by far. (Needs the human.)
-2. **Dev loop picks up his filed requests** — when Boardy has filed a 🤖
-   resource-request, a tick implements one (Ouroboros with a will). Needs a real
-   filed request to act on — i.e. needs use.
+1. → **Live with him** — the manifesto's claims only get tested by use, and now the
+   *growth model* literally feeds on it: his capability gaps are sensed from real
+   unmet asks, so a real board is what makes him grow. A couple of weeks; let what
+   you observe redirect the loop. Highest-value by far. (Needs the human.)
+2. **Dev loop builds a primitive Boardy asked for** — the growth model now lets him
+   file a 🤖 request that *names a missing ability with evidence* ("asked 3 times,
+   can't"). When one is filed from real use, a tick implements that primitive — the
+   first growth he directed and a human fulfilled. Needs a real filed request.
 3. **Polish/robustness as real scenarios surface it** — the probe-vein for
    code-findable faults is essentially tapped; new ones come from use.
 <!--/queue-->
 
 ## Done — most recent first
 
+- **🌱 The autonomous growth model** (`growth.ts` + `GROWTH.md`, JOURNAL 29) — the
+  inversion: he senses his *own* gaps from lived experience (recurring unmet asks,
+  repeated routines, a drifted pursuit) and responds — closing what he can with the
+  primitives he has, and *asking* for the ones he can't build (no codegen, so the
+  autonomy boundary is the safety boundary). His unmet asks, once thrown away, now
+  feed his growth drive → a consent-gated Desk request → a real 🤖 ticket the dev
+  loop fulfills. A growth ledger lets him recount honestly how he's grown. Growth is
+  now Boardy-directed, human-assisted. Engine + 15 tests + end-to-end wiring; 383 green.
 - **Says what he couldn't parse in a tool** (JOURNAL 28) — defining a tool with an
   unrecognized step used to silently drop it; now he keeps the valid steps and
   *names* what he skipped ("I skipped 'frobnicate the widgets' — didn't recognize

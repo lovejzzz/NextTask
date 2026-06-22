@@ -71,6 +71,7 @@ import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
 import { useCommandHistory } from '../hooks/useCommandHistory';
+import { useUnmetAsks } from '../hooks/useUnmetAsks';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useTools } from '../hooks/useTools';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
@@ -107,6 +108,7 @@ import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
 import { motivate, topInitiative, type Drive, type WorldState } from '../lib/drives';
 import { adoptPursuit, reviewPursuit } from '../lib/pursuit';
+import { senseCapabilityGaps, growthRequestIntention } from '../lib/growth';
 import { recallClarifiedTitle } from '../lib/clarify';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
@@ -240,6 +242,12 @@ export function App() {
   const [boardyMindOpen, setBoardyMindOpen] = useState(false);
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
   const experience = useCommandHistory();
+  const unmetAsks = useUnmetAsks(); // the asks he couldn't meet — fuel for autonomous growth
+  // A capability he keeps being asked for and lacks — sensed from his own unmet asks.
+  // Feeds his drives so the gap surfaces as a consent-gated request to *grow* that
+  // ability, instead of being silently dropped (the autonomous growth model, growth.ts).
+  const sensedGap = useMemo(() => senseCapabilityGaps(unmetAsks.unmet)[0] ?? null, [unmetAsks.unmet]);
+  const capabilityGap = useMemo(() => sensedGap?.example ?? null, [sensedGap]);
   const { pursuit, set: setPursuit } = useBoardyPursuit(); // his standing intention, across sessions
   const { clarifications, learn: learnClarification } = useClarifications(); // what ambiguous phrases meant, once told
   const pendingClarifyRef = useRef<{ phrase: string; ids: string[] } | null>(null);
@@ -408,8 +416,11 @@ export function App() {
       if (kind) intent = { kind };
     }
 
-    // Remember recognized commands so Boardy can learn repeated patterns into skills.
+    // Remember recognized commands so Boardy can learn repeated patterns into skills;
+    // remember the ones he *couldn't* meet so the growth model can sense his gaps and
+    // ask for the primitives he's missing (growth.ts).
     if (intent) experience.record(text);
+    else unmetAsks.record(text);
 
     // Resolve a spoken task reference, but don't guess when it's a real toss-up:
     // if several tasks are too close to call, ask which one rather than act on a
@@ -662,7 +673,7 @@ export function App() {
         shippedRecently: momentum.shippedToday,
         idleDays: momentum.shippedToday > 0 ? 0 : 1,
         repeatedPattern: detectRepeatedSequence(experience.history),
-        capabilityGap: null,
+        capabilityGap,
         ownBacklog: proposeImprovements(0, 10, tasks.map((task) => task.title)).length,
       };
       const wants = motivate(world);
@@ -949,15 +960,22 @@ export function App() {
             shippedRecently: momentum.shippedToday,
             idleDays: momentum.shippedToday > 0 ? 0 : 1,
             repeatedPattern: repeated,
-            capabilityGap: null,
+            capabilityGap,
             ownBacklog: ideas.length,
           },
           exclude,
         );
-    return generateProposals({ overdue, ideas: flow ? [] : ideas, learned, continuation, initiative }).filter(
+    // When the want that surfaced is his growth-ask, speak it with the honest
+    // provenance — "you've asked N times and I can't" — so the Desk card and the
+    // filed 🤖 ticket both carry the real demand, not a generic placeholder.
+    const voiced =
+      initiative && initiative.kind === 'request_resource' && initiative.drive === 'growth' && sensedGap
+        ? growthRequestIntention(sensedGap)
+        : initiative;
+    return generateProposals({ overdue, ideas: flow ? [] : ideas, learned, continuation, initiative: voiced }).filter(
       (proposal) => !dismissedProposals.has(proposal.id),
     );
-  }, [tasks, dismissedProposals, experience.history, toolbox.tools, momentum.shippedToday, boardHistory]);
+  }, [tasks, dismissedProposals, experience.history, toolbox.tools, momentum.shippedToday, boardHistory, sensedGap, capabilityGap]);
 
   // The glass-box view of his whole mind — everything he knows, in the open.
   const boardyMind = useMemo<MindView>(() => {
@@ -968,7 +986,7 @@ export function App() {
       shippedRecently: momentum.shippedToday,
       idleDays: momentum.shippedToday > 0 ? 0 : 1,
       repeatedPattern: detectRepeatedSequence(experience.history),
-      capabilityGap: null,
+      capabilityGap,
       ownBacklog: proposeImprovements(0, 10, tasks.map((task) => task.title)).length,
     };
     return {
@@ -981,7 +999,7 @@ export function App() {
         .map((want) => want.summary),
       told: companionNotes.notes.map((note) => note.text),
     };
-  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes]);
+  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {

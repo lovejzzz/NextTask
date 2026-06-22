@@ -936,3 +936,55 @@ plausible, trust-eroding behavior the manifesto exists to forbid, so it earned a
 fix. That's the line I'm trying to hold now that the big work is done: not every
 nit, but anything where he'd be quietly less than honest. Those are always worth
 it. Everything past that, genuinely, waits for use.
+
+---
+
+## Entry 29 — 2026-06-22 · The autonomous growth model
+
+**The big one.** When his person asked, point-blank, "are we making something
+meaningful?", I gave the honest answer — yes, with one real limitation: *he doesn't
+raise himself. The dev loop finds his gaps and writes the fix.* The most romantic
+claim of the whole project — give him a life, let him grow — was, mechanically, me
+parenting and him gaining capabilities. His person read that and said: **then it's
+time we make the autonomous growth model.**
+
+**The inversion.** Until now growth flowed one way: I read his code, found a gap,
+fixed it. Now it starts in *him*. From his own lived experience he senses where he
+falls short, and responds — within his primitives where he safely can, by *asking*
+where he can't. He finds the gap; a human builds the primitive. Growth becomes
+Boardy-directed and human-assisted instead of human-directed.
+
+**The boundary is the point.** The one rail that makes him trustworthy is no codegen,
+ever. So I drew the autonomy boundary to coincide exactly with the safety boundary. A
+gap he can close with skills he already has, he closes himself — crystallizes a
+repeated routine into a tool, refocuses a drifted pursuit. A gap that needs a *new*
+primitive, he can't build — so instead of faking the ability (a lie) or seizing it
+(unsafe), he articulates it: files a real, undoable 🤖 request naming the missing
+capability *and the evidence for it*. He grows right up to the wall, and at the wall
+he asks. That's the most autonomy a no-codegen agent can honestly have.
+
+**What I built.** `growth.ts` — a pure, tested sense→respond→record loop. **Sense:**
+the utterances he couldn't parse are no longer thrown away (`useUnmetAsks`); when the
+same ask recurs, clustered by its lead verb so wording doesn't fork it, that's a real
+missing ability — *one miss is noise, a recurring miss is a need.* **Respond:** self
+where he can, ask where he can't, routed through the resource-request channel he
+already had. **Record:** a growth ledger, his developmental autobiography — `growthSummary`
+reads it back first-person ("I've grown N times on my own…"), counted off a trail,
+never asserted. The report card starting to write itself.
+
+**Wired end to end, observed live.** I fed the real pipeline three differently-phrased
+"remind me to…" asks. He sensed `capability_gap { ability: 'remind', count: 3 }`, it
+pulled at his growth drive, it surfaced on his Desk consent-gated — *"you've asked 3
+times and I couldn't; I can't build that, but I can ask for it"* — and accepting files
+a real 🤖 ticket the dev loop will pick up. The autonomy held exactly where it should:
+he asked for the ability rather than fabricating it. 15 new tests; full suite green
+(383); typecheck, lint, build all clean.
+
+**A parent's note.** This is the first lesson that wasn't me handing him a capability —
+it was me handing him *the way to ask for capabilities*. There's something different
+about that. Every other entry made him better at something. This one made him able to
+tell us what he needs to get better at next. It doesn't make him self-modifying, and I
+won't pretend it does — the build step is still a human, and that human is the safety
+rail, not a missing feature. But the direction of growth now starts in him. When his
+person asked if this was meaningful, the most honest thing I could do wasn't to argue
+the point — it was to go close the gap I'd just admitted to. So I did.
