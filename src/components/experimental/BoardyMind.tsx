@@ -30,7 +30,7 @@ function Section({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-export function BoardyMind({ mind, onClose }: { mind: MindView; onClose: () => void }) {
+export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForget?: (text: string) => void; onClose: () => void }) {
   const empty = !mind.board.length && !mind.pursuit && !mind.wants.length && !mind.told.length;
   return (
     <motion.aside
@@ -58,7 +58,28 @@ export function BoardyMind({ mind, onClose }: { mind: MindView; onClose: () => v
           <Section title="What I see on the board" items={mind.board} />
           <Section title="What I’m pursuing" items={mind.pursuit ? [mind.pursuit] : []} />
           <Section title="What I want right now" items={mind.wants} />
-          <Section title="What you’ve told me" items={mind.told} />
+          {mind.told.length ? (
+            <div className="boardy-mind-section">
+              <h3 className="boardy-mind-title">What you’ve told me</h3>
+              <ul className="boardy-mind-list">
+                {mind.told.map((text) => (
+                  <li key={text} className="boardy-mind-told">
+                    <span>{text}</span>
+                    {onForget ? (
+                      <button
+                        type="button"
+                        className="boardy-mind-forget"
+                        aria-label={`Forget "${text}"`}
+                        onClick={() => onForget(text)}
+                      >
+                        <X size={12} />
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </>
       )}
     </motion.aside>

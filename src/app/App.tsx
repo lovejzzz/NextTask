@@ -1545,7 +1545,9 @@ export function App() {
             ) : null}
           </AnimatePresence>
           <AnimatePresence>
-            {boardyMindOpen ? <BoardyMind mind={boardyMind} onClose={() => setBoardyMindOpen(false)} /> : null}
+            {boardyMindOpen ? (
+              <BoardyMind mind={boardyMind} onForget={companionNotes.forgetNote} onClose={() => setBoardyMindOpen(false)} />
+            ) : null}
           </AnimatePresence>
         </>
       ) : null}

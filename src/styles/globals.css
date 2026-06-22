@@ -3695,6 +3695,31 @@ textarea:focus-visible,
   line-height: 1.42;
 }
 
+.boardy-mind-told {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.boardy-mind-forget {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.boardy-mind-forget:hover {
+  background: var(--surface-soft);
+  color: var(--danger);
+}
+
 .boardy-mind-empty {
   margin: 0;
   padding: 12px 14px 16px;

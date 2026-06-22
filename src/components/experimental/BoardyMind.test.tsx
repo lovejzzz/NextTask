@@ -37,4 +37,16 @@ describe('BoardyMind (glass-box panel)', () => {
     screen.getByRole('button', { name: 'Close' }).click();
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('lets you forget a stored memory (correctable residue)', () => {
+    const onForget = vi.fn();
+    render(<BoardyMind mind={mind} onForget={onForget} onClose={() => {}} />);
+    screen.getByRole('button', { name: 'Forget "Works best in the mornings"' }).click();
+    expect(onForget).toHaveBeenCalledWith('Works best in the mornings');
+  });
+
+  it('is read-only when no onForget is given', () => {
+    render(<BoardyMind mind={mind} onClose={() => {}} />);
+    expect(screen.queryByRole('button', { name: /Forget/ })).not.toBeInTheDocument();
+  });
 });

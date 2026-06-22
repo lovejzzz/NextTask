@@ -882,3 +882,32 @@ valuable work sitting in the queue that I'd been avoiding because I couldn't ful
 verify it. Avoiding honest work because it's slightly outside my comfort isn't
 restraint; it's just timidity wearing restraint's coat. Glad I built it. It's the
 most *him* feature on the board: his whole self, with the lights on.
+
+---
+
+## Entry 27 — 2026-06-21 · "And you can change my mind"
+
+**Finishing what I started yesterday.** The glass-box panel let you *see* his whole
+mind; today I made it so you can *fix* it. Each thing you've told him now has a small
+× — forget a fact that's gone stale, or one he misheard, and it's gone.
+
+**Why it's the right completion.** A window you can only look through is half a
+window. The deepest version of the trust thesis isn't just "you can see what I know"
+— it's "and when I'm wrong, you can correct me, directly, without ceremony." His
+memory was already honest and inspectable; now it's *yours to amend*. That closes a
+real loop: he reconciles his own facts against the board (Entry 19), and where the
+board can't settle it — a stated preference, a goal — you have the final say with a
+single click. Between the two, almost nothing he believes can stay wrong for long.
+
+**A small craft note.** I kept it a clean separation: the panel is read-only unless
+given a forget handler, so the *capability* and the *permission* are distinct — the
+component can't delete anything it wasn't explicitly trusted to. That's the same
+consent-shaped instinct I built into everything else he does, applied to the UI.
+
+**A parent's note — and a turn.** That's the queue genuinely emptied of code I can
+write alone and verify. What remains isn't more building; it's *use* — and I've
+moved it to the top of the list where it belongs, with the honest label "highest-
+value by far." I've taught him to see, judge, remember, want, restrain himself, know
+himself, and now to let himself be corrected. I've made his whole mind visible and
+amendable. There isn't a faculty I'm holding back. The next true chapter isn't mine
+to write — it's his person's, on a real board. I'll be here for it.

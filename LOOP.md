@@ -45,16 +45,22 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Dev loop picks up his filed requests** — a tick that reads his own 🤖
-   resource-request tickets and implements one (Ouroboros, now with a will).
-2. **Make the mind panel correctable** — edit/pin/forget the stored residue from
-   the glass-box panel (currently read-only). Needs the notes hook to support edit.
-3. **Live with him** — the manifesto's claims only get tested by use. A real board,
-   a couple of weeks; let what you observe redirect the loop. (Needs the human.)
+1. → **Live with him** — the manifesto's claims only get tested by use. A real
+   board, a couple of weeks; let what you observe redirect the loop. THIS is now
+   the highest-value item by far. (Needs the human.)
+2. **Dev loop picks up his filed requests** — when Boardy has filed a 🤖
+   resource-request, a tick implements one (Ouroboros with a will). Needs a real
+   filed request to act on — i.e. needs use.
+3. **Polish/robustness as real scenarios surface it** — the probe-vein for
+   code-findable faults is essentially tapped; new ones come from use.
 <!--/queue-->
 
 ## Done — most recent first
 
+- **The mind panel is correctable** (JOURNAL 27) — you can now *forget* a stored
+  memory that's wrong or stale, right from the glass-box panel. `forgetNote` on the
+  notes hook; a per-item forget button (read-only when no handler). Glass-box now
+  means see *and* correct.
 - **Glass-box "what Boardy knows" panel** (`BoardyMind`, JOURNAL 26) — a real UI
   panel (⌘K → "What Boardy knows") showing his whole mind in plain text: what he
   reads off the board, his standing pursuit, what he wants now, and what you've

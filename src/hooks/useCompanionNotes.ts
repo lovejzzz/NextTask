@@ -37,10 +37,18 @@ export function useCompanionNotes() {
     });
   }, []);
 
+  const forgetNote = useCallback((text: string) => {
+    setNotes((current) => {
+      const next = current.filter((note) => note.text !== text);
+      save(next);
+      return next;
+    });
+  }, []);
+
   const clearNotes = useCallback(() => {
     setNotes([]);
     save([]);
   }, []);
 
-  return { notes, addNote, clearNotes };
+  return { notes, addNote, forgetNote, clearNotes };
 }
