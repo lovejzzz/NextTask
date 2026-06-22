@@ -183,9 +183,12 @@ meant to trust beside you, the relationship is the point.
   falls back to the `updated_at` proxy only when there's no log yet.
 - ✅ **Trace layer** (`memory.ts`) — the thin, decaying store for the residue the
   board can't hold. Unit-tested. Demoted from "the memory" to "the footnotes".
-- ⬜ **Record events from the app** — append a `BoardEvent` on each real board
-  mutation (create/move/complete/reschedule/reprioritize/delete) + persist the
-  log, so the history is real lived experience, not just a tested capability.
+- ✅ **Recording lived history from the app** (`deriveEvents` + `useBoardHistory`).
+  Rather than instrumenting every mutation call site, Boardy *observes* the board's
+  state transitions by diffing snapshots between renders, so an event is recorded
+  no matter what caused the change (drag, chat command, card edit). The `BoardEvent`
+  log persists across sessions (`next-task:board-history`). His history is now real
+  lived experience, not just a tested capability.
 - ⬜ **Wire recall into the chat handlers** — answer "what's my deadline / what am
   I focused on / what did I just ship" from `reconstruct()` instead of the stored
   `companionNotes`, so those answers are always live. (This is where the old

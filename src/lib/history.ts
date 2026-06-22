@@ -44,3 +44,40 @@ export function recordEvent(log: BoardEvent[], event: BoardEvent): BoardEvent[] 
   if (log.some((e) => e.id === event.id)) return log; // idempotent
   return [...log, event].slice(-CAP);
 }
+
+type TaskSnapshot = { id: string; title: string; status: string; due_date: string | null; priority: string };
+
+/**
+ * Derive events by *observing* the board's state transitions — diff two snapshots
+ * and emit what changed, regardless of what caused it (drag, chat command, card
+ * edit). This is the reconstructive stance applied to recording: the history is
+ * read off the world's actual changes, not stitched together by instrumenting
+ * every mutation call site. One change can yield several events (moved + rescheduled).
+ */
+export function deriveEvents(prev: TaskSnapshot[], next: TaskSnapshot[], now: number = Date.now()): BoardEvent[] {
+  const before = new Map(prev.map((t) => [t.id, t]));
+  const after = new Map(next.map((t) => [t.id, t]));
+  const events: BoardEvent[] = [];
+
+  for (const task of next) if (!before.has(task.id)) events.push(boardEvent('created', task, undefined, now));
+  for (const task of prev) if (!after.has(task.id)) events.push(boardEvent('dropped', task, undefined, now));
+
+  for (const task of next) {
+    const was = before.get(task.id);
+    if (!was) continue;
+    if (was.status !== task.status) {
+      events.push(
+        task.status === 'done'
+          ? boardEvent('completed', task, `${was.status} → done`, now)
+          : boardEvent('moved', task, `${was.status} → ${task.status}`, now),
+      );
+    }
+    if ((was.due_date ?? null) !== (task.due_date ?? null)) {
+      events.push(boardEvent('rescheduled', task, task.due_date ? `to ${task.due_date}` : 'cleared the due date', now));
+    }
+    if (was.priority !== task.priority) {
+      events.push(boardEvent('reprioritized', task, `${was.priority} → ${task.priority}`, now));
+    }
+  }
+  return events;
+}

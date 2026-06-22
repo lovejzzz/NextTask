@@ -66,6 +66,7 @@ import { useAccent } from '../hooks/useAccent';
 import { useBoardBrain } from '../hooks/useBoardBrain';
 import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
+import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useCommandHistory } from '../hooks/useCommandHistory';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useTools } from '../hooks/useTools';
@@ -254,6 +255,10 @@ export function App() {
   const board = boardQuery.data;
   const stats = statsQuery.data;
   const tasks = board?.tasks ?? EMPTY_TASKS;
+  // Boardy's lived history: observe the board's changes and record them as his
+  // episodic memory, persisted across sessions. Reconstructive recall reads this
+  // log (wired into chat next tick).
+  useBoardHistory(tasks);
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const syncing = boardQuery.isFetching || statsQuery.isFetching || mutations.reorderTasks.isPending;

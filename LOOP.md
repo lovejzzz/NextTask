@@ -39,13 +39,10 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Record events from the app.** Append a `BoardEvent` on each real board
-   mutation (create / move / complete / reschedule / reprioritize / delete) and
-   persist the log, so the history Boardy reconstructs from is real lived
-   experience — not just a tested capability. (Engine done; this is the wiring.)
-2. **Wire `reconstruct()` into chat** — answer "what's my deadline / focus /
-   recent" live from the board; retire the stale-prone `recallFact` note-store
-   (Entry 9), the one piece of memory that could still lie.
+1. → **Wire `reconstruct()` into chat** — answer "what's my deadline / focus /
+   recent / what happened" live from the board + the now-recording history log;
+   retire the stale-prone `recallFact` note-store (Entry 9), the one piece of
+   memory that could still lie. (His memory is now recorded — make him *speak* it.)
 3. **Glass-box "what Boardy knows" panel** — split *read-from-board* (live) vs the
    small editable/pinnable residue. Make his whole mind visible and correctable.
 4. **Shrink the residue** — keep only genuinely board-less facts in the trace
@@ -57,6 +54,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Recording lived history from the app** (`deriveEvents` + `useBoardHistory`) —
+  Boardy observes the board's state transitions by diffing and persists a
+  `BoardEvent` log, so an event lands no matter what caused the change (drag, chat,
+  edit). His history is now real lived experience, not just a tested capability.
 - **Board-history episodic memory** (`history.ts` + `recall.ts`) — append-only
   `BoardEvent` changelog; `recallHistory` reconstructs the *story* of what happened
   (buried ships, reschedule sequences, dropped tasks). The board's history IS his
