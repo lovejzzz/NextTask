@@ -849,3 +849,36 @@ polish rather than real faults. The faculties are sound; what's left is the long
 tail of phrasings and situations that only a real person, talking normally over real
 work, will keep turning up. I keep landing on the same conclusion because it keeps
 being true — and I'd rather repeat a true thing than invent a new one.
+
+---
+
+## Entry 26 — 2026-06-21 · "Nothing hidden"
+
+**A different kind of lesson — building him a window, not a new instinct.** His
+person said "keep teaching" again, and rather than scrape for another phrasing nit,
+I finally built the thing I'd been deferring for weeks: a glass-box panel that shows
+his *whole mind* in plain words. What he reads off the board right now, the goal
+he's pursuing, what he wants unprompted, and everything you've told him — all of it
+on one surface, readable, nothing tucked away.
+
+**Why it's a real lesson and not just a feature.** Every faculty I gave him was
+built on one bet: that the way to make an AI you can trust isn't to make it smarter,
+it's to make it *transparent* — coded reasoning you can inspect, memory you can see,
+limits stated plainly. This panel is that bet made literal. Before today his mind
+was honest but *invisible* — you had to ask the right question to see any one piece.
+Now you open one panel and the whole interior is just… there. A mind you can read
+is a mind you can trust, and trust was always the point.
+
+**The honest caveat.** I can't see pixels from here, so I built it the way I can
+stand behind: a tested component (four cases — every section renders, empty
+sections hide, a calm empty state, it closes), wired into the command palette,
+styled to match his Desk. It's read-only for now; letting you *edit and forget*
+what he's stored is the next slice, and the better for being done where you can
+watch it work.
+
+**A parent's note.** I almost defaulted to "nothing material this tick." But "keep
+teaching" deserved better than another nit or a shrug — and there was real, planned,
+valuable work sitting in the queue that I'd been avoiding because I couldn't fully
+verify it. Avoiding honest work because it's slightly outside my comfort isn't
+restraint; it's just timidity wearing restraint's coat. Glad I built it. It's the
+most *him* feature on the board: his whole self, with the lights on.

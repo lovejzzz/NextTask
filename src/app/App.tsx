@@ -101,7 +101,7 @@ import {
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { findStaleFocus, formatNotes, recallFact } from '../lib/companionNotes';
-import { recallFocus, recallHistory, recallNearestDeadline } from '../lib/recall';
+import { recallFocus, recallHistory, recallNearestDeadline, reconstruct } from '../lib/recall';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
@@ -116,6 +116,7 @@ import { buildStandup } from '../lib/standup';
 import { BoardCompanion } from '../components/experimental/BoardCompanion';
 import { BoardInsights } from '../components/experimental/BoardInsights';
 import { BoardyDesk } from '../components/experimental/BoardyDesk';
+import { BoardyMind, type MindView } from '../components/experimental/BoardyMind';
 import { CommandPalette, type Command as PaletteCommand } from '../components/experimental/CommandPalette';
 import { Confetti } from '../components/experimental/Confetti';
 import { FocusSpotlight } from '../components/experimental/FocusSpotlight';
@@ -236,6 +237,7 @@ export function App() {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [boardyDeskOpen, setBoardyDeskOpen] = useState(false);
+  const [boardyMindOpen, setBoardyMindOpen] = useState(false);
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
   const experience = useCommandHistory();
   const { pursuit, set: setPursuit } = useBoardyPursuit(); // his standing intention, across sessions
@@ -953,6 +955,30 @@ export function App() {
     );
   }, [tasks, dismissedProposals, experience.history, toolbox.tools, momentum.shippedToday, boardHistory]);
 
+  // The glass-box view of his whole mind — everything he knows, in the open.
+  const boardyMind = useMemo<MindView>(() => {
+    const world: WorldState = {
+      overdue: insights.overdue,
+      stale: tasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length,
+      active: insights.active,
+      shippedRecently: momentum.shippedToday,
+      idleDays: momentum.shippedToday > 0 ? 0 : 1,
+      repeatedPattern: detectRepeatedSequence(experience.history),
+      capabilityGap: null,
+      ownBacklog: proposeImprovements(0, 10, tasks.map((task) => task.title)).length,
+    };
+    return {
+      board: reconstruct(tasks, [], new Date(), '', boardHistory)
+        .filter((recollection) => recollection.source === 'board')
+        .map((recollection) => recollection.text),
+      pursuit: pursuit ? reviewPursuit(pursuit, world).reflection : null,
+      wants: motivate(world)
+        .slice(0, 3)
+        .map((want) => want.summary),
+      told: companionNotes.notes.map((note) => note.text),
+    };
+  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes]);
+
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {
       await chatWithBoard([{ role: 'user', content: 'clear overdue' }], () => {});
@@ -1306,6 +1332,7 @@ export function App() {
     { id: 'persona', label: `Board personality: ${roast}`, keywords: 'roast tone gentle savage personality', icon: Drama, run: cyclePersona },
     { id: 'goal', label: `Daily ship goal: ${goal}`, keywords: 'goal target daily ships quota', icon: Target, run: cycleGoal },
     { id: 'boardy-desk', label: `🤖 Open ${COMPANION_NAME}'s Desk`, keywords: 'boardy desk proposals wants collaborate accept ai peer upgrades', icon: Bot, run: () => setBoardyDeskOpen(true) },
+    { id: 'boardy-mind', label: `🧠 What ${COMPANION_NAME} knows`, keywords: 'boardy mind memory drives pursuit glass box transparency inspect knows', icon: Bot, run: () => setBoardyMindOpen(true) },
     ...(brain.status !== 'off'
       ? [
           {
@@ -1516,6 +1543,9 @@ export function App() {
                 onClose={() => setBoardyDeskOpen(false)}
               />
             ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {boardyMindOpen ? <BoardyMind mind={boardyMind} onClose={() => setBoardyMindOpen(false)} /> : null}
           </AnimatePresence>
         </>
       ) : null}

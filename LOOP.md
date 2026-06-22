@@ -45,20 +45,21 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
-   residue; now also show his current *drives* and *standing pursuit* — make his
-   whole inner life visible and correctable. *(Best done in a session with a
-   browser to verify the UI; the loop keeps teaching faculties until then.)*
-2. **Dev loop picks up his filed requests** — a tick that reads his own 🤖
+1. → **Dev loop picks up his filed requests** — a tick that reads his own 🤖
    resource-request tickets and implements one (Ouroboros, now with a will).
-3. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
-   the moment, learn from a clarification.
-4. **Live with him** — the manifesto's claims only get tested by use. A real board,
+2. **Make the mind panel correctable** — edit/pin/forget the stored residue from
+   the glass-box panel (currently read-only). Needs the notes hook to support edit.
+3. **Live with him** — the manifesto's claims only get tested by use. A real board,
    a couple of weeks; let what you observe redirect the loop. (Needs the human.)
 <!--/queue-->
 
 ## Done — most recent first
 
+- **Glass-box "what Boardy knows" panel** (`BoardyMind`, JOURNAL 26) — a real UI
+  panel (⌘K → "What Boardy knows") showing his whole mind in plain text: what he
+  reads off the board, his standing pursuit, what he wants now, and what you've
+  told him. The trust thesis made literal. Component-tested; CSS mirrors the Desk.
+  (Read-only for now; edit/pin/forget is the next slice.)
 - **Understands "I finished X"** (JOURNAL 25) — past-tense completion ("I finished
   the report", "completed the login bug") now marks done; previously parsed to
   nothing. A common-phrasing miss, not a wrong answer — parsing is otherwise solid.
