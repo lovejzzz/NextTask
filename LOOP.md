@@ -59,6 +59,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Steady self-model** (`describeSelf`, JOURNAL 21) — asked what he is, he answers
+  plainly and humbly: coded brain + small voice, what he can do, and his limits
+  stated as frankly as his abilities. The sixth L4→L5; **every faculty now reaches
+  the mastery tier.** (Character L4→L5.)
 - **Second-order judgment: the bottleneck** (`pickUnblocker`, JOURNAL 20) — spots
   the task others are waiting on and flags that clearing it unblocks the most,
   instead of only answering the surface "what's next". Sees leverage, not just the

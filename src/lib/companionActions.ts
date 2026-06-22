@@ -26,6 +26,7 @@ export type CompanionIntent =
   | { kind: 'recall_fact'; topic: string }
   | { kind: 'recap' }
   | { kind: 'self_intent' }
+  | { kind: 'self_describe' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -180,6 +181,16 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(your (?:own )?(?:backlog|tickets|queue|upgrades|wishlist)|what have you (?:queued|filed)|what are you (?:working on|building) for yourself|ouroboros (?:status|backlog|queue))\b/.test(lower)) {
     return { kind: 'ouroboros_backlog' };
+  }
+  // Honest self-description ("what are you / what can you do") — distinct from
+  // "what are you working on" (ouroboros_backlog, above) and "what do you want"
+  // (self_intent). The negative lookahead keeps activity questions out.
+  if (
+    /\bwhat can you do\b|\bwhat are you\b(?!\s+(?:working|building|doing|up to))|\bwho are you\b|\bhow do you work\b|\bwhat (?:are )?your (?:limits|abilities|capabilities)\b|\bhow do i use you\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'self_describe' };
   }
   if (/\bwhat'?s next\b/.test(lower) || /^(?:next(?: up| task)?\??|what should i (?:do|work on)\??)$/.test(lower)) {
     return { kind: 'whats_next' };

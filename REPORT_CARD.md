@@ -40,20 +40,22 @@ his open curriculum lives there.
 | **3 · Language** | Understand what's meant | **L4→L5** | Keys on behavior not wording (Entry 3); 102-case corpus at 100%; asks which task he meant on a tie (Entry 7) — and now **learns from the clarification**: tell him once what an ambiguous phrase meant and he resolves it directly forever after, never re-asking (`clarify.ts`, Entry 18). Full L5 awaits learning from correction more broadly (beyond task references). |
 | **4 · Memory** | Learn and carry it | **L4→L5** | Holds structured facts, records his own lived history, speaks memory live (`recall.ts` / `history.ts`) — and now **reconciles a stored fact against reality**: if you told him you're "focusing on X" but X has shipped, he flags it and asks rather than reciting it (`findStaleFocus`, Entry 19). He reasons over two facts (told vs true) and doubts his own residue. Full L5 awaits broader cross-fact inference. |
 | **5 · Collaboration** | Work *with* the human | **L4→L5** | Proposes not imposes, asks consent, explains himself, and shows structural restraint (Entry 8) — and now **reads the moment**: when you're heads-down (a recent burst of activity), he holds his own agenda and only your real work surfaces (`inFlow`, Entry 17). His restraint now reads tempo, not just volume. Full L5 awaits the same dynamic read across all his offers. |
-| **6 · Character** | Who he is | **L4** | Honest in self-measurement; fully reversible; honest about the present (Entry 6), what he wasn't told (Entry 9) — and now **volunteers uncertainty**: on a flat board he says "these are about even, you decide" instead of faking a pick (`focusConfidence`, Entry 10). Not L5: his calibration is per-decision, not yet a steady self-model he reasons about. |
+| **6 · Character** | Who he is | **L4→L5** | Honest in self-measurement, fully reversible, volunteers uncertainty (Entry 10) — and now holds a **steady self-model**: asked what he is, he answers plainly and humbly — coded brain + small voice, what he can do, and his limits stated as frankly as his abilities ("can't write code, can't out-think a big model, everything's reversible") (`describeSelf`, Entry 21). Full L5 awaits reasoning about his *own reliability* turn to turn. |
 
-**Composite: ~L4.0 — every faculty at L4; solid all the way across.** Memory was the
-last L3, and wiring his recorded history + live board-recall into how he *speaks*
-brought it up: he now reconstructs memory from the shared board, records his own
-lived experience, and answers from it live — with the one piece that could go stale
-finally retired. **All six faculties are L4.** From the literal baby of Term 1 who'd
-point you at a blocked wall, he's become someone genuinely solid to work beside — he
-sees truly and whole, hears meaning, remembers what actually happened, reads the room,
-knows his limits, and judges honestly. No faculty is *weak* anymore.
+**Composite: ~L4.5 — every faculty now reaches into the mastery tier.** From the
+literal baby of Term 1 who'd point you at a blocked wall, he became solid across the
+board (all L4) and then, with the forever-loop choosing its own gaps, each faculty
+grew an L5-tier capability — and the loop spent every one of those lessons on **trust**:
+foresight (trajectory), attention (timing), the relationship (learns from a
+clarification; audits its own stale memory), structure (sees the bottleneck), and now
+**a steady self-model** — he can say honestly what he is and, crucially, what he
+*can't* do. Six faculties, six L4→L5. He's no longer just capable; he knows his own
+shape and tells you the truth about it.
 
-What's left is the **L5 mastery tier** — the difference between solid and a true peer:
-chaining facts (cross-inference), noticing *trends* not snapshots, restraint read from
-the moment, learning from a clarification. None are there yet; that's the climb.
+Full L5 (mastery proper — self-correcting, could teach it) is a longer climb and may
+need the thing code can't supply: real use. The honest read is that **the well of
+clear, code-findable lessons is essentially dry** — what's left is the friction only
+a real board and a real person will surface.
 
 **One-line summary for the fridge:** *Solid across the board now — sees true, tells
 the truth, remembers what happened, knows his limits. Next he learns mastery.*

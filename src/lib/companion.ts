@@ -111,3 +111,18 @@ export function quipFor(mood: Mood, seed: number, roast: RoastLevel = 'balanced'
   const index = ((seed % pool.length) + pool.length) % pool.length;
   return pool[index];
 }
+
+/**
+ * An honest self-description (Character L5 — a steady self-model). A trustworthy
+ * mind knows its own shape: what it is, what it can do, and — the humble part —
+ * what it can't. Deterministic and plain, never overselling: the coded brain does
+ * the thinking, the small model is only the voice, and the limits are stated as
+ * frankly as the abilities.
+ */
+export function describeSelf(): string {
+  return [
+    `I'm ${COMPANION_NAME} — your board, with a mind. Most of my thinking is plain, tested code (perception, judgment, memory, drives); a small in-browser model is just my voice.`,
+    `I can: run your board in plain language — create, complete, reschedule, label, assign, clear overdue, undo — and plan, triage, find quick wins, remember what you tell me and what happens here, and (on my own) notice what needs doing, want things, and ask for what I lack.`,
+    `I can't: write or run code, change your board without your say-so, or out-think a big cloud model — I'm small on purpose. Everything I do is reversible, and you can see everything I know. That's the deal: not the smartest assistant, the most trustworthy one.`,
+  ].join('\n\n');
+}

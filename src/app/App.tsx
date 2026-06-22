@@ -87,7 +87,7 @@ import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEva
 import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
 import { detectRepeatedSequence, suggestSkillContinuation, suggestSkillName } from '../lib/skills';
-import { COMPANION_NAME } from '../lib/companion';
+import { COMPANION_NAME, describeSelf } from '../lib/companion';
 import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
@@ -640,6 +640,10 @@ export function App() {
       const history = recallHistory(boardHistory);
       if (!history.length) return "Nothing's happened on the board yet that I've seen. Make a move and I'll remember it.";
       return `Here's what's been happening:\n${history.map((r) => `- ${r.text}`).join('\n')}`;
+    }
+
+    if (intent?.kind === 'self_describe') {
+      return describeSelf();
     }
 
     if (intent?.kind === 'self_intent') {

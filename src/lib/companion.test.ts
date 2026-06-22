@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { IDLE_THRESHOLD_MS, quipFor, readMood, type CompanionSignals } from './companion';
+import { COMPANION_NAME, describeSelf, IDLE_THRESHOLD_MS, quipFor, readMood, type CompanionSignals } from './companion';
 
 const base: CompanionSignals = {
   active: 4,
@@ -73,5 +73,23 @@ describe('quipFor', () => {
   it('falls back to the balanced pool for an unknown tone', () => {
     // @ts-expect-error exercising the runtime fallback
     expect(quipFor('proud', 0, 'nonsense')).toBe(quipFor('proud', 0, 'balanced'));
+  });
+});
+
+describe('describeSelf (honest self-model)', () => {
+  const self = describeSelf();
+
+  it('names what he is, plainly', () => {
+    expect(self).toContain(COMPANION_NAME);
+    expect(self).toMatch(/code/i);
+    expect(self).toMatch(/voice/i);
+  });
+
+  it('states his limits as frankly as his abilities', () => {
+    expect(self).toMatch(/can't|cannot/i);
+    expect(self).toMatch(/reversible/i);
+    expect(self).toMatch(/trustworthy/i);
+    // the no-codegen line, in plain words
+    expect(self.toLowerCase()).toMatch(/write or run code/);
   });
 });

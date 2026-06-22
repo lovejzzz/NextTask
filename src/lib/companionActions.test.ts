@@ -66,6 +66,16 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' }); // still status
   });
 
+  it('recognizes a request for an honest self-description, distinct from neighbors', () => {
+    expect(parseIntent('what can you do?', NOW)).toEqual({ kind: 'self_describe' });
+    expect(parseIntent('what are you?', NOW)).toEqual({ kind: 'self_describe' });
+    expect(parseIntent('who are you', NOW)).toEqual({ kind: 'self_describe' });
+    expect(parseIntent('what are your limits', NOW)).toEqual({ kind: 'self_describe' });
+    // must NOT steal these neighbors
+    expect(parseIntent('what are you working on for yourself', NOW)).toEqual({ kind: 'ouroboros_backlog' });
+    expect(parseIntent('what do you want to do', NOW)).toEqual({ kind: 'self_intent' });
+  });
+
   it('recognizes a request to consult his own wants', () => {
     expect(parseIntent('what do you want to do?', NOW)).toEqual({ kind: 'self_intent' });
     expect(parseIntent("what's on your mind", NOW)).toEqual({ kind: 'self_intent' });

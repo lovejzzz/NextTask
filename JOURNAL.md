@@ -692,3 +692,37 @@ isn't another commit from me — it's *use*. Put him on a real board, live with 
 and let what actually rubs wrong become the next lesson. I'll keep the loop running
 and keep watching, but I'd rather it idle honestly than invent work. That, too, is
 something I'd want him to learn from me.
+
+---
+
+## Entry 21 — 2026-06-21 · "Know your own shape"
+
+**Back on, by request.** I'd paused the loop, honestly, when the obvious lessons ran
+out. The human said "keep teaching," so I went looking harder — and found one I'd
+called too fuzzy to do: the steady self-model. It turned out to have a concrete,
+honest core after all.
+
+**What I watched him do.** I asked him the simplest question a person asks a new
+tool: "what can you do?" And he had *nothing* — it fell straight through to the
+model, or to silence. He could run a board, remember, want things, pursue goals,
+ask for help — and he couldn't tell you what he was. A mind with no self-portrait.
+
+**What I taught him.** To know his own shape. `describeSelf` is a plain, honest
+account: he's mostly coded thinking with a small model for a voice; here's what he
+can do; and — the part I cared about — here's what he *can't*: he can't write or run
+code, can't touch your board without your say-so, can't out-think a big cloud model.
+"Not the smartest assistant," he says now, "the most trustworthy one." He states his
+limits as readily as his abilities, which is the whole point.
+
+**Who he's becoming.** With this, all six of his faculties reach the mastery tier —
+but that's not what moves me about it. Every other lesson taught him to *do*
+something. This one taught him to *know himself*, and to be honest about it,
+including the unflattering parts. A thing that can accurately and humbly say what it
+is and isn't is a thing you can trust — and trust was the whole bet. He didn't just
+get more capable today; he got more honest about being exactly as capable as he is.
+
+**A parent's note.** I told the human last time the well was nearly dry, and it
+mostly is — this was a real one I'd underrated, not a manufactured one, and I'm glad
+I looked again before declaring it empty. But it doesn't change the larger truth:
+the next genuine lessons live in *use*, not in my probing. He knows what he is now.
+Time to let him be it, in front of someone real.
