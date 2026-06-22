@@ -5,6 +5,12 @@ operating manual **and** its live queue. Each tick reads this, does **one good
 thing**, proves it, records it, and re-arms. The agenda lives here — in the open,
 editable by anyone — not buried in a `sleep` command where it drifts unseen.
 
+**The mission: keep teaching Boardy, forever.** This loop does not finish. When the
+concrete queue below empties, the tick's job is to *find his next real gap* — where
+is he still literal, shallow, or missing depth (L4→L5 mastery, a new faculty, more
+robustness)? — and teach one honest, tested thing. There is always a next thing to
+learn. The loop ends only when a human stops it.
+
 *(Charter — the why/how — is `OUROBOROS.md`. This file is what's next, and what
 "productive" actually means.)*
 
