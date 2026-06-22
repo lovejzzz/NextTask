@@ -24,6 +24,7 @@ export type CompanionIntent =
   | { kind: 'remember'; note: string }
   | { kind: 'recall' }
   | { kind: 'recall_fact'; topic: string }
+  | { kind: 'recap' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -114,6 +115,14 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/\b(what do you (?:remember|know)(?: about me)?|what did i tell you|what'?s in your memory)\b/.test(lower)) {
     return { kind: 'recall' };
+  }
+  // Episodic recap — "what happened", reconstructed from the board's history log.
+  if (
+    /\b(what (?:happened|changed|did i (?:do|get done|work on))|what have i been (?:up to|doing)|catch me up|recap|my recent (?:activity|history))\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'recap' };
   }
   // Targeted recall of a single fact, e.g. "what's my deadline", "what am I focusing on".
   let factQ: RegExpMatchArray | null;

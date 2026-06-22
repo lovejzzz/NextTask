@@ -97,6 +97,7 @@ import {
 import { eventLine, type CompanionEvent } from '../lib/companionEvents';
 import { summarizeMemory } from '../lib/companionMemory';
 import { formatNotes, recallFact } from '../lib/companionNotes';
+import { recallFocus, recallHistory, recallNearestDeadline } from '../lib/recall';
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks } from '../lib/experimental';
@@ -257,8 +258,8 @@ export function App() {
   const tasks = board?.tasks ?? EMPTY_TASKS;
   // Boardy's lived history: observe the board's changes and record them as his
   // episodic memory, persisted across sessions. Reconstructive recall reads this
-  // log (wired into chat next tick).
-  useBoardHistory(tasks);
+  // log so he can speak what actually happened.
+  const boardHistory = useBoardHistory(tasks);
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const syncing = boardQuery.isFetching || statsQuery.isFetching || mutations.reorderTasks.isPending;
@@ -588,9 +589,26 @@ export function App() {
     }
 
     if (intent?.kind === 'recall_fact') {
+      // Board-derivable facts are answered LIVE so they can't go stale; only
+      // genuinely board-less facts (a stated goal, a preference) come from the
+      // stored residue. This retires the part of recallFact that could lie.
+      if (intent.topic === 'deadline') {
+        const live = recallNearestDeadline(tasks);
+        if (live) return live.text;
+      }
+      if (intent.topic === 'focus') {
+        const live = recallFocus(tasks);
+        if (live) return live.text;
+      }
       const fact = recallFact(companionNotes.notes, intent.topic);
       if (fact) return `${fact}. (You told me that one.)`;
       return `You haven't told me your ${intent.topic} yet — say so and I'll hold onto it.`;
+    }
+
+    if (intent?.kind === 'recap') {
+      const history = recallHistory(boardHistory);
+      if (!history.length) return "Nothing's happened on the board yet that I've seen. Make a move and I'll remember it.";
+      return `Here's what's been happening:\n${history.map((r) => `- ${r.text}`).join('\n')}`;
     }
 
     if (intent?.kind === 'undo') {

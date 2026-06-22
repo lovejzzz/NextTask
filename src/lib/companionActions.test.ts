@@ -66,6 +66,13 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' }); // still status
   });
 
+  it('recognizes an episodic recap request', () => {
+    expect(parseIntent('what happened today?', NOW)).toEqual({ kind: 'recap' });
+    expect(parseIntent('what have I been up to', NOW)).toEqual({ kind: 'recap' });
+    expect(parseIntent('catch me up', NOW)).toEqual({ kind: 'recap' });
+    expect(parseIntent('what did I get done', NOW)).toEqual({ kind: 'recap' });
+  });
+
   it('recognizes targeted recall of a single remembered fact', () => {
     expect(parseIntent("what's my deadline?", NOW)).toEqual({ kind: 'recall_fact', topic: 'deadline' });
     expect(parseIntent('when is my deadline', NOW)).toEqual({ kind: 'recall_fact', topic: 'deadline' });

@@ -39,21 +39,21 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Wire `reconstruct()` into chat** — answer "what's my deadline / focus /
-   recent / what happened" live from the board + the now-recording history log;
-   retire the stale-prone `recallFact` note-store (Entry 9), the one piece of
-   memory that could still lie. (His memory is now recorded — make him *speak* it.)
-3. **Glass-box "what Boardy knows" panel** — split *read-from-board* (live) vs the
+1. → **Glass-box "what Boardy knows" panel** — split *read-from-board* (live) vs the
    small editable/pinnable residue. Make his whole mind visible and correctable.
-4. **Shrink the residue** — keep only genuinely board-less facts in the trace
+2. **Shrink the residue** — keep only genuinely board-less facts in the trace
    layer; let the board carry everything it can.
-5. **L4→L5 depth** (post-syllabus mastery) — reason *over* facts (Memory→L4),
+3. **L4→L5 depth** (post-syllabus mastery) — reason *over* facts (Memory→L4),
    notice *trends* not snapshots (Perception→L5), restraint read from the moment
    (Collaboration→L5), learn from a clarification (Language→L5).
 <!--/queue-->
 
 ## Done — most recent first
 
+- **Memory wired into his voice** (chat handlers). "What's my deadline / what am I
+  focused on" now answer *live from the board* (not the stale-prone stored note);
+  new "what happened / catch me up" recap reads his history log. The one piece of
+  memory that could lie is retired. **Memory → L4.**
 - **Recording lived history from the app** (`deriveEvents` + `useBoardHistory`) —
   Boardy observes the board's state transitions by diffing and persists a
   `BoardEvent` log, so an event lands no matter what caused the change (drag, chat,
