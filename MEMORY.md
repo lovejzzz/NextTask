@@ -174,8 +174,18 @@ meant to trust beside you, the relationship is the point.
 - ✅ **Reconstruction engine** (`recall.ts`) — derives episodic + semantic memory
   live from the board; `reconstruct()` blends board (primary) with residue
   (secondary). Unit-tested, including the anti-rot property.
+- ✅ **Board history = episodic memory** (`history.ts` + `recall.ts`). An
+  append-only `BoardEvent` log (created / moved / completed / rescheduled /
+  reprioritized / dropped) is the board's own changelog; `recallHistory()`
+  reconstructs the *story* of what happened — ships an edit would bury, the
+  sequence of reschedules, even tasks dropped that leave no card. Immutable past
+  facts, so still rot-proof. `reconstruct()` uses the log for episodic memory and
+  falls back to the `updated_at` proxy only when there's no log yet.
 - ✅ **Trace layer** (`memory.ts`) — the thin, decaying store for the residue the
   board can't hold. Unit-tested. Demoted from "the memory" to "the footnotes".
+- ⬜ **Record events from the app** — append a `BoardEvent` on each real board
+  mutation (create/move/complete/reschedule/reprioritize/delete) + persist the
+  log, so the history is real lived experience, not just a tested capability.
 - ⬜ **Wire recall into the chat handlers** — answer "what's my deadline / what am
   I focused on / what did I just ship" from `reconstruct()` instead of the stored
   `companionNotes`, so those answers are always live. (This is where the old

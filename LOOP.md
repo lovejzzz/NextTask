@@ -39,10 +39,10 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Board-history episodic memory.** Append-only `BoardEvent` log (created /
-   moved / rescheduled / completed / dropped); `recall.ts` reconstructs *real*
-   episodic memory from it, not the `updated_at` proxy. The board's history IS
-   Boardy's memory — his body's record of its own life. (See MEMORY.md.)
+1. → **Record events from the app.** Append a `BoardEvent` on each real board
+   mutation (create / move / complete / reschedule / reprioritize / delete) and
+   persist the log, so the history Boardy reconstructs from is real lived
+   experience — not just a tested capability. (Engine done; this is the wiring.)
 2. **Wire `reconstruct()` into chat** — answer "what's my deadline / focus /
    recent" live from the board; retire the stale-prone `recallFact` note-store
    (Entry 9), the one piece of memory that could still lie.
@@ -57,6 +57,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Board-history episodic memory** (`history.ts` + `recall.ts`) — append-only
+  `BoardEvent` changelog; `recallHistory` reconstructs the *story* of what happened
+  (buried ships, reschedule sequences, dropped tasks). The board's history IS his
+  memory. Engine + tests done; app event-recording is the next queue item.
 - **Worth-it quick wins** (`quickWinScore`, JOURNAL 13) — fast AND valuable, not
   the most trivial near-done task. Judgment→L4. **🎓 Closes the curriculum** — every
   planned competency ✓. *(Pulled forward off-queue: the human asked for a mentoring

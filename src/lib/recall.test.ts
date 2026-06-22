@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../test/factories';
+import { boardEvent, recordEvent, type BoardEvent } from './history';
 import { remember, type MemoryStore } from './memory';
-import { reconstruct, recallFromBoard, recallNearestDeadline, recallNeglected, recallRecentlyShipped } from './recall';
+import { reconstruct, recallFromBoard, recallHistory, recallNearestDeadline, recallNeglected, recallRecentlyShipped } from './recall';
 
 const NOW = new Date(2026, 5, 20); // 2026-06-20
+const at = (iso: string) => new Date(iso).getTime();
 
 describe('recallNearestDeadline (read live from the board)', () => {
   it('reads the nearest deadline straight off the cards', () => {
@@ -63,6 +65,40 @@ describe('recallFromBoard', () => {
   });
 });
 
+describe('recallHistory (episodic memory from the board changelog)', () => {
+  it('remembers the story of a day — what happened, not just current state', () => {
+    let log: BoardEvent[] = [];
+    log = recordEvent(log, boardEvent('completed', { id: '1', title: 'Login fix' }, undefined, at('2026-06-19T10:00:00Z')));
+    log = recordEvent(log, boardEvent('created', { id: '2', title: 'New task' }, undefined, at('2026-06-19T11:00:00Z')));
+    const [yesterday] = recallHistory(log, NOW);
+    expect(yesterday.text).toMatch(/^Yesterday you/);
+    expect(yesterday.text).toContain('shipped "Login fix"');
+    expect(yesterday.text).toContain('added 1 task');
+  });
+
+  it('remembers a ship even after a later edit would bury it in updated_at', () => {
+    // Problem 1 from the TALK: shipped yesterday, the card touched again since.
+    const log = recordEvent([], boardEvent('completed', { id: '1', title: 'Launch' }, undefined, at('2026-06-19T09:00:00Z')));
+    expect(recallHistory(log, NOW)[0].text).toContain('shipped "Launch"');
+  });
+
+  it('remembers a task that was created and then dropped — gone from the board, kept in history', () => {
+    // Problem 3 from the TALK: no card survives, but the event did.
+    const log = recordEvent([], boardEvent('dropped', { id: '9', title: 'Spike' }, undefined, at('2026-06-19T09:00:00Z')));
+    expect(recallHistory(log, NOW)[0].text).toContain('dropped "Spike"');
+  });
+
+  it('keeps the most recent days, newest first', () => {
+    const nowPm = new Date(2026, 5, 20, 18, 0, 0); // a real moment, not midnight
+    let log: BoardEvent[] = [];
+    log = recordEvent(log, boardEvent('completed', { id: '1', title: 'Old' }, undefined, at('2026-06-18T09:00:00Z')));
+    log = recordEvent(log, boardEvent('completed', { id: '2', title: 'Fresh' }, undefined, at('2026-06-20T09:00:00Z')));
+    const hist = recallHistory(log, nowPm);
+    expect(hist[0].text).toMatch(/^Today/);
+    expect(hist[1].text).toMatch(/days ago|Yesterday/);
+  });
+});
+
 describe('reconstruct (board primary, stored residue secondary)', () => {
   const traces = (): MemoryStore => remember([], { kind: 'semantic', text: 'Works best in the mornings', source: 'user-told' }, NOW.getTime());
 
@@ -78,5 +114,13 @@ describe('reconstruct (board primary, stored residue secondary)', () => {
     const tasks = [makeTask({ id: 'due', title: 'Invoice', status: 'todo', due_date: '2026-06-22' })];
     const hits = reconstruct(tasks, [], NOW, 'deadline');
     expect(hits.some((r) => /deadline/i.test(r.text) && r.source === 'board')).toBe(true);
+  });
+
+  it('uses the real changelog for episodic memory when a log is present', () => {
+    const tasks = [makeTask({ id: 'due', title: 'Invoice', status: 'todo', due_date: '2026-06-22' })];
+    const log = recordEvent([], boardEvent('completed', { id: 'g', title: 'Ghost task' }, undefined, at('2026-06-19T09:00:00Z')));
+    // "Ghost task" isn't on the board at all — only the history knows it shipped.
+    const hits = reconstruct(tasks, [], NOW, '', log);
+    expect(hits.some((r) => /Ghost task/.test(r.text))).toBe(true);
   });
 });

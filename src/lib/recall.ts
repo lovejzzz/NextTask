@@ -27,6 +27,7 @@
  */
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 
+import type { BoardEvent, BoardEventKind } from './history';
 import { retrieve, type MemoryKind, type MemoryStore } from './memory';
 import type { Task } from './types';
 
@@ -99,14 +100,77 @@ export function recallFromBoard(tasks: Task[], now: Date = new Date()): Recollec
   );
 }
 
+function dayLabel(offset: number): string {
+  if (offset <= 0) return 'Today';
+  if (offset === 1) return 'Yesterday';
+  return `${offset} days ago`;
+}
+
+/** A short, human list of distinct titles, capped so a busy day doesn't run on. */
+function titleList(events: BoardEvent[]): string {
+  const titles = [...new Set(events.map((e) => `"${e.title}"`))];
+  const shown = titles.slice(0, 3).join(', ');
+  return titles.length > 3 ? `${shown} and ${titles.length - 3} more` : shown;
+}
+
+/** Summarize one day's events into a clause: "shipped X; added 2 tasks; rescheduled Y". */
+function summarizeDay(events: BoardEvent[]): string {
+  const of = (kind: BoardEventKind) => events.filter((e) => e.kind === kind);
+  const parts: string[] = [];
+  const completed = of('completed');
+  if (completed.length) parts.push(`shipped ${titleList(completed)}`);
+  const created = of('created');
+  if (created.length) parts.push(`added ${created.length} task${created.length === 1 ? '' : 's'}`);
+  const moved = of('moved');
+  if (moved.length) parts.push(`moved ${titleList(moved)} forward`);
+  const rescheduled = of('rescheduled');
+  if (rescheduled.length) parts.push(`rescheduled ${titleList(rescheduled)}`);
+  const reprioritized = of('reprioritized');
+  if (reprioritized.length) parts.push(`reprioritized ${titleList(reprioritized)}`);
+  const dropped = of('dropped');
+  if (dropped.length) parts.push(`dropped ${titleList(dropped)}`);
+  return parts.join('; ');
+}
+
+/**
+ * Real episodic memory — reconstructed from the board's own changelog, so it knows
+ * the *story* of what happened, not just the current snapshot: the ships an edit
+ * would otherwise bury, the sequence of reschedules, even tasks that were dropped
+ * and leave no card behind. Most recent days first.
+ */
+export function recallHistory(events: BoardEvent[], now: Date = new Date(), withinDays = 7, maxBuckets = 3): Recollection[] {
+  const today = startOfToday(now);
+  const byDay = new Map<number, BoardEvent[]>();
+  for (const event of events) {
+    if (event.at > now.getTime()) continue;
+    const offset = differenceInCalendarDays(today, startOfToday(new Date(event.at)));
+    if (offset < 0 || offset > withinDays) continue;
+    const bucket = byDay.get(offset) ?? [];
+    bucket.push(event);
+    byDay.set(offset, bucket);
+  }
+  return [...byDay.keys()]
+    .sort((a, b) => a - b)
+    .slice(0, maxBuckets)
+    .map((offset) => ({ offset, summary: summarizeDay(byDay.get(offset)!) }))
+    .filter((bucket) => bucket.summary)
+    .map(({ offset, summary }) => ({ kind: 'episodic' as MemoryKind, text: `${dayLabel(offset)} you ${summary}.`, confidence: 1, source: 'board' as const }));
+}
+
 /**
  * What Boardy remembers, period: the board reconstructed live (primary), blended
  * with the thin stored residue the board can't hold (preferences, stated goals).
  * With a query, both are filtered to what's relevant. The board always leads —
  * a live truth outranks a stored one, by construction.
  */
-export function reconstruct(tasks: Task[], traces: MemoryStore = [], now: Date = new Date(), query = ''): Recollection[] {
-  const fromBoard = recallFromBoard(tasks, now);
+export function reconstruct(tasks: Task[], traces: MemoryStore = [], now: Date = new Date(), query = '', events: BoardEvent[] = []): Recollection[] {
+  const snapshot = [recallNearestDeadline(tasks, now), recallFocus(tasks), recallNeglected(tasks, now)].filter(
+    (r): r is Recollection => r !== null,
+  );
+  // The board's changelog gives real episodic memory; fall back to the updated_at
+  // proxy only when there's no log yet.
+  const episodic = events.length ? recallHistory(events, now) : [recallRecentlyShipped(tasks, now)].filter((r): r is Recollection => r !== null);
+  const fromBoard = [...snapshot, ...episodic];
   const q = query.trim().toLowerCase();
   const board = q
     ? fromBoard.filter((r) => q.split(/\s+/).some((word) => word.length > 2 && r.text.toLowerCase().includes(word)))
