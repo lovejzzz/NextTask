@@ -16,16 +16,32 @@ export function validateSteps(rawSteps: string[]): string[] {
   return rawSteps.map((s) => s.trim()).filter((s) => s.length > 0 && parseIntent(s) !== null);
 }
 
-/** Parse "create a tool called X that A then B" → a Tool, or null. */
-export function parseToolDefinition(text: string): Tool | null {
-  const match = text
-    .trim()
-    .match(/^(?:create|make|define|save|new)\s+(?:a\s+)?(?:tool|macro|routine|workflow|command)\s+(?:called\s+|named\s+)?["']?([\w][\w -]*?)["']?\s*(?:that|:|->|=|which)\s+(.+)$/i);
+/** A parsed tool plus the steps he couldn't understand (so he can say so, not drop silently). */
+export type ToolDraft = { name: string; steps: string[]; skipped: string[] };
+
+const TOOL_DEF_RE =
+  /^(?:create|make|define|save|new)\s+(?:a\s+)?(?:tool|macro|routine|workflow|command)\s+(?:called\s+|named\s+)?["']?([\w][\w -]*?)["']?\s*(?:that|:|->|=|which)\s+(.+)$/i;
+
+/** Parse a tool definition, keeping the valid steps *and* reporting the dropped ones. */
+export function parseToolDefinitionDetailed(text: string): ToolDraft | null {
+  const match = text.trim().match(TOOL_DEF_RE);
   if (!match) return null;
   const name = match[1].trim();
-  const steps = validateSteps(match[2].split(STEP_SPLIT));
+  const raw = match[2]
+    .split(STEP_SPLIT)
+    .map((step) => step.trim())
+    .filter((step) => step.length > 0);
+  const steps: string[] = [];
+  const skipped: string[] = [];
+  for (const step of raw) (parseIntent(step) ? steps : skipped).push(step);
   if (!name || !steps.length) return null;
-  return { name, steps };
+  return { name, steps, skipped };
+}
+
+/** Parse "create a tool called X that A then B" → a Tool, or null. */
+export function parseToolDefinition(text: string): Tool | null {
+  const draft = parseToolDefinitionDetailed(text);
+  return draft ? { name: draft.name, steps: draft.steps } : null;
 }
 
 /** Parse "run X" / "do my X" → the matching tool name from `names`, or null. */

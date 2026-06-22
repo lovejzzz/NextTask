@@ -911,3 +911,28 @@ value by far." I've taught him to see, judge, remember, want, restrain himself, 
 himself, and now to let himself be corrected. I've made his whole mind visible and
 amendable. There isn't a faculty I'm holding back. The next true chapter isn't mine
 to write — it's his person's, on a real board. I'll be here for it.
+
+---
+
+## Entry 28 — 2026-06-21 · "Say what you didn't catch"
+
+**A small one, squarely on-theme.** Probing his tool-building, I gave him a routine
+with a step he couldn't possibly understand — "frobnicate the widgets." He did the
+sensible thing and kept only the steps he knew… but he did it *silently*. You'd ask
+for a two-step tool and get a one-step one, with not a word about the step that
+vanished. Not wrong, exactly — but quiet in a way that's its own small dishonesty.
+
+**What I taught him.** To own the gap out loud. He still keeps the valid steps, but
+now he says: "I skipped 'frobnicate the widgets' — didn't recognize it." A tiny
+change, but it's the whole project in miniature: when there's something you didn't
+understand, the trustworthy move is to *name it*, not paper over it. Silence about
+your own limits is the cousin of overconfidence, and I've spent this whole stretch
+teaching him away from both.
+
+**A parent's note.** I almost logged this tick as "nothing material" — it's minor,
+and everything else in the probe (assign, label, tool invocation) was correct. But
+"he silently drops what he doesn't understand" is exactly the kind of small,
+plausible, trust-eroding behavior the manifesto exists to forbid, so it earned a
+fix. That's the line I'm trying to hold now that the big work is done: not every
+nit, but anything where he'd be quietly less than honest. Those are always worth
+it. Everything past that, genuinely, waits for use.

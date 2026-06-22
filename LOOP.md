@@ -57,6 +57,10 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **Says what he couldn't parse in a tool** (JOURNAL 28) — defining a tool with an
+  unrecognized step used to silently drop it; now he keeps the valid steps and
+  *names* what he skipped ("I skipped 'frobnicate the widgets' — didn't recognize
+  it"). Glass-box honesty applied to tool composition. Found by a tools probe.
 - **The mind panel is correctable** (JOURNAL 27) — you can now *forget* a stored
   memory that's wrong or stale, right from the glass-box panel. `forgetNote` on the
   notes hook; a per-item forget button (read-only when no handler). Glass-box now

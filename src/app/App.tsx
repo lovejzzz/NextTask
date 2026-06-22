@@ -84,7 +84,7 @@ import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTur
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
-import { isToolListRequest, parseToolDefinition, parseToolInvocation, type Tool } from '../lib/tools';
+import { isToolListRequest, parseToolDefinitionDetailed, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
 import { detectRepeatedSequence, suggestSkillContinuation, suggestSkillName } from '../lib/skills';
 import { COMPANION_NAME, describeSelf } from '../lib/companion';
@@ -378,11 +378,15 @@ export function App() {
 
     // Tool composition + multi-step execution (checked first so "create a tool…"
     // isn't mistaken for "create a task").
-    const newTool = parseToolDefinition(text);
+    const newTool = parseToolDefinitionDetailed(text);
     if (newTool) {
-      toolbox.add(newTool);
+      toolbox.add({ name: newTool.name, steps: newTool.steps });
       companion.registerActivity();
-      return `New tool "${newTool.name}" — ${newTool.steps.length} step${newTool.steps.length === 1 ? '' : 's'}: ${newTool.steps.join(' → ')}. Say "run ${newTool.name}" anytime.`;
+      // Say what I couldn't understand instead of silently dropping it.
+      const skipped = newTool.skipped.length
+        ? ` (I skipped ${newTool.skipped.map((step) => `"${step}"`).join(', ')} — didn't recognize ${newTool.skipped.length === 1 ? 'it' : 'them'}.)`
+        : '';
+      return `New tool "${newTool.name}" — ${newTool.steps.length} step${newTool.steps.length === 1 ? '' : 's'}: ${newTool.steps.join(' → ')}.${skipped} Say "run ${newTool.name}" anytime.`;
     }
     const toRun = parseToolInvocation(text, toolbox.names);
     if (toRun) {
