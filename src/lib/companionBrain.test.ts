@@ -10,6 +10,7 @@ import {
   modelLabel,
   nextModelId,
   recommendUpgrade,
+  withNoThink,
   type PromptParts,
 } from './companionBrain';
 
@@ -106,5 +107,27 @@ describe('cleanLine', () => {
   it('strips wrapping quotes and truncates very long output', () => {
     expect(cleanLine('"Ship something."')).toBe('Ship something.');
     expect(cleanLine('x'.repeat(300)).endsWith('…')).toBe(true);
+  });
+
+  it('drops Qwen3 reasoning blocks and never echoes the control token', () => {
+    expect(cleanLine('<think>let me consider the board...</think>Ship the login fix.')).toBe('Ship the login fix.');
+    expect(cleanLine('<think>truncated reasoning with no close')).toBe('');
+    expect(cleanLine('Do the thing. /no_think')).toBe('Do the thing.');
+  });
+});
+
+describe('withNoThink', () => {
+  it('appends the non-thinking switch to the latest user turn', () => {
+    const out = withNoThink([
+      { role: 'system', content: 'You are Boardy.' },
+      { role: 'user', content: "what's next?" },
+    ]);
+    expect(out[1].content).toBe("what's next? /no_think");
+    expect(out[0].content).toBe('You are Boardy.'); // system untouched
+  });
+
+  it('is a no-op when there is no user turn', () => {
+    const messages = [{ role: 'system' as const, content: 'x' }];
+    expect(withNoThink(messages)).toEqual(messages);
   });
 });

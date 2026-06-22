@@ -36,7 +36,7 @@ about overdue piles, calls out fidgeting (recoloring instead of doing), and
 dozes off when neglected. Behavioural signals (idle time, fidgets, pokes) blend
 with board state to pick one of 9 moods, each with its own voice.
 
-| 11 | **Give the board a brain (beta)** 🧠 — an optional **in-browser LLM** (Transformers.js + Qwen2.5-0.5B, WebGPU→WASM) that makes the companion's voice generative. $0: runs on the visitor's device, no API. Rule-based engine stays as fallback. | `lib/companionBrain.ts`, `hooks/useBoardBrain.ts` |
+| 11 | **Give the board a brain (beta)** 🧠 — an optional **in-browser LLM** (Transformers.js + Qwen3-0.6B, non-thinking, WebGPU→WASM) that makes the companion's voice generative. $0: runs on the visitor's device, no API. Rule-based engine stays as fallback. | `lib/companionBrain.ts`, `hooks/useBoardBrain.ts` |
 
 The brain is fully opt-in (palette: "Give the board a brain"). Transformers.js is
 loaded lazily from a CDN — **not** in the main bundle — and the ~0.5GB model
@@ -72,7 +72,7 @@ Every tick: `typecheck` + `lint` + `test` + `build` must stay green before push.
 ## Backlog (pull from here)
 
 **The Board Has Feelings — deepen the headline**
-- Model picker: 0.5B (default) ↔ Llama-3.2-1B for sharper output
+- Model picker: Qwen3-0.6B (default) ↔ Qwen3-1.7B for a sharper voice
 - Proactive lines: the board speaks up on real events (a ship, an overdue flip)
 - ~~Chat-driven actions: "add a high-priority task to email Sam Friday"~~ ✅ (deterministic intent parser — `companionActions.ts`)
 - More moods & a wider quip pool; reduce repetition with better seeding

@@ -13,11 +13,14 @@ import { COMPANION_NAME, type Mood } from './companion';
 // Major-pinned so the CDN always resolves a valid latest v3 build.
 const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 
-// Selectable chat models (both Transformers.js-compatible Qwen2.5 instruct).
+// Selectable chat models — Transformers.js-compatible Qwen3 instruct, run in
+// NON-THINKING mode. The model is Boardy's *voice*; his coded brain does the
+// reasoning (see BRAIN.md / MODELS.md), so we want a small, snappy, modern model
+// that runs everywhere — not a bigger one that thinks aloud. Smallest first.
 export type BrainModel = { id: string; label: string; note: string };
 export const MODELS: BrainModel[] = [
-  { id: 'onnx-community/Qwen2.5-0.5B-Instruct', label: 'Qwen 0.5B', note: 'fast · ~0.5GB' },
-  { id: 'onnx-community/Qwen2.5-1.5B-Instruct', label: 'Qwen 1.5B', note: 'smarter · ~1GB' },
+  { id: 'onnx-community/Qwen3-0.6B-ONNX', label: 'Qwen3 0.6B', note: 'default · runs anywhere · ~0.5GB' },
+  { id: 'onnx-community/Qwen3-1.7B-ONNX', label: 'Qwen3 1.7B', note: 'richer voice · ~1.2GB · wants a decent GPU' },
 ];
 export const DEFAULT_MODEL_ID = MODELS[0].id;
 
@@ -117,9 +120,31 @@ export function buildChatMessages(parts: PromptParts & { history: ChatTurn[] }):
 
 /** Trim model output down to a clean line/short reply. */
 export function cleanLine(raw: string): string {
-  let line = raw.trim().replace(/^["'`]+|["'`]+$/g, '');
+  let line = raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, '') // drop any completed reasoning block
+    .replace(/<think>[\s\S]*$/i, '') // ...and a dangling one if generation was cut off
+    .replace(/\s*\/no_?think\s*/gi, ' ') // never echo the control token back
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, '');
   if (line.length > 240) line = `${line.slice(0, 237).trimEnd()}…`;
   return line.trim();
+}
+
+/**
+ * Qwen3 reasons aloud by default. Boardy's model is a thin voice, so switch
+ * thinking off per-turn with the documented `/no_think` control token (appended
+ * to the latest user turn). Returns the messages unchanged when there's no user
+ * turn to mark.
+ */
+export function withNoThink(messages: BrainMessage[]): BrainMessage[] {
+  const out = messages.map((message) => ({ ...message }));
+  for (let i = out.length - 1; i >= 0; i -= 1) {
+    if (out[i].role === 'user') {
+      out[i] = { ...out[i], content: `${out[i].content} /no_think` };
+      return out;
+    }
+  }
+  return out;
 }
 
 const pipelines = new Map<string, Promise<GenerateFn>>();
@@ -168,7 +193,9 @@ export async function loadBrain(modelId: string = DEFAULT_MODEL_ID, onProgress?:
           },
         });
       }
-      const output = await generator(messages, {
+      // Qwen3 thinks aloud unless told not to; keep the voice snappy and grounded.
+      const prepared = modelId.includes('Qwen3') ? withNoThink(messages) : messages;
+      const output = await generator(prepared, {
         max_new_tokens: onToken ? 110 : 44,
         temperature: 0.9,
         top_p: 0.95,
