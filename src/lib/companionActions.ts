@@ -27,6 +27,7 @@ export type CompanionIntent =
   | { kind: 'recap' }
   | { kind: 'self_intent' }
   | { kind: 'self_describe' }
+  | { kind: 'self_growth' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -185,6 +186,16 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   // Honest self-description ("what are you / what can you do") — distinct from
   // "what are you working on" (ouroboros_backlog, above) and "what do you want"
   // (self_intent). The negative lookahead keeps activity questions out.
+  // How he's grown / what he's learned — answered from his growth ledger (a real
+  // trail), distinct from "what are you" (self_describe). Checked first so "how have
+  // you grown" isn't swallowed by a broader self pattern.
+  if (
+    /\bhow have you (?:grown|changed|developed|improved)\b|\bwhat have you learned\b|\bhow are you (?:growing|developing)\b|\bare you getting better\b|\bhow'?s your (?:growth|progress|development)\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'self_growth' };
+  }
   if (
     /\bwhat can you do\b|\bwhat are you\b(?!\s+(?:working|building|doing|up to))|\bwho are you\b|\bhow do you work\b|\bwhat (?:are )?your (?:limits|abilities|capabilities)\b|\bhow do i use you\b/.test(
       lower,

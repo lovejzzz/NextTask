@@ -82,6 +82,15 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('what do you want to do', NOW)).toEqual({ kind: 'self_intent' });
   });
 
+  it('recognizes a request to recount his growth, distinct from self-description', () => {
+    expect(parseIntent('how have you grown?', NOW)).toEqual({ kind: 'self_growth' });
+    expect(parseIntent('what have you learned', NOW)).toEqual({ kind: 'self_growth' });
+    expect(parseIntent('how have you changed', NOW)).toEqual({ kind: 'self_growth' });
+    expect(parseIntent('are you getting better', NOW)).toEqual({ kind: 'self_growth' });
+    // must NOT steal the plain self-description
+    expect(parseIntent('what are you?', NOW)).toEqual({ kind: 'self_describe' });
+  });
+
   it('recognizes a request to consult his own wants', () => {
     expect(parseIntent('what do you want to do?', NOW)).toEqual({ kind: 'self_intent' });
     expect(parseIntent("what's on your mind", NOW)).toEqual({ kind: 'self_intent' });

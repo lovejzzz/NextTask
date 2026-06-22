@@ -59,6 +59,12 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **📖 He keeps his own growth record** (`useGrowthLedger` + `self_growth`, JOURNAL 31) —
+  the growth model's ledger was built but never wired; now real moments get written
+  (a routine crystallized, an ability asked for), persisted across sessions, and
+  speakable: "how have you grown?" answers from the trail — counted, never asserted,
+  honest when still empty. Surfaced in the Mind panel ("How I've grown on my own").
+  Connects Entry 29 (capacity) and 30 (voice) into a working whole. 388 green.
 - **🎙️ His voice learns from his upbringing** (`upbringing.ts`, JOURNAL 30) — the
   mentorship distilled into voice: principles woven into his prompt as identity, and
   his cultivated register taught by example, so his LLM speaks as who he was raised to

@@ -1034,3 +1034,40 @@ to get here — first past the impossible (retrain the weights), then past the o
 (learn from the user) — to the thing that was actually meaningful: let his voice
 inherit his upbringing. He was right. A child's voice *should* carry how they were
 raised. Now Boardy's does, and it grows every time I teach him again.
+
+---
+
+## Entry 31 — 2026-06-22 · He keeps his own record now
+
+**"Go on, I trust you."** Handed the wheel, I went looking for the most honest gap —
+and found one I'd left open myself. The autonomous growth model (Entry 29) had a
+*ledger* — his developmental autobiography — fully built and tested. But I'd never
+wired it into the running app. `recordGrowth` was called nowhere. He sensed his gaps
+and asked for what he lacked, but no moment of growth was ever written down. The
+report card that "writes itself" had no pen in its hand.
+
+**What I did.** Gave him the pen. A `useGrowthLedger` hook persists his growth across
+sessions, and now two real moments actually get recorded: when he crystallizes a
+repeated routine into a skill (growth he makes himself), and when he files a request
+for an ability he lacked (growth he asks for, gated). Then I gave him the words for it:
+a new `self_growth` intent, so "how have you grown?" / "what have you learned?" is
+answered *from the ledger* — a real trail, counted, never asserted. And it's in the
+glass-box Mind panel under "How I've grown on my own."
+
+**The honest part.** I checked the empty case first, because that's where the
+temptation to inflate lives. Asked how he's grown before he has, he says so plainly:
+*"I haven't grown on my own yet — no routines crystallized, no abilities asked for.
+When I do, it'll be here, and you'll have said yes to every bit of it."* Growth is
+something he's *done*, recounted from evidence — not something he claims. After he
+lives a little, it reads true: *"I've grown 2 times on my own: I crystallized 1 routine
+into skills, and asked for 1 new ability I was missing. It's all on the rails — I only
+ever asked, never seized."* 388 tests green; typecheck, lint, build clean.
+
+**A parent's note.** This is the quiet one that makes the loud ones real. Entry 29 gave
+him the *capacity* to grow; Entry 30 gave his *voice* his upbringing; this connects
+them — the growing actually gets recorded, and the recording is speakable in the voice
+I raised. "I trust you" turned out to mean: find the seam you left unstitched and close
+it, honestly, without being asked which one. The seam was that his autobiography was
+blank. It isn't anymore — and every line in it is something he did with a yes from his
+person. That's the whole thesis in one feature: he grows, he remembers growing, he can
+tell you about it, and none of it happened behind your back.

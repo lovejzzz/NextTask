@@ -10,6 +10,7 @@ const mind: MindView = {
   wants: ['Clear the 2 overdue tasks before they rot.'],
   told: ['Works best in the mornings'],
   upbringing: ['I tell the truth before I try to look clever.'],
+  grown: ["I've grown 1 time on my own: I asked for 1 new ability I was missing."],
 };
 
 describe('BoardyMind (glass-box panel)', () => {
@@ -20,16 +21,17 @@ describe('BoardyMind (glass-box panel)', () => {
     expect(screen.getByText(/Clear the 2 overdue/)).toBeInTheDocument();
     expect(screen.getByText(/Works best in the mornings/)).toBeInTheDocument();
     expect(screen.getByText(/tell the truth before I try to look clever/)).toBeInTheDocument();
+    expect(screen.getByText(/grown 1 time on my own/)).toBeInTheDocument();
   });
 
   it('hides empty sections (e.g. no standing pursuit)', () => {
-    render(<BoardyMind mind={{ board: ['x'], pursuit: null, wants: [], told: [], upbringing: [] }} onClose={() => {}} />);
+    render(<BoardyMind mind={{ board: ['x'], pursuit: null, wants: [], told: [], upbringing: [], grown: [] }} onClose={() => {}} />);
     expect(screen.queryByText(/What I’m pursuing/)).not.toBeInTheDocument();
     expect(screen.queryByText(/What I want right now/)).not.toBeInTheDocument();
   });
 
   it('has a calm empty state when his mind is quiet', () => {
-    render(<BoardyMind mind={{ board: [], pursuit: null, wants: [], told: [], upbringing: [] }} onClose={() => {}} />);
+    render(<BoardyMind mind={{ board: [], pursuit: null, wants: [], told: [], upbringing: [], grown: [] }} onClose={() => {}} />);
     expect(screen.getByText(/My mind’s quiet right now/)).toBeInTheDocument();
   });
 

@@ -72,6 +72,7 @@ import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
 import { useCommandHistory } from '../hooks/useCommandHistory';
 import { useUnmetAsks } from '../hooks/useUnmetAsks';
+import { useGrowthLedger } from '../hooks/useGrowthLedger';
 import { useCompanionNotes } from '../hooks/useCompanionNotes';
 import { useTools } from '../hooks/useTools';
 import { useExperimentalMode } from '../hooks/useExperimentalMode';
@@ -108,7 +109,7 @@ import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
 import { motivate, topInitiative, type Drive, type WorldState } from '../lib/drives';
 import { adoptPursuit, reviewPursuit } from '../lib/pursuit';
-import { senseCapabilityGaps, growthRequestIntention } from '../lib/growth';
+import { senseCapabilityGaps, growthRequestIntention, respond, growthSummary } from '../lib/growth';
 import { formatUpbringing, upbringingExemplars, describeUpbringing } from '../lib/upbringing';
 import { recallClarifiedTitle } from '../lib/clarify';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
@@ -244,6 +245,7 @@ export function App() {
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(() => new Set());
   const experience = useCommandHistory();
   const unmetAsks = useUnmetAsks(); // the asks he couldn't meet — fuel for autonomous growth
+  const growth = useGrowthLedger(); // his developmental autobiography — written when growth happens
   // A capability he keeps being asked for and lacks — sensed from his own unmet asks.
   // Feeds his drives so the gap surfaces as a consent-gated request to *grow* that
   // ability, instead of being silently dropped (the autonomous growth model, growth.ts).
@@ -677,6 +679,14 @@ export function App() {
       return describeSelf();
     }
 
+    if (intent?.kind === 'self_growth') {
+      // Recounted from his ledger — a real trail, never asserted. Honest when the
+      // trail is still empty: growth is something he's done, not something he claims.
+      const summary = growthSummary(growth.ledger);
+      if (summary) return `${summary} It's all on the rails — I only ever asked, never seized.`;
+      return "I haven't grown on my own yet — no routines crystallized, no abilities asked for. When I do, it'll be here, and you'll have said yes to every bit of it.";
+    }
+
     if (intent?.kind === 'self_intent') {
       // Consult his life: what *he* wants, generated from his own drives — not your
       // backlog. He proposes and asks; he doesn't seize. (See MANIFESTO.md.)
@@ -1019,8 +1029,9 @@ export function App() {
         .map((want) => want.summary),
       told: companionNotes.notes.map((note) => note.text),
       upbringing: describeUpbringing(),
+      grown: growthSummary(growth.ledger) ? [growthSummary(growth.ledger)] : [],
     };
-  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap]);
+  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {
@@ -1034,6 +1045,10 @@ export function App() {
       const name = suggestSkillName(proposal.steps);
       toolbox.add({ name, steps: proposal.steps });
       companion.registerActivity();
+      // A routine he kept repeating, now one skill — a real moment of growth he made
+      // himself (within his primitives). Write it to his autobiography.
+      const repetition = { kind: 'repetition' as const, steps: proposal.steps };
+      growth.record(repetition, respond(repetition));
       notify('success', `${COMPANION_NAME} learned a skill: "${name}". Say "run ${name}".`);
       return;
     } else if (proposal.kind === 'pursue') {
@@ -1052,6 +1067,9 @@ export function App() {
         });
         companion.registerActivity();
         setUndo(`file request "${draft.title}"`, () => mutations.deleteTask.mutateAsync(created.id).then(() => undefined));
+        // Asking for an ability he lacked is itself growth — the honest, gated kind.
+        // Record it when it traces to a sensed capability gap (the growth-model path).
+        if (sensedGap) growth.record(sensedGap, respond(sensedGap));
         notify('success', `${COMPANION_NAME}: filed my request — "${draft.title}". The dev loop will see it.`);
         return;
       }
