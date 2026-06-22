@@ -5,6 +5,74 @@ of what's borrowed versus what's actually distinctive.
 
 ---
 
+## The turn: memory you don't store
+
+The first version of this doc described a better *store* — salience, decay, scored
+retrieval. It was a good store. But every store, however clever, shares one
+disease: **it drifts from the world.** Boardy "remembers" your deadline is Friday;
+you move the card to Monday; his memory is now a lie. Vector stores, MemGPT,
+Generative Agents, and the engine in `memory.ts` all rot this way, because memory
+that is a *copy* of reality will always, eventually, disagree with reality.
+
+So the real fix isn't a better copy. It's **not keeping a copy.**
+
+Boardy's world — the board — is already a durable, structured, timestamped,
+human-maintained record. Your deadlines *are* the due dates. Your focus *is* what's
+in progress. What you shipped *is* in Done, dated. So most of what he "remembers"
+shouldn't be stored at all — it should be **reconstructed from the live board each
+time he's asked.** Reconstructed memory can't desync from reality, because it *is*
+reality, read freshly. Move the card and the memory moves with it.
+
+```
+conventional:  world ──writes──▶ [private memory store] ──reads──▶ answer   (drifts)
+Boardy:        world ───────────reconstruct on demand───────────▶ answer   (can't drift)
+```
+
+He stores only the **irreducible residue** — the handful of things that happened and
+left no mark on the board (a spoken preference, a stated goal). That's the inversion:
+**world-first, store-last**, where everyone else is store-first.
+
+### Why this is the out-of-the-box answer
+
+- **It kills the rot.** The failure mode that makes AI memory untrustworthy — the
+  remembered fact that's quietly wrong — becomes *structurally impossible* for
+  anything the board can hold. (See `recall.test.ts`: reschedule the card, and the
+  memory is the new date — there is no path to "still says Friday".)
+- **Glass-box by construction.** The memory substrate is the board — already
+  visible, already editable, already shared. There's nothing hidden to inspect.
+- **It barely grows.** No accumulating store to page, prune, or embed. The residue
+  is tiny; the board carries the load.
+- **Editing memory = using the app.** Correcting what Boardy "knows" is just moving
+  a card. No separate memory-management surface to learn.
+
+### Honest grounding
+
+The cognitive theory is old and I'm not inventing it: reconstructive memory
+(**Bartlett, 1932** — memory is rebuilt from traces, not replayed), "the world as
+its own best model" (**Brooks, 1991**), and the extended-mind thesis (**Clark &
+Chalmers, 1998** — the notebook in your pocket is part of your mind). What's new is
+using it as the *actual memory architecture* for an AI companion: making the shared
+workspace the substrate so memory can't rot, and storing only what the workspace
+can't represent. The theory is borrowed; the application is the contribution.
+
+### How it's built
+
+- **`src/lib/recall.ts`** — reconstruction: `recallNearestDeadline`, `recallFocus`,
+  `recallRecentlyShipped`, `recallNeglected`, and `reconstruct(board, traces, …)`
+  which blends the live board (primary) with the stored residue (secondary). The
+  board always leads — a live truth outranks a stored one by construction.
+- **`src/lib/memory.ts`** — *demoted* to the thin **trace layer**: the small,
+  decaying store for residue the board can't hold. Still useful, no longer central.
+
+The rest of this doc describes that trace engine — now a supporting actor, not the
+lead.
+
+---
+
+## The trace layer (`memory.ts`) — supporting the residue
+
+---
+
 ## Where we started (the problem)
 
 Boardy's memory was **four disconnected stores**, each a different shape, none
@@ -103,15 +171,19 @@ meant to trust beside you, the relationship is the point.
 
 ## Status & migration
 
-- ✅ **Core engine** (`memory.ts`) — model + remember/strength/retrieve/decay/
-  consolidate/inspect, fully unit-tested. Additive: nothing else depends on it yet.
-- ⬜ **Migrate the four stores** onto it (notes → semantic, history → episodic,
-  companionMemory → relational, skills ↔ procedural), one at a time, behind the
-  existing hooks so behavior is preserved.
-- ⬜ **Persist** the unified store (one localStorage key) with a `consolidate` +
-  `decay` pass on load/idle.
-- ⬜ **Glass-box UI** — a "what Boardy knows" panel: inspect, pin, edit, forget.
-- ⬜ **Board-as-substrate** — let durable memories surface as board annotations.
+- ✅ **Reconstruction engine** (`recall.ts`) — derives episodic + semantic memory
+  live from the board; `reconstruct()` blends board (primary) with residue
+  (secondary). Unit-tested, including the anti-rot property.
+- ✅ **Trace layer** (`memory.ts`) — the thin, decaying store for the residue the
+  board can't hold. Unit-tested. Demoted from "the memory" to "the footnotes".
+- ⬜ **Wire recall into the chat handlers** — answer "what's my deadline / what am
+  I focused on / what did I just ship" from `reconstruct()` instead of the stored
+  `companionNotes`, so those answers are always live. (This is where the old
+  `recallFact` note-store, which *could* go stale, gets retired.)
+- ⬜ **Shrink the residue** — keep only genuinely board-less facts (preferences,
+  goals) in the trace layer; let the board carry everything else.
+- ⬜ **Glass-box panel** — "what Boardy knows," split into *read from the board*
+  (live) vs *things you told me* (the small editable/pinnable residue).
 
-Each step is its own reviewable change. The engine is the foundation they all
-stand on.
+Each step is its own reviewable change. The board is the foundation; the trace
+layer is the footnote.
