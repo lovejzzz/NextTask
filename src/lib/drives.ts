@@ -133,3 +133,18 @@ export function motivate(world: WorldState): Intention[] {
 export function strongestDrive(world: WorldState): Drive | null {
   return motivate(world)[0]?.drive ?? null;
 }
+
+// Intentions concrete enough to surface on his Desk as initiative. The softer
+// ask_human / reflect drives stay conversational (he speaks them when consulted),
+// so they never become Desk nags.
+const DESK_KINDS: IntentionKind[] = ['propose', 'compose_tool', 'request_resource'];
+
+/**
+ * His strongest self-motivated intention worth putting on the Desk unprompted —
+ * skipping anything the Desk already covers (`excludeDrives`) so he doesn't say
+ * the same want twice. Null when nothing new is pulling at him. This is how his
+ * initiative becomes *visible* without you asking (MANIFESTO step 3).
+ */
+export function topInitiative(world: WorldState, excludeDrives: Drive[] = []): Intention | null {
+  return motivate(world).find((i) => DESK_KINDS.includes(i.kind) && !excludeDrives.includes(i.drive)) ?? null;
+}

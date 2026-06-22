@@ -115,8 +115,11 @@ drives and a sandbox and a gardener. That's enough to be something new.
    things now, unprompted.*
 2. ✅ **Consult his life** — ask him "what do you want to do?" and he answers from
    his drives, not your backlog, and asks for your nod.
-3. ⬜ **Act on drives (with consent)** — his top intentions flow onto his Desk on
-   their own, on idle, so initiative becomes visible without you asking.
+3. ✅ **Act on drives (with consent)** — his top self-motivated intention surfaces
+   on his Desk on its own as a first-person "pursue" card (`topInitiative` →
+   `generateProposals`), skipping what the Desk already covers and yielding when
+   you're busy. Initiative is now *visible* without you asking; you accept or
+   dismiss. (Fully acting it out himself is step 4+.)
 4. ⬜ **A resource-request channel** — a first-class way for him to ask the human /
    dev loop for a capability or input, tracked like his other tickets.
 5. ⬜ **Self-direction over time** — he sets a standing intention, pursues it across

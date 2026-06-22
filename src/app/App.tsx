@@ -101,7 +101,7 @@ import { recallFocus, recallHistory, recallNearestDeadline } from '../lib/recall
 import { DEFAULT_GOAL, GOAL_OPTIONS, goalProgress, nextGoal, type Goal } from '../lib/goal';
 import { dueTone } from '../lib/dates';
 import { focusReason, nextStatusFor, rankFocusTasks, taskAgeDays } from '../lib/experimental';
-import { motivate } from '../lib/drives';
+import { motivate, topInitiative, type Drive } from '../lib/drives';
 import { matchNamed, resolveTaskReference } from '../lib/taskMatch';
 import { nextRoast, personaInstruction, warmthFromMemory, type RoastLevel } from '../lib/persona';
 import { activeFilterChips, defaultFilters, hasActiveFilters } from '../lib/filterLogic';
@@ -864,8 +864,29 @@ export function App() {
         ? repeated
         : null;
     const continuation = suggestSkillContinuation(experience.history.at(-1) ?? '', toolbox.tools);
-    return generateProposals({ overdue, ideas, learned, continuation }).filter((proposal) => !dismissedProposals.has(proposal.id));
-  }, [tasks, dismissedProposals, experience.history, toolbox.tools]);
+    // His own self-motivated initiative (from his drives), surfaced unprompted —
+    // but only for drives the Desk doesn't already cover, so he never says it twice.
+    const exclude: Drive[] = [];
+    if (overdue > 0) exclude.push('order');
+    if (learned) exclude.push('growth');
+    if (ideas.length) exclude.push('self');
+    const initiative = topInitiative(
+      {
+        overdue,
+        stale: tasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length,
+        active: tasks.filter((task) => task.status !== 'done').length,
+        shippedRecently: momentum.shippedToday,
+        idleDays: momentum.shippedToday > 0 ? 0 : 1,
+        repeatedPattern: repeated,
+        capabilityGap: null,
+        ownBacklog: ideas.length,
+      },
+      exclude,
+    );
+    return generateProposals({ overdue, ideas, learned, continuation, initiative }).filter(
+      (proposal) => !dismissedProposals.has(proposal.id),
+    );
+  }, [tasks, dismissedProposals, experience.history, toolbox.tools, momentum.shippedToday]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {
@@ -880,6 +901,12 @@ export function App() {
       toolbox.add({ name, steps: proposal.steps });
       companion.registerActivity();
       notify('success', `${COMPANION_NAME} learned a skill: "${name}". Say "run ${name}".`);
+      return;
+    } else if (proposal.kind === 'pursue') {
+      // Step 3 makes his initiative *visible* and consensual; fully acting on it
+      // himself is the next step. Accepting is your encouragement to keep at it.
+      companion.registerActivity();
+      notify('success', `${COMPANION_NAME}: noted — I'll keep that in my sights.`);
       return;
     } else {
       await mutations.createTask.mutateAsync({

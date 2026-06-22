@@ -72,4 +72,27 @@ describe('generateProposals', () => {
   it('respects a tighter limit when asked to stay especially quiet', () => {
     expect(generateProposals({ overdue: 3, ideas, learned: ['a', 'b'] }, 1)).toHaveLength(1);
   });
+
+  it('surfaces his self-motivated initiative as a first-person pursue card', () => {
+    const proposals = generateProposals({
+      overdue: 0,
+      ideas: [],
+      initiative: { drive: 'order', kind: 'propose', intensity: 0.4, summary: 'tidy 5 stale tasks', rationale: 'x' },
+    });
+    const pursue = proposals.find((p) => p.kind === 'pursue');
+    expect(pursue?.summary).toContain('On my own initiative');
+    expect(pursue?.summary).toContain('tidy 5 stale tasks');
+  });
+
+  it('lets his initiative yield to your needs when the Desk is busy', () => {
+    const proposals = generateProposals({
+      overdue: 3,
+      ideas: [],
+      continuation: { name: 'morning', firstStep: 'clear overdue', remaining: ['plan my day'] },
+      learned: ['clear overdue', 'plan my day'],
+      initiative: { drive: 'self', kind: 'request_resource', intensity: 0.3, summary: 'pursue an upgrade', rationale: 'x' },
+    });
+    // Cap is 3, and his initiative sits below your needs → dropped when busy.
+    expect(proposals.some((p) => p.kind === 'pursue')).toBe(false);
+  });
 });

@@ -9,12 +9,14 @@
  * tested; execution + UI live in the app.
  */
 import type { AutopilotProposal } from './autopilot';
+import type { Intention } from './drives';
 
 export type Proposal =
   | { id: string; kind: 'clear_overdue'; count: number; summary: string }
   | { id: string; kind: 'run_skill'; name: string; steps: string[]; summary: string }
   | { id: string; kind: 'save_skill'; steps: string[]; summary: string }
-  | { id: string; kind: 'upgrade'; idea: AutopilotProposal; summary: string };
+  | { id: string; kind: 'upgrade'; idea: AutopilotProposal; summary: string }
+  | { id: string; kind: 'pursue'; intention: Intention; summary: string };
 
 export type SkillContinuation = { name: string; firstStep: string; remaining: string[] };
 
@@ -23,6 +25,7 @@ export type ProposalInput = {
   ideas: AutopilotProposal[]; // Ouroboros upgrade ideas (already deduped vs board)
   learned?: string[] | null; // a repeated command sequence worth saving as a skill
   continuation?: SkillContinuation | null; // a saved skill whose first step just happened
+  initiative?: Intention | null; // his strongest self-motivated want, surfaced unprompted
 };
 
 // Restraint: never dump a wall of asks. Boardy shows at most this many at once.
@@ -38,7 +41,10 @@ const MAX_PROPOSALS = 3;
  * self-interested "upgrade" asks wait for a quieter moment instead of piling on.
  * Because upgrades come last, they're the first to yield when the Desk is busy.
  */
-export function generateProposals({ overdue, ideas, learned, continuation }: ProposalInput, limit = MAX_PROPOSALS): Proposal[] {
+export function generateProposals(
+  { overdue, ideas, learned, continuation, initiative }: ProposalInput,
+  limit = MAX_PROPOSALS,
+): Proposal[] {
   const proposals: Proposal[] = [];
 
   // 1. You're mid-flow — finishing what you started is the most timely help.
@@ -72,7 +78,18 @@ export function generateProposals({ overdue, ideas, learned, continuation }: Pro
     });
   }
 
-  // 4. Boardy's *own* wants — last, because his self-interest waits behind yours.
+  // 4. His own self-motivated initiative (from his drives) — visible, unprompted,
+  // but it waits behind your needs and yields first when the Desk is busy.
+  if (initiative) {
+    proposals.push({
+      id: `pursue-${initiative.drive}-${initiative.kind}`,
+      kind: 'pursue',
+      intention: initiative,
+      summary: `On my own initiative, I want to: ${initiative.summary}`,
+    });
+  }
+
+  // 5. Boardy's *own* wishlist upgrades — last, the first to yield when busy.
   ideas.slice(0, 2).forEach((idea, index) => {
     proposals.push({
       id: `upgrade-${index}-${idea.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)}`,

@@ -39,22 +39,24 @@ no more, no less. The bar, every beat:
 ## Live queue — highest value first
 
 <!--queue-->
-1. → **Act on his drives, with consent** (MANIFESTO step 3). His top intentions
-   from `motivate()` flow onto his Desk on their own (on idle) — initiative becomes
-   visible without you asking. Consent-gated, reversible.
-2. **A resource-request channel** (MANIFESTO step 4) — a first-class way for him to
-   ask the human / dev loop for a capability or input, tracked like his tickets
-   (his `request_resource` intentions become real asks).
-3. **Self-direction over time** (MANIFESTO step 5) — a standing intention he pursues
+1. → **A resource-request channel** (MANIFESTO step 4) — turn his `request_resource`
+   intentions into first-class asks to the human / dev loop, tracked like his
+   tickets. When he hits a wall, "I need ability X" becomes a real, visible request.
+2. **Self-direction over time** (MANIFESTO step 5) — a standing intention he pursues
    across sessions and reflects on in his journal. A life with continuity.
-4. **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
+3. **Glass-box "what Boardy knows" panel** — read-from-board (live) vs editable
    residue; now also show his current *drives* — make his whole inner life visible.
-5. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
+4. **L4→L5 depth** — reason *over* facts, trends not snapshots, restraint read from
    the moment, learn from a clarification.
 <!--/queue-->
 
 ## Done — most recent first
 
+- **His initiative on the Desk** (`topInitiative` → `generateProposals` 'pursue'
+  card). His strongest self-motivated want surfaces unprompted, first-person,
+  consent-gated — skipping what the Desk already covers, yielding when you're busy.
+  MANIFESTO step 3 done: initiative is now *visible* without you asking.
+- **Chose Boardy's voice** — Qwen3-0.6B default / 1.7B opt-in, non-thinking (MODELS.md).
 - **🌱 He has drives** (`drives.ts` + `MANIFESTO.md`). Coded intrinsic motivation:
   given just the world (no prompt), `motivate()` generates *his own* ranked
   intentions — fix the board, grow a skill, ask for a resource, improve himself,

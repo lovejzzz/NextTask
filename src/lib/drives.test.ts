@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { motivate, strongestDrive, type WorldState } from './drives';
+import { motivate, strongestDrive, topInitiative, type WorldState } from './drives';
 
 const calm: WorldState = {
   overdue: 0,
@@ -52,5 +52,29 @@ describe('motivate — self-generated goals, no prompt required', () => {
     const wants = motivate({ ...calm, overdue: 5, active: 8, ownBacklog: 2, idleDays: 2 });
     expect(wants[0].drive).toBe('order');
     expect(wants[0].intensity).toBeGreaterThanOrEqual(wants[wants.length - 1].intensity);
+  });
+});
+
+describe('topInitiative — what he puts on the Desk unprompted', () => {
+  it('surfaces his strongest actionable initiative', () => {
+    const it_ = topInitiative({ ...calm, overdue: 3, active: 5 });
+    expect(it_?.drive).toBe('order');
+  });
+
+  it('never surfaces the soft drives (no Desk nags)', () => {
+    // only care/curiosity-eligible state → nothing concrete to put on the Desk
+    expect(topInitiative({ ...calm, active: 4, idleDays: 5 })).toBeNull();
+  });
+
+  it("skips a drive the Desk already covers, so he doesn't say it twice", () => {
+    const world: WorldState = { ...calm, overdue: 3, active: 5, repeatedPattern: ['clear overdue', 'plan my day'] };
+    // His loudest is 'order' (clear overdue) — but the Desk's clear-overdue card
+    // already has it. Exclude it and he offers the next new initiative: growth.
+    expect(topInitiative(world)?.drive).toBe('order');
+    expect(topInitiative(world, ['order'])?.drive).toBe('growth');
+  });
+
+  it('is null when nothing new is pulling at him', () => {
+    expect(topInitiative(calm)).toBeNull();
   });
 });
