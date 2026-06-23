@@ -94,6 +94,13 @@ describe('parseIntent — questions', () => {
     expect(parseIntent("what's next", NOW)).toEqual({ kind: 'whats_next' });
   });
 
+  it('recognizes the Tier 4 self-improvement request', () => {
+    expect(parseIntent('improve yourself', NOW)).toEqual({ kind: 'self_improve' });
+    expect(parseIntent('write yourself a tool', NOW)).toEqual({ kind: 'self_improve' });
+    // distinct from describing himself or recounting growth
+    expect(parseIntent('what are you?', NOW)).toEqual({ kind: 'self_describe' });
+  });
+
   it('recognizes a request for taught knowledge, distinct from self-growth', () => {
     expect(parseIntent('what do you know about WIP limits?', NOW)).toEqual({ kind: 'knowledge', topic: 'wip limits' });
     expect(parseIntent('what have you learned about kanban', NOW)).toEqual({ kind: 'knowledge', topic: 'kanban' });

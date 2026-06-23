@@ -32,6 +32,7 @@ export type CompanionIntent =
   | { kind: 'reflect' }
   | { kind: 'remind'; text: string }
   | { kind: 'list_reminders' }
+  | { kind: 'self_improve' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -126,6 +127,14 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/^\s*remind me\b/i.test(raw)) {
     return { kind: 'remind', text: raw };
+  }
+  // Tier 4: autonomous self-improvement — author a new capability through the gate.
+  if (
+    /\b(?:improve yourself|make yourself better|write yourself (?:a )?(?:tool|capability|skill)|give yourself (?:a )?(?:tool|capability|skill)|teach yourself something|level yourself up|can you (?:improve|upgrade) yourself)\b/.test(
+      lower,
+    )
+  ) {
+    return { kind: 'self_improve' };
   }
   // Knowledge his mentor taught him (supervised, from the open web) — "what do you
   // know/think about X", "what have you learned about X". Checked before `recall`

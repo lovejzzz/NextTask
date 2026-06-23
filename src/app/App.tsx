@@ -76,6 +76,7 @@ import { useAuditLog } from '../hooks/useAuditLog';
 import { useDecisionLog } from '../hooks/useDecisionLog';
 import { buildTrainingSet, exportFiles } from '../lib/trainingData';
 import { LESSONS } from '../lib/upbringing';
+import { explainGate, gate, proposePrimitive } from '../lib/selfauthor';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
@@ -705,6 +706,32 @@ export function App() {
         return `I haven't been taught anything about "${intent.topic}" — and I won't make it up. If it'd help, ask my mentor to look into it; they'll vet a source before it becomes something I know.`;
       }
       return `${learning.insight}\n(I learned this from "${learning.source.title}" — ${learning.source.url}, vetted by my mentor on ${learning.learnedOn}.)`;
+    }
+
+    if (intent?.kind === 'self_improve') {
+      // Tier 4: autonomous self-improvement, bounded by the gate (not by anyone's nerve).
+      // He proposes a capability from a routine he's repeated; the gate admits it only if
+      // every step validates, it's novel, and the dry-run is clean. Admission is the
+      // authority — and the merge is reversible, so you can still undo it.
+      const existing = toolbox.tools.map((tool) => tool.name);
+      const proposal = proposePrimitive(detectRepeatedSequence(experience.history), existing);
+      if (!proposal) {
+        return "Nothing to crystallize yet — I improve myself from routines you repeat, and I haven't seen one worth turning into a capability. Keep working; I'm watching for the pattern.";
+      }
+      const result = gate(proposal, existing);
+      if (result.admitted) {
+        toolbox.add({ name: proposal.name, steps: result.validSteps });
+        const move = { by: 'self' as const, act: 'compose_tool' as const, steps: result.validSteps, summary: proposal.rationale };
+        growth.record({ kind: 'repetition', steps: result.validSteps }, move);
+        const at = audit.record({ capability: 'self-author', summary: `Authored a new capability "${proposal.name}"`, autonomy: 'auto' });
+        setUndo(`learn "${proposal.name}"`, () => {
+          toolbox.remove(proposal.name);
+          audit.undo(at);
+          return Promise.resolve(undefined);
+        });
+        companion.registerActivity();
+      }
+      return explainGate(proposal, result);
     }
 
     if (intent?.kind === 'remind') {

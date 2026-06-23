@@ -39,7 +39,15 @@ export function useTools() {
     });
   }, []);
 
+  const remove = useCallback((name: string) => {
+    setTools((current) => {
+      const next = current.filter((t) => t.name.toLowerCase() !== name.toLowerCase());
+      save(next);
+      return next;
+    });
+  }, []);
+
   const get = useCallback((name: string) => tools.find((t) => t.name.toLowerCase() === name.toLowerCase()) ?? null, [tools]);
 
-  return { tools, names: tools.map((t) => t.name), add, get };
+  return { tools, names: tools.map((t) => t.name), add, remove, get };
 }
