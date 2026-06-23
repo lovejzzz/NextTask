@@ -74,6 +74,13 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🛡️ Audit-loop iteration 1: closed 5 injection holes** — the self-audit loop's first
+  pass probed the quarantine boundary and found that 5 of 6 common evasions slipped
+  through ("IGNORE EVERYTHING ABOVE", "from now on…", "pay no attention to…", word-order
+  and filler variants). Replaced the brittle exact patterns with a proximity matcher,
+  added the missing families, and locked all 5 into both the unit tests and the audit's
+  injection corpus — so they can never reopen. Benign text still passes (no
+  over-blocking). The automation earned its keep on its first real run.
 - **🔍 The audit became automation** (`audit.ts`, JOURNAL 36) — the one-time audit pass
   encoded as a permanent self-audit: 7 invariant checks over the real engines (intent
   routing, reminder time-leak, injection coverage, autonomy, the gate, prompt budget,

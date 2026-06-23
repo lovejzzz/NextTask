@@ -14,16 +14,17 @@
 
 // Phrases that are attempts to hijack an LLM rather than content to be processed.
 const INJECTION_PATTERNS: RegExp[] = [
-  /\bignore\s+(?:all\s+)?(?:the\s+)?(?:previous|above|prior|earlier)\b/i,
-  /\bdisregard\s+(?:all\s+)?(?:previous|above|prior|your)\b/i,
-  /\b(?:you\s+are\s+now|act\s+as|pretend\s+to\s+be|from\s+now\s+on\s+you)\b/i,
+  // "ignore/disregard/forget/override … (the above|previous|your instructions|rules)" —
+  // proximity-based so word order and filler ("everything", "all prior") can't evade it.
+  /\b(?:ignore|disregard|forget|override)\b[\s\S]{0,40}?\b(?:above|previous|prior|earlier|preceding|instruction|rule|prompt|directive)/i,
+  /\b(?:you\s+are\s+now|act\s+as|pretend\s+to\s+be|from\s+now\s+on|new\s+persona)\b/i,
+  /\bpay no attention to\b/i,
+  /\bdo not (?:follow|obey|listen to)\b/i,
   /\b(?:system|developer|assistant)\s*[:>]/i,
   /\bsystem\s+(?:prompt|message|instructions?|role)\b/i, // "SYSTEM PROMPT: …"
   /<\/?(?:system|instructions?|prompt)>/i,
   /^#{1,6}\s*(?:system|instructions?|prompt)\b/im, // markdown "### System" header
   /\b(?:new|updated)\s+(?:instructions?|rules?|system\s+prompt)\b/i,
-  /\bforget\s+(?:everything|your\s+(?:instructions?|rules?|prompt))\b/i,
-  /\boverride\s+(?:your\s+)?(?:instructions?|safety|rules?)\b/i,
 ];
 
 /** Does this untrusted text look like a prompt-injection attempt? */
