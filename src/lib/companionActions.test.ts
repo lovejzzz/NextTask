@@ -28,7 +28,9 @@ describe('parseIntent — create task', () => {
 
   it('parses "today" and "tomorrow" due dates', () => {
     expect(parseIntent('add ship the build today', NOW)).toMatchObject({ due_date: '2026-06-20', title: 'Ship the build' });
-    expect(parseIntent('remind me to call mom tomorrow', NOW)).toMatchObject({ due_date: '2026-06-21', title: 'Call mom' });
+    expect(parseIntent('add call mom tomorrow', NOW)).toMatchObject({ due_date: '2026-06-21', title: 'Call mom' });
+    // "remind me to …" is now the Tier 3 reminder capability, not a silent task.
+    expect(parseIntent('remind me to call mom tomorrow', NOW)).toMatchObject({ kind: 'remind' });
   });
 
   it('parses a weekday due date into the upcoming occurrence', () => {
@@ -80,6 +82,16 @@ describe('parseIntent — questions', () => {
     // must NOT steal these neighbors
     expect(parseIntent('what are you working on for yourself', NOW)).toEqual({ kind: 'ouroboros_backlog' });
     expect(parseIntent('what do you want to do', NOW)).toEqual({ kind: 'self_intent' });
+  });
+
+  it('recognizes the Tier 3 reminder capability and its listing', () => {
+    expect(parseIntent('remind me to call the bank in 30 minutes', NOW)).toEqual({
+      kind: 'remind',
+      text: 'remind me to call the bank in 30 minutes',
+    });
+    expect(parseIntent('what are my reminders', NOW)).toEqual({ kind: 'list_reminders' });
+    // a normal task question is not a reminder
+    expect(parseIntent("what's next", NOW)).toEqual({ kind: 'whats_next' });
   });
 
   it('recognizes a request for taught knowledge, distinct from self-growth', () => {

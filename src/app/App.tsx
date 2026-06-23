@@ -69,6 +69,10 @@ import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { boardTrend, inFlow, trendNote } from '../lib/history';
 import { reflect } from '../lib/reflect';
 import { LEARNINGS, describeLearnings, findLearning, formatLearnings } from '../lib/knowledge';
+import { decideAutonomy, describeAudit } from '../lib/agency';
+import { describeReminder, describeReminders, dueReminders, parseReminder } from '../lib/reminders';
+import { useReminders } from '../hooks/useReminders';
+import { useAuditLog } from '../hooks/useAuditLog';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
@@ -248,6 +252,8 @@ export function App() {
   const experience = useCommandHistory();
   const unmetAsks = useUnmetAsks(); // the asks he couldn't meet — fuel for autonomous growth
   const growth = useGrowthLedger(); // his developmental autobiography — written when growth happens
+  const reminders = useReminders(); // Tier 3: his first real, reversible capability
+  const audit = useAuditLog(); // Tier 3: the glass-box trail of every action he takes
   // A capability he keeps being asked for and lacks — sensed from his own unmet asks.
   // Feeds his drives so the gap surfaces as a consent-gated request to *grow* that
   // ability, instead of being silently dropped (the autonomous growth model, growth.ts).
@@ -697,6 +703,30 @@ export function App() {
       return `${learning.insight}\n(I learned this from "${learning.source.title}" — ${learning.source.url}, vetted by my mentor on ${learning.learnedOn}.)`;
     }
 
+    if (intent?.kind === 'remind') {
+      // Tier 3: a real action. A reminder is reversible and board-local, so by the
+      // graduated-autonomy policy he sets it himself — with an undo and an audit entry.
+      const parsed = parseReminder(intent.text);
+      if (!parsed) return "I can hold a reminder for you — try \"remind me to call the bank in 30 minutes\".";
+      const capability = { reversibility: 'reversible' as const, outwardFacing: false };
+      const autonomy = decideAutonomy(capability); // 'auto' — reversible + local
+      const reminder = reminders.add(parsed.text, parsed.dueAt);
+      const at = audit.record({ capability: 'reminder', summary: `Set a reminder to ${parsed.text}`, autonomy });
+      setUndo(`set reminder "${parsed.text}"`, () => {
+        reminders.remove(reminder.id);
+        audit.undo(at);
+        return Promise.resolve(undefined);
+      });
+      companion.registerActivity();
+      return describeReminder(parsed);
+    }
+
+    if (intent?.kind === 'list_reminders') {
+      const active = describeReminders(reminders.reminders);
+      if (!active.length) return "No reminders set. Say \"remind me to …\" and I'll hold it for you.";
+      return `Here's what I'm holding for you:\n${active.map((r) => `- ${r}`).join('\n')}`;
+    }
+
     if (intent?.kind === 'reflect') {
       // Higher-order: patterns in how you work, read from lived history — each with its
       // evidence, or honest silence when the trail's too thin to read.
@@ -1085,8 +1115,10 @@ export function App() {
       grown: growthSummary(growth.ledger) ? [growthSummary(growth.ledger)] : [],
       noticed: reflect(boardHistory).map((r) => `${r.observation} (${r.evidence})`),
       learned: describeLearnings(),
+      reminders: describeReminders(reminders.reminders),
+      did: describeAudit(audit.log),
     };
-  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger]);
+  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger, reminders.reminders, audit.log]);
 
   async function acceptProposal(proposal: Proposal) {
     if (proposal.kind === 'clear_overdue') {
@@ -1251,6 +1283,22 @@ export function App() {
       setToast((current) => (current?.id === item.id ? null : current));
     }, 3200);
   }
+
+  // Tier 3: fire due reminders. A real, time-based action in the world — checked on a
+  // gentle interval; each fire notifies once and is recorded in the audit trail.
+  useEffect(() => {
+    const tick = () => {
+      for (const reminder of dueReminders(reminders.reminders)) {
+        notify('success', `⏰ ${COMPANION_NAME}: reminding you to ${reminder.text}.`);
+        reminders.markFired(reminder.id);
+        audit.record({ capability: 'reminder', summary: `Reminded you to ${reminder.text}`, autonomy: 'auto' });
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- notify is stable; reminders/audit methods are stable callbacks
+  }, [reminders.reminders]);
 
   function confirmAction(options: ConfirmOptions) {
     return new Promise<boolean>((resolve) => {

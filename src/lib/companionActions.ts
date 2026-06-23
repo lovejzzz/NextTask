@@ -30,6 +30,8 @@ export type CompanionIntent =
   | { kind: 'self_growth' }
   | { kind: 'knowledge'; topic: string }
   | { kind: 'reflect' }
+  | { kind: 'remind'; text: string }
+  | { kind: 'list_reminders' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -117,6 +119,13 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
 
   if (/^(?:undo|revert|nevermind|never mind|take that back|oops|undo that)\b/.test(lower)) {
     return { kind: 'undo' };
+  }
+  // Tier 3 capability: reminders. "what/show … reminders" lists; "remind me …" sets one.
+  if (/\b(?:what (?:are|were) my reminders|show (?:me )?my reminders|list (?:my )?reminders|my reminders)\b/.test(lower)) {
+    return { kind: 'list_reminders' };
+  }
+  if (/^\s*remind me\b/i.test(raw)) {
+    return { kind: 'remind', text: raw };
   }
   // Knowledge his mentor taught him (supervised, from the open web) — "what do you
   // know/think about X", "what have you learned about X". Checked before `recall`

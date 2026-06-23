@@ -18,6 +18,8 @@ export type MindView = {
   grown: string[]; // how he's grown on his own, recounted from his ledger
   noticed: string[]; // higher-order patterns he's read from your lived history
   learned: string[]; // durable knowledge his mentor taught him from vetted sources
+  reminders: string[]; // what he's holding to remind you about (Tier 3 capability)
+  did: string[]; // the audit trail of actions he's actually taken (Tier 3)
 };
 
 function Section({ title, items }: { title: string; items: string[] }) {
@@ -43,7 +45,9 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
     !mind.upbringing.length &&
     !mind.grown.length &&
     !mind.noticed.length &&
-    !mind.learned.length;
+    !mind.learned.length &&
+    !mind.reminders.length &&
+    !mind.did.length;
   return (
     <motion.aside
       className="boardy-mind"
@@ -68,6 +72,8 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
       ) : (
         <>
           <Section title="What I see on the board" items={mind.board} />
+          <Section title="What I’ll remind you about" items={mind.reminders} />
+          <Section title="What I’ve actually done (audit trail)" items={mind.did} />
           <Section title="What I’ve noticed about how you work" items={mind.noticed} />
           <Section title="What I’m pursuing" items={mind.pursuit ? [mind.pursuit] : []} />
           <Section title="What I want right now" items={mind.wants} />
