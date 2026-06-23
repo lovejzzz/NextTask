@@ -1168,6 +1168,9 @@ export function App() {
       ownBacklog: proposeImprovements(0, 10, tasks.map((task) => task.title)).length,
     };
     return {
+      identity: [
+        `I'm the same Boardy across ${selfModel.sessions} session${selfModel.sessions === 1 ? '' : 's'} — here ${ageDescription(selfModel.bornAt)}.`,
+      ],
       board: reconstruct(tasks, [], new Date(), '', boardHistory)
         .filter((recollection) => recollection.source === 'board')
         .map((recollection) => recollection.text),
@@ -1183,7 +1186,7 @@ export function App() {
       reminders: describeReminders(reminders.reminders),
       did: describeAudit(audit.log),
     };
-  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger, reminders.reminders, audit.log]);
+  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger, reminders.reminders, audit.log, selfModel]);
 
   // A compact board context for labeling a Desk decision (Tier 2 training signal).
   const decisionContext = () => `board: ${insights.active} active, ${insights.overdue} overdue, ${momentum.shippedToday} shipped today`;

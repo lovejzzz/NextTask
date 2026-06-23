@@ -10,6 +10,7 @@ import { COMPANION_NAME } from '../../lib/companion';
  * trust thesis made literal: no hidden state, nothing you can't see.
  */
 export type MindView = {
+  identity: string[]; // who he is — his continuity across sessions (Tier 5)
   board: string[]; // reconstructed live from the board
   pursuit: string | null; // his standing intention, if any
   wants: string[]; // his current self-motivated drives
@@ -38,6 +39,7 @@ function Section({ title, items }: { title: string; items: string[] }) {
 
 export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForget?: (text: string) => void; onClose: () => void }) {
   const empty =
+    !mind.identity.length &&
     !mind.board.length &&
     !mind.pursuit &&
     !mind.wants.length &&
@@ -71,6 +73,7 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
         <p className="boardy-mind-empty">My mind’s quiet right now — clear board, nothing told, nothing pulling at me.</p>
       ) : (
         <>
+          <Section title="Who I am" items={mind.identity} />
           <Section title="What I see on the board" items={mind.board} />
           <Section title="What I’ll remind you about" items={mind.reminders} />
           <Section title="What I’ve actually done (audit trail)" items={mind.did} />
