@@ -90,6 +90,8 @@ describe('parseIntent — questions', () => {
       text: 'remind me to call the bank in 30 minutes',
     });
     expect(parseIntent('what are my reminders', NOW)).toEqual({ kind: 'list_reminders' });
+    expect(parseIntent('set a reminder to pay rent', NOW)).toMatchObject({ kind: 'remind' });
+    expect(parseIntent('can you remind me to call the bank', NOW)).toMatchObject({ kind: 'remind' }); // politeness stripped
     // a normal task question is not a reminder
     expect(parseIntent("what's next", NOW)).toEqual({ kind: 'whats_next' });
   });

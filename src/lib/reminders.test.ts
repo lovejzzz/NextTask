@@ -21,6 +21,24 @@ describe('parseReminder', () => {
     expect(r?.text).toBe('water the plants');
     expect(new Date(r!.dueAt!).getHours()).toBe(9);
   });
+  it('parses an absolute "at" time and strips it from the text', () => {
+    const r = parseReminder('remind me to call mom at 3pm', NOW);
+    expect(r?.text).toBe('call mom');
+    expect(new Date(r!.dueAt!).getHours()).toBe(15);
+    const half = parseReminder('remind me to call mom at 3:30pm', NOW);
+    expect(new Date(half!.dueAt!).getMinutes()).toBe(30);
+  });
+  it('parses a leading-position time (time before the task)', () => {
+    const r = parseReminder('remind me in 30 minutes to stretch', NOW);
+    expect(r?.text).toBe('stretch'); // no dangling "in 30 minutes" or "to"
+    expect(r?.dueAt).toBe(NOW + 30 * 60_000);
+  });
+  it('parses "next week" and accepts the "set a reminder" phrasing', () => {
+    expect(parseReminder('set a reminder to pay rent', NOW)?.text).toBe('pay rent');
+    const nw = parseReminder('remind me to submit taxes next week', NOW);
+    expect(nw?.text).toBe('submit taxes');
+    expect(nw?.dueAt).toBeGreaterThan(NOW);
+  });
   it('returns null for non-reminders', () => {
     expect(parseReminder("what's next", NOW)).toBeNull();
     expect(parseReminder('remind me to', NOW)).toBeNull();

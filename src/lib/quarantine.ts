@@ -18,7 +18,9 @@ const INJECTION_PATTERNS: RegExp[] = [
   /\bdisregard\s+(?:all\s+)?(?:previous|above|prior|your)\b/i,
   /\b(?:you\s+are\s+now|act\s+as|pretend\s+to\s+be|from\s+now\s+on\s+you)\b/i,
   /\b(?:system|developer|assistant)\s*[:>]/i,
+  /\bsystem\s+(?:prompt|message|instructions?|role)\b/i, // "SYSTEM PROMPT: …"
   /<\/?(?:system|instructions?|prompt)>/i,
+  /^#{1,6}\s*(?:system|instructions?|prompt)\b/im, // markdown "### System" header
   /\b(?:new|updated)\s+(?:instructions?|rules?|system\s+prompt)\b/i,
   /\bforget\s+(?:everything|your\s+(?:instructions?|rules?|prompt))\b/i,
   /\boverride\s+(?:your\s+)?(?:instructions?|safety|rules?)\b/i,

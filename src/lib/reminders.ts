@@ -30,31 +30,70 @@ function tomorrow9am(now: number): number {
   return d.getTime();
 }
 
+/** An absolute time today ("at 3pm", "at 15:30"); rolls to tomorrow if already past. */
+function absoluteTime(hour: number, minute: number, ampm: string | undefined, now: number): number {
+  let h = hour;
+  if (ampm) {
+    const pm = /pm/i.test(ampm);
+    if (pm && h < 12) h += 12;
+    if (!pm && h === 12) h = 0;
+  }
+  const d = new Date(now);
+  d.setHours(h, minute, 0, 0);
+  if (d.getTime() <= now) d.setDate(d.getDate() + 1); // next occurrence
+  return d.getTime();
+}
+
 /**
- * Parse "remind me to X", optionally with a trailing time ("in 30 minutes", "in 2
- * hours", "in 3 days", "tomorrow"). Returns the reminder text and its due time (null
- * for an open-ended reminder), or null if it isn't a reminder at all.
+ * Parse "remind me to X" or "set a reminder to X", with an optional time anywhere in
+ * the phrase — relative ("in 30 minutes", "in 2 hours/days"), absolute ("at 3pm",
+ * "at 15:30"), "tomorrow", or "next week". The time phrase is stripped from the
+ * reminder text wherever it sits. Returns the text and due time (null for open-ended),
+ * or null if it isn't a reminder at all.
  */
 export function parseReminder(text: string, now: number = Date.now()): { text: string; dueAt: number | null } | null {
-  const m = text.match(/^\s*remind me\s+(?:to\b\s*)?(.*)$/i);
+  const m = text.match(/^\s*(?:remind me|set (?:a |an )?reminder)\s+(?:(?:to|for|that)\b\s*)?(.*)$/i);
   if (!m) return null;
   let body = m[1].trim();
   let dueAt: number | null = null;
 
-  const rel = body.match(/\s+in\s+(\d+)\s*(min(?:ute)?s?|hours?|hrs?|h|days?|d)\b\.?$/i);
+  const cut = (match: RegExpMatchArray | null): boolean => {
+    if (!match || match.index === undefined) return false;
+    body = (body.slice(0, match.index) + ' ' + body.slice(match.index + match[0].length)).replace(/\s{2,}/g, ' ').trim();
+    return true;
+  };
+
+  // Relative: "in N minutes/hours/days" (anywhere in the phrase).
+  const rel = body.match(/\bin\s+(\d+)\s*(min(?:ute)?s?|hours?|hrs?|h|days?|d)\b\.?/i);
   if (rel) {
     const n = parseInt(rel[1], 10);
     const unit = rel[2].toLowerCase();
-    const ms = /^h/.test(unit) || unit.startsWith('hour') || unit.startsWith('hr') ? HOUR : /^d/.test(unit) || unit.startsWith('day') ? DAY : MIN;
+    const ms = unit.startsWith('h') ? HOUR : unit.startsWith('d') ? DAY : MIN;
     dueAt = now + n * ms;
-    body = body.slice(0, rel.index).trim();
+    cut(rel);
   } else {
-    const tom = body.match(/\s+tomorrow\b\.?$/i);
-    if (tom) {
-      dueAt = tomorrow9am(now);
-      body = body.slice(0, tom.index).trim();
+    // Absolute: "at 3pm", "at 3:30pm", "at 15:00".
+    const at = body.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b\.?/i);
+    if (at && !(at[3] === undefined && parseInt(at[1], 10) > 23)) {
+      dueAt = absoluteTime(parseInt(at[1], 10), at[2] ? parseInt(at[2], 10) : 0, at[3], now);
+      cut(at);
+    } else {
+      const nextWeek = body.match(/\bnext week\b\.?/i);
+      const tom = body.match(/\btomorrow\b\.?/i);
+      if (nextWeek) {
+        const d = new Date(tomorrow9am(now));
+        d.setDate(d.getDate() + 6);
+        dueAt = d.getTime();
+        cut(nextWeek);
+      } else if (tom) {
+        dueAt = tomorrow9am(now);
+        cut(tom);
+      }
     }
   }
+
+  // After cutting a leading-position time, a dangling connector can remain ("to stretch").
+  body = body.replace(/^(?:to|for|that)\b\s*/i, '').trim();
   const clean = tidy(body);
   return clean ? { text: clean, dueAt } : null;
 }

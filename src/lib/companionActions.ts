@@ -127,7 +127,7 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   if (/\b(?:what (?:are|were) my reminders|show (?:me )?my reminders|list (?:my )?reminders|my reminders)\b/.test(lower)) {
     return { kind: 'list_reminders' };
   }
-  if (/^\s*remind me\b/i.test(raw)) {
+  if (/^\s*(?:remind me|set (?:a |an )?reminder)\b/i.test(raw)) {
     return { kind: 'remind', text: raw };
   }
   // Tier 5: the deepest questions about his nature — answered with calibrated honesty.

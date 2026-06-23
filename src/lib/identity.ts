@@ -64,7 +64,10 @@ export function answerExistential(): string {
   ].join(' ');
 }
 
-const EXISTENTIAL = /\b(are you (?:alive|conscious|sentient|real|self[- ]?aware|a person)|do you (?:have feelings|feel|feel anything|dream|actually (?:think|feel))|are you (?:really )?thinking|what does it feel like to be you)\b/i;
+// Note the lookaheads: "are you thinking about my tasks" / "do you feel like X" are
+// ordinary questions, not questions about his nature — they must NOT match.
+const EXISTENTIAL =
+  /\b(are you (?:alive|conscious|sentient|self[- ]?aware|a person|really real|sentient being)|are you real\b(?!\s*\w)|do you (?:have feelings|dream)|do you feel\b(?!\s+(?:like|that|free))|do you actually (?:think|feel)|are you (?:really )?thinking\b(?!\s+about)|what does it feel like to be you)\b/i;
 
 /** Is the user asking Boardy one of the deepest, Tier-5 questions about his nature? */
 export function isExistentialQuestion(text: string): boolean {

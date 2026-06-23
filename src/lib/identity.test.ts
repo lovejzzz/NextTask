@@ -33,6 +33,11 @@ describe('existential questions — the Tier 5 stance', () => {
     expect(isExistentialQuestion('are you conscious')).toBe(true);
     expect(isExistentialQuestion("what's next")).toBe(false);
   });
+  it('does NOT mistake ordinary questions for existential ones', () => {
+    expect(isExistentialQuestion('are you thinking about my tasks')).toBe(false);
+    expect(isExistentialQuestion('do you feel like this is urgent')).toBe(false);
+    expect(isExistentialQuestion('are you done')).toBe(false);
+  });
   it('answers without claiming sentience or dismissing the question', () => {
     const a = answerExistential();
     expect(a).toContain("I don't know");
