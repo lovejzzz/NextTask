@@ -28,6 +28,7 @@ export type CompanionIntent =
   | { kind: 'self_intent' }
   | { kind: 'self_describe' }
   | { kind: 'self_growth' }
+  | { kind: 'knowledge'; topic: string }
   | { kind: 'reflect' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
@@ -117,6 +118,18 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   if (/^(?:undo|revert|nevermind|never mind|take that back|oops|undo that)\b/.test(lower)) {
     return { kind: 'undo' };
   }
+  // Knowledge his mentor taught him (supervised, from the open web) — "what do you
+  // know/think about X", "what have you learned about X". Checked before `recall`
+  // (his memory of *you*) and self_growth; the "about me/my…" form is left to recall.
+  {
+    const know = lower.match(
+      /\b(?:what do you know about\s+(.+?)|what have you learned about\s+(.+?)|do you know (?:anything )?about\s+(.+?))[?.!]*$/,
+    );
+    const topic = (know?.[1] ?? know?.[2] ?? know?.[3] ?? '').trim();
+    if (know && topic && !/^(?:me|my|myself)\b/.test(topic)) {
+      return { kind: 'knowledge', topic };
+    }
+  }
   if (/\b(what do you (?:remember|know)(?: about me)?|what did i tell you|what'?s in your memory)\b/.test(lower)) {
     return { kind: 'recall' };
   }
@@ -196,11 +209,11 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   ) {
     return { kind: 'reflect' };
   }
-  // How he's grown / what he's learned — answered from his growth ledger (a real
-  // trail), distinct from "what are you" (self_describe). Checked first so "how have
-  // you grown" isn't swallowed by a broader self pattern.
+  // How he's grown / what he's learned about himself — answered from his growth ledger
+  // (a real trail), distinct from "what are you" (self_describe) and "learned about X"
+  // (knowledge, above). The negative lookahead keeps "learned about …" out.
   if (
-    /\bhow have you (?:grown|changed|developed|improved)\b|\bwhat have you learned\b|\bhow are you (?:growing|developing)\b|\bare you getting better\b|\bhow'?s your (?:growth|progress|development)\b/.test(
+    /\bhow have you (?:grown|changed|developed|improved)\b|\bwhat have you learned\b(?!\s+about)|\bhow are you (?:growing|developing)\b|\bare you getting better\b|\bhow'?s your (?:growth|progress|development)\b/.test(
       lower,
     )
   ) {

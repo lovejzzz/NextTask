@@ -17,6 +17,7 @@ export type MindView = {
   upbringing: string[]; // the convictions his voice learned from how he was raised
   grown: string[]; // how he's grown on his own, recounted from his ledger
   noticed: string[]; // higher-order patterns he's read from your lived history
+  learned: string[]; // durable knowledge his mentor taught him from vetted sources
 };
 
 function Section({ title, items }: { title: string; items: string[] }) {
@@ -41,7 +42,8 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
     !mind.told.length &&
     !mind.upbringing.length &&
     !mind.grown.length &&
-    !mind.noticed.length;
+    !mind.noticed.length &&
+    !mind.learned.length;
   return (
     <motion.aside
       className="boardy-mind"
@@ -92,6 +94,7 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
             </div>
           ) : null}
           <Section title="How I was raised to speak" items={mind.upbringing} />
+          <Section title="What I've learned (with my mentor)" items={mind.learned} />
           <Section title="How I've grown on my own" items={mind.grown} />
         </>
       )}

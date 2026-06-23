@@ -59,6 +59,14 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🌐 He learns from the world, supervised** (`knowledge.ts` + `LEARNING.md`, JOURNAL 33) —
+  the safe answer to "let him browse the internet." His runtime never fetches (a 0.6B
+  voice + untrusted web text = prompt injection); instead the *mentor* is the vetted
+  gateway: real web research, source-checked, distilled into durable glass-box
+  Learnings with provenance. First two taught for real from the open web — Kanban WIP
+  limits and the GTD two-minute rule. Bounded: he refuses to invent what he wasn't
+  taught. Woven into his voice; answerable ("what do you know about X?"); in the Mind
+  panel. 404 green.
 - **🔭 He reflects** (`reflect.ts`, JOURNAL 32) — the leap from reactive to reflective:
   reads patterns out of weeks of lived history (work that keeps slipping, the stage
   where things park, the shipping-day rhythm, follow-through) and tells you what he's

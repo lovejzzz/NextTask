@@ -82,6 +82,15 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('what do you want to do', NOW)).toEqual({ kind: 'self_intent' });
   });
 
+  it('recognizes a request for taught knowledge, distinct from self-growth', () => {
+    expect(parseIntent('what do you know about WIP limits?', NOW)).toEqual({ kind: 'knowledge', topic: 'wip limits' });
+    expect(parseIntent('what have you learned about kanban', NOW)).toEqual({ kind: 'knowledge', topic: 'kanban' });
+    // "what have you learned" with no topic is about his own growth, not taught knowledge
+    expect(parseIntent('what have you learned', NOW)).toEqual({ kind: 'self_growth' });
+    // "about me" stays his memory of you, not taught knowledge
+    expect(parseIntent('what do you know about me', NOW)).toEqual({ kind: 'recall' });
+  });
+
   it('recognizes a request to reflect on patterns, distinct from the board read', () => {
     expect(parseIntent('what have you noticed?', NOW)).toEqual({ kind: 'reflect' });
     expect(parseIntent('notice any patterns', NOW)).toEqual({ kind: 'reflect' });

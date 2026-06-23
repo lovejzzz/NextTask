@@ -61,6 +61,7 @@ export type PromptParts = {
   persona: string; // personaInstruction(...) output
   notes?: string; // formatNotes(...) — things the user asked it to remember
   upbringing?: string; // formatUpbringing(...) — the creed his voice learned from his raising
+  knowledge?: string; // formatLearnings(...) — durable things his mentor taught him (vetted)
 };
 
 export type OnToken = (chunk: string) => void;
@@ -74,7 +75,7 @@ const MAX_HISTORY_TURNS = 8;
  * what's on it right now. A tiny voice example anchors the tone for the 0.5B
  * model. Pure + tested.
  */
-export function buildSystemPrompt({ mood, context, memory, persona, notes, upbringing }: PromptParts): string {
+export function buildSystemPrompt({ mood, context, memory, persona, notes, upbringing, knowledge }: PromptParts): string {
   const facts = `${context.active} active, ${context.overdue} overdue, ${context.inProgress} in progress, ${context.shippedToday} shipped today`;
   const titles = context.titles.slice(0, 3).filter(Boolean);
   const sample = titles.length ? ` A few tasks: ${titles.map((t) => `"${t}"`).join(', ')}.` : '';
@@ -87,6 +88,8 @@ export function buildSystemPrompt({ mood, context, memory, persona, notes, upbri
   // identity (before the volatile board facts) so it shapes *who he is*, not just
   // what he says about right now.
   if (upbringing) lines.push(upbringing);
+  // Durable knowledge his mentor taught him from vetted sources — apply it, don't recite it.
+  if (knowledge) lines.push(knowledge);
   lines.push(`What you remember: ${memory}`);
   if (notes) lines.push(`They asked you to remember: ${notes}. Reference this naturally when relevant.`);
   lines.push(

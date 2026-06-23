@@ -68,6 +68,7 @@ import { useCompanion } from '../hooks/useCompanion';
 import { useCompanionMemory } from '../hooks/useCompanionMemory';
 import { boardTrend, inFlow, trendNote } from '../lib/history';
 import { reflect } from '../lib/reflect';
+import { LEARNINGS, describeLearnings, findLearning, formatLearnings } from '../lib/knowledge';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
@@ -348,6 +349,10 @@ export function App() {
   // cultivated register it speaks by example. This is how his voice learns from how he
   // was raised — in-context, glass-box, growing each time he's mentored (upbringing.ts).
   const upbringingText = useMemo(() => formatUpbringing(), []);
+  // Durable knowledge his mentor taught him from the open web (vetted) — woven into
+  // his voice so he can apply it (knowledge.ts / LEARNING.md). The web only ever
+  // reaches him as this audited, static residue; his runtime never browses.
+  const knowledgeText = useMemo(() => formatLearnings(), []);
   const upbringingAnchors = useMemo(
     () => upbringingExemplars().flatMap((ex) => [
       { role: 'user' as const, content: ex.user },
@@ -358,9 +363,9 @@ export function App() {
   const generateAmbient = useCallback(
     (mood: Mood) =>
       brainRun(
-        buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText, notes: notesText, upbringing: upbringingText }),
+        buildAmbientMessages({ mood, context: companionContext, memory: memorySummary, persona: personaText, notes: notesText, upbringing: upbringingText, knowledge: knowledgeText }),
       ),
-    [brainRun, companionContext, memorySummary, personaText, notesText, upbringingText],
+    [brainRun, companionContext, memorySummary, personaText, notesText, upbringingText, knowledgeText],
   );
 
   // Let the model phrase a grounded one-liner about a task, but only if it passes
@@ -375,6 +380,7 @@ export function App() {
         persona: personaText,
         notes: notesText,
         upbringing: upbringingText,
+        knowledge: knowledgeText,
         exemplars: upbringingAnchors,
         history: [{ role: 'user', content: question }],
       }),
@@ -676,6 +682,21 @@ export function App() {
       return `Here's what's been happening:\n${history.map((r) => `- ${r.text}`).join('\n')}`;
     }
 
+    if (intent?.kind === 'knowledge') {
+      // What he was taught — supervised, from vetted sources, always with provenance.
+      if (!intent.topic) {
+        if (!LEARNINGS.length) return "I haven't been taught anything from outside the board yet. My mentor vets what I learn before it's mine.";
+        return `Here's what my mentor has taught me from the open web (each checked against a real source):\n${LEARNINGS.map(
+          (l) => `- ${l.topic}: ${l.insight} (source: ${l.source.title})`,
+        ).join('\n')}`;
+      }
+      const learning = findLearning(intent.topic);
+      if (!learning) {
+        return `I haven't been taught anything about "${intent.topic}" — and I won't make it up. If it'd help, ask my mentor to look into it; they'll vet a source before it becomes something I know.`;
+      }
+      return `${learning.insight}\n(I learned this from "${learning.source.title}" — ${learning.source.url}, vetted by my mentor on ${learning.learnedOn}.)`;
+    }
+
     if (intent?.kind === 'reflect') {
       // Higher-order: patterns in how you work, read from lived history — each with its
       // evidence, or honest silence when the trail's too thin to read.
@@ -876,6 +897,7 @@ export function App() {
         persona: personaText,
         notes: notesText,
         upbringing: upbringingText,
+        knowledge: knowledgeText,
         exemplars: upbringingAnchors,
         history,
       }),
@@ -918,6 +940,7 @@ export function App() {
           persona: personaText,
           notes: notesText,
           upbringing: upbringingText,
+          knowledge: knowledgeText,
           exemplars: upbringingAnchors,
           history: [{ role: 'user', content: text }],
         }),
@@ -935,6 +958,7 @@ export function App() {
           persona: personaInstruction(level, warmth),
           notes: notesText,
           upbringing: upbringingText,
+          knowledge: knowledgeText,
           exemplars: upbringingAnchors,
           history: [{ role: 'user', content: text }],
         }),
@@ -1044,6 +1068,7 @@ export function App() {
       upbringing: describeUpbringing(),
       grown: growthSummary(growth.ledger) ? [growthSummary(growth.ledger)] : [],
       noticed: reflect(boardHistory).map((r) => `${r.observation} (${r.evidence})`),
+      learned: describeLearnings(),
     };
   }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger]);
 
