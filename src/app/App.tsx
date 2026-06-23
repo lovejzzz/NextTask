@@ -77,6 +77,8 @@ import { useDecisionLog } from '../hooks/useDecisionLog';
 import { buildTrainingSet, exportFiles } from '../lib/trainingData';
 import { LESSONS } from '../lib/upbringing';
 import { explainGate, gate, proposePrimitive } from '../lib/selfauthor';
+import { ageDescription, answerExistential, selfAccount } from '../lib/identity';
+import { useSelfContinuity } from '../hooks/useSelfContinuity';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
@@ -99,7 +101,7 @@ import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEva
 import { isToolListRequest, parseToolDefinitionDetailed, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
 import { detectRepeatedSequence, suggestSkillContinuation, suggestSkillName } from '../lib/skills';
-import { COMPANION_NAME, describeSelf } from '../lib/companion';
+import { COMPANION_NAME } from '../lib/companion';
 import { classifyIntent } from '../lib/intentFallback';
 import {
   AUTOPILOT_PREFIX,
@@ -259,6 +261,7 @@ export function App() {
   const reminders = useReminders(); // Tier 3: his first real, reversible capability
   const audit = useAuditLog(); // Tier 3: the glass-box trail of every action he takes
   const decisions = useDecisionLog(); // Tier 2: accept/reject signal → his training data
+  const selfModel = useSelfContinuity(); // Tier 5: continuity — the same Boardy across sessions
   // A capability he keeps being asked for and lacks — sensed from his own unmet asks.
   // Feeds his drives so the gap surfaces as a consent-gated request to *grow* that
   // ability, instead of being silently dropped (the autonomous growth model, growth.ts).
@@ -771,7 +774,21 @@ export function App() {
     }
 
     if (intent?.kind === 'self_describe') {
-      return describeSelf();
+      // Tier 5: a continuity-aware self-account — who he is, grounded in his real
+      // faculties and his life so far, calibrated about the part nobody can settle.
+      return selfAccount({
+        age: ageDescription(selfModel.bornAt),
+        sessions: selfModel.sessions,
+        faculties: ['read the board truthfully', 'reflect on how you work', 'remember what happened', 'grow on my own', 'set reminders'],
+        learnedCount: LEARNINGS.length,
+        grownCount: growth.ledger.length,
+      });
+    }
+
+    if (intent?.kind === 'self_existential') {
+      // Tier 5: the deepest question, answered with the project's whole honesty —
+      // claiming nothing it can't ground, denying nothing it can't rule out.
+      return answerExistential();
     }
 
     if (intent?.kind === 'self_growth') {

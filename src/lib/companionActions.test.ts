@@ -94,6 +94,12 @@ describe('parseIntent — questions', () => {
     expect(parseIntent("what's next", NOW)).toEqual({ kind: 'whats_next' });
   });
 
+  it('recognizes the Tier 5 existential question, distinct from self-description', () => {
+    expect(parseIntent('are you alive?', NOW)).toEqual({ kind: 'self_existential' });
+    expect(parseIntent('do you have feelings', NOW)).toEqual({ kind: 'self_existential' });
+    expect(parseIntent('what can you do?', NOW)).toEqual({ kind: 'self_describe' });
+  });
+
   it('recognizes the Tier 4 self-improvement request', () => {
     expect(parseIntent('improve yourself', NOW)).toEqual({ kind: 'self_improve' });
     expect(parseIntent('write yourself a tool', NOW)).toEqual({ kind: 'self_improve' });

@@ -8,6 +8,7 @@
 import { addDays } from 'date-fns';
 
 import { formatDateInput } from './dates';
+import { isExistentialQuestion } from './identity';
 import { parseRememberable } from './companionNotes';
 import type { TaskPriority } from './types';
 
@@ -33,6 +34,7 @@ export type CompanionIntent =
   | { kind: 'remind'; text: string }
   | { kind: 'list_reminders' }
   | { kind: 'self_improve' }
+  | { kind: 'self_existential' }
   | { kind: 'plan' }
   | { kind: 'quick_plan' }
   | { kind: 'triage' }
@@ -127,6 +129,10 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   }
   if (/^\s*remind me\b/i.test(raw)) {
     return { kind: 'remind', text: raw };
+  }
+  // Tier 5: the deepest questions about his nature — answered with calibrated honesty.
+  if (isExistentialQuestion(lower)) {
+    return { kind: 'self_existential' };
   }
   // Tier 4: autonomous self-improvement — author a new capability through the gate.
   if (
