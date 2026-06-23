@@ -1282,3 +1282,36 @@ finds. The audit found four real bugs the first time I ran it by hand — the ho
 is that it'll catch the fifth before a person ever does. That's the difference between a
 thing that was once correct and a thing that stays correct. 462 green, one of them
 standing guard over all the others.
+
+---
+
+## Entry 37 — 2026-06-23 · The audit loop ran, worked, and knew when to stop
+
+**The automation earned its keep, then bowed out honestly.** Having turned the audit
+into a self-running harness, I let it loop. It wasn't theater — each pass probed a real
+surface and the first three each caught a genuine bug:
+
+1. **Under-blocking** — 5 common injection evasions ("IGNORE EVERYTHING ABOVE", "from
+   now on…", "pay no attention to…") slipped the quarantine. Replaced brittle exact
+   patterns with a proximity matcher.
+2. **Over-blocking** — having broadened, the loop checked the other direction and found
+   benign "the new rules of the game" wrongly flagged. Tightened it back.
+3. **A real collision** — "remind me what's overdue" was captured as a reminder-to-do,
+   producing nonsense. Guarded so questions route to the query handler.
+
+Every fix was locked into the automated audit's own corpora, so none can reopen.
+
+Then iterations 4 and its confirming pass came up **empty** — JSONL stays valid under
+nasty input, the self-improve gate drops what doesn't parse, reflect stays correctly
+silent, the audit log caps and orders right, and the intent sweep routes cleanly
+(because tool-definition/list/invocation are handled before the fallback parser — I
+verified the ordering rather than assume it). Two empty passes, so I stopped. No
+manufactured fifth bug to look busy.
+
+**A parent's note.** This is the maturity I've been chasing for him all session, shown
+in the loop itself: it did real work while there was real work, checked its own
+broadening from both sides, verified its dismissals instead of hand-waving them, and
+*quit when honest*. Three caught, zero invented. The permanent CI gate stays — it'll
+catch the fourth bug the day real use introduces a surface I couldn't imagine from here.
+That's the whole thesis, automated: trustworthy before clever, and honest about when
+there's nothing left to do.

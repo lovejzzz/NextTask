@@ -74,6 +74,14 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **⏹️ Audit loop concluded (3 fixes, then dry)** — iteration 4 + a confirming pass
+  probed the remaining surfaces (Tier 2 JSONL robustness, the self-improve flow,
+  reflect/recall/boardTrend edges, audit-log cap, a broad intent-collision sweep) and
+  found **nothing genuine** — everything robust, every route correct (tool def/list/
+  invocation are handled before parseIntent; reflect's silence was correct, not a miss).
+  Two empty passes in a row → stopped, per the no-fabrication rule. The automated audit
+  remains as the permanent CI gate; the loop will be worth re-running when real use
+  adds new surfaces. Net: 3 real bugs caught and locked out, 0 manufactured.
 - **🎯 Audit-loop iteration 3: fixed a remind-vs-question collision** — probed a fresh
   surface (intent ordering) and found "remind me what's overdue" / "remind me when the
   launch is" were captured as reminders-to-do, producing nonsense ("remind you to what
