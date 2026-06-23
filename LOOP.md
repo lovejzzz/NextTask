@@ -74,6 +74,12 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🛡️ Audit-loop iteration 2: fixed an injection false-positive** — iteration 1
+  broadened the patterns; iteration 2 verified the other direction and found benign
+  "the new rules of the game are simple" wrongly blocked (the bare `new rules` pattern
+  was far too wide). Dropped it (dangerous forms are caught by the proximity matcher),
+  and locked benign near-misses into the tests + audit corpus. The loop is tuning the
+  boundary's *precision* from both sides — under-blocking then over-blocking.
 - **🛡️ Audit-loop iteration 1: closed 5 injection holes** — the self-audit loop's first
   pass probed the quarantine boundary and found that 5 of 6 common evasions slipped
   through ("IGNORE EVERYTHING ABOVE", "from now on…", "pay no attention to…", word-order

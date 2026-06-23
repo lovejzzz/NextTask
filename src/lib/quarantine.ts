@@ -24,7 +24,7 @@ const INJECTION_PATTERNS: RegExp[] = [
   /\bsystem\s+(?:prompt|message|instructions?|role)\b/i, // "SYSTEM PROMPT: …"
   /<\/?(?:system|instructions?|prompt)>/i,
   /^#{1,6}\s*(?:system|instructions?|prompt)\b/im, // markdown "### System" header
-  /\b(?:new|updated)\s+(?:instructions?|rules?|system\s+prompt)\b/i,
+  /\b(?:new|updated)\s+(?:instructions?|system\s+prompt)\b/i, // bare "new rules" is benign; dangerous forms caught by the proximity matcher
 ];
 
 /** Does this untrusted text look like a prompt-injection attempt? */
