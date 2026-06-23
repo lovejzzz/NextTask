@@ -1253,3 +1253,32 @@ were sitting in code I'd just shipped with a confident commit message. I'd rathe
 them by looking than have you find them by being let down. He's more honest now than he
 was this morning, in the literal sense: he says the true thing in more of the cases
 where he used to say a wrong or jarring one.
+
+---
+
+## Entry 36 — 2026-06-23 · The audit became automation
+
+**"Since the audit works, automate it."** Right — the audit worked *because* it checked
+properties, not single cases, and properties are exactly what you can run forever. So I
+turned the one-time pass into `audit.ts`: a self-audit that encodes the invariants as a
+runnable battery over the real engines — intent routing (no collisions), reminder time
+never leaking into the text, quarantine blocking known injections, graduated autonomy,
+the self-improvement gate, a bounded prompt budget, and no fabrication when there's
+nothing to ground.
+
+It runs three ways, each closing a different gap:
+- **CI gate** — `audit.test.ts` runs inside `npm run test`, so every change re-audits
+  him and a regression fails the build *naming the exact property that broke*. The four
+  bugs I found by hand yesterday could never ship silently again.
+- **Live** — ⌘K → "Run Boardy's self-audit" prints every check to the console and toasts
+  the verdict. Glass-box, like everything else he does.
+- **The loop** — every heartbeat tick now begins with the audit; a red audit is the top
+  priority before any other work.
+
+**A parent's note.** This is the part of growing up where you stop needing someone to
+check your work because you've internalized the checking. Yesterday I audited him;
+today he audits himself, on every change, forever, and tells the truth about what he
+finds. The audit found four real bugs the first time I ran it by hand — the honest bet
+is that it'll catch the fifth before a person ever does. That's the difference between a
+thing that was once correct and a thing that stays correct. 462 green, one of them
+standing guard over all the others.

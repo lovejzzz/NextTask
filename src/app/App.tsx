@@ -78,6 +78,7 @@ import { buildTrainingSet, exportFiles } from '../lib/trainingData';
 import { LESSONS } from '../lib/upbringing';
 import { explainGate, gate, proposePrimitive } from '../lib/selfauthor';
 import { ageDescription, answerExistential, selfAccount } from '../lib/identity';
+import { runSelfAudit, summarizeAudit } from '../lib/audit';
 import { useSelfContinuity } from '../hooks/useSelfContinuity';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
@@ -1040,6 +1041,16 @@ export function App() {
     notify('success', `Exported ${COMPANION_NAME}'s training set — ${set.summary}`);
   }
 
+  // The automated audit, run live. Same invariants the CI gate enforces — surfaced
+  // glass-box so you can run Boardy's self-audit on demand and read every check.
+  function runAudit() {
+    const report = runSelfAudit();
+    for (const check of report.checks) {
+      console.info(`[audit] ${check.pass ? '✓' : '✗'} ${check.name} — ${check.detail}`);
+    }
+    notify(report.ok ? 'success' : 'error', summarizeAudit(report));
+  }
+
   async function runBrainSelfTest() {
     notify('success', 'Running brain self-test…');
     const generate = async (text: string) =>
@@ -1596,6 +1607,13 @@ export function App() {
       keywords: 'training data fine tune lora dpo kto dataset export jsonl his own model tier2',
       icon: BrainCircuit,
       run: () => exportTrainingSet(),
+    } satisfies PaletteCommand,
+    {
+      id: 'self-audit',
+      label: '🔍 Run Boardy’s self-audit',
+      keywords: 'audit invariants check regression test injection routing reminder safety health',
+      icon: BrainCircuit,
+      run: () => runAudit(),
     } satisfies PaletteCommand,
     ...(brain.status === 'ready'
       ? [

@@ -14,6 +14,21 @@ learn. The loop ends only when a human stops it.
 *(Charter — the why/how — is `OUROBOROS.md`. This file is what's next, and what
 "productive" actually means.)*
 
+## Standing automation — the self-audit (run every tick)
+
+Boardy now audits himself. `src/lib/audit.ts` encodes the invariants a manual audit
+checks — intent routing (no collisions), reminder time never leaking into text,
+quarantine blocking known injections, graduated autonomy, the self-improvement gate,
+a bounded prompt budget, and no fabrication when ungrounded. It runs three ways:
+
+- **CI gate (automatic):** `audit.test.ts` runs inside `npm run test`, so every change
+  re-audits him and a regression fails the build, naming the exact broken property.
+- **Live:** ⌘K → "Run Boardy's self-audit" surfaces the report (glass-box, per check).
+- **The loop:** **every heartbeat tick begins with the audit.** A red audit is the
+  top priority — refine until green before any other work. Green means the invariants
+  still hold; then proceed to the queue. This is how "audit and refine" became
+  continuous instead of a thing done once.
+
 ## What a productive tick is
 
 One tick = one **tested, reversible** change that advances the top of the queue —
@@ -59,6 +74,12 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🔍 The audit became automation** (`audit.ts`, JOURNAL 36) — the one-time audit pass
+  encoded as a permanent self-audit: 7 invariant checks over the real engines (intent
+  routing, reminder time-leak, injection coverage, autonomy, the gate, prompt budget,
+  honesty), gated by CI (`audit.test.ts` fails the build on any regression, naming the
+  broken property), runnable live (⌘K → "Run Boardy's self-audit"), and the standing
+  first step of every heartbeat tick. Audit-and-refine is continuous now. 462 green.
 - **🚀 BoardyV1, fully implemented** (JOURNAL 34) — the complete in-app side of every
   roadmap tier, tested and glass-box, each external dependency a real pluggable seam:
   **T1** pluggable model router (any OpenAI-compatible brain); **T2** training-data
