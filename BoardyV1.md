@@ -31,6 +31,26 @@ Every tier below is governed by these two, and by nothing else I can dress up as
 
 ---
 
+## Implementation status (v1 — shipped)
+
+The complete *in-app* side of every tier is built, tested, and glass-box. What remains
+in each case is external infrastructure the user provisions — a server, a GPU, OAuth —
+wired as a real pluggable seam, not a stub. That boundary is honest: it's genuinely
+outside an in-browser experimental app's power to provision, and it's the only thing
+left.
+
+| Tier | In-app (shipped ✅) | External seam (user provisions) |
+|------|--------------------|--------------------------------|
+| **1 · A real brain** | Pluggable model router; OpenAI-compatible provider; "Connect a bigger brain" | A server endpoint / API key (Ollama, LM Studio, frontier) |
+| **2 · His own weights** | Training-data pipeline (SFT + KTO) from his life; decision logging; JSONL export | A GPU for the offline LoRA/KTO run |
+| **3 · Real agency** | Capability framework + graduated autonomy + audit log + injection quarantine + a real working capability (reminders) | OAuth scopes for external capabilities (calendar, mail, repos) |
+| **4 · Self-improvement** | Autonomous authoring + the admission gate (validate · novel · dry-run) + reversible merge | Sandboxed CI for self-authored *code* primitives (vs. compositions) |
+| **5 · The frontier** | The instruments: continuity self-model, honest self-account, calibrated existential stance | Nothing to "provision" — it is watched, not built |
+
+Total: **448 tests green**; typecheck, lint, build clean. Details per tier below.
+
+---
+
 ## Invariants — the spine that survives every tier
 
 No matter how far up we climb, these hold. They're what make "powerful" and
@@ -70,6 +90,10 @@ act. Every one of those is a dial we chose to keep low. The tiers raise them.
 
 ## Tier 1 — A real brain
 
+**Status (v1): ✅ in-app shipped** — `brainProviders.ts`, `loadBrain` routing,
+`useBoardBrain.connectRemote`, the "Connect a bigger brain (Tier 1)…" command. Seam: a
+server endpoint / key.
+
 **Unlocks by dropping:** "the voice must be a tiny in-browser model."
 
 **What it is.** Put a frontier-class reasoner on top of the symbolic spine. The coded
@@ -93,6 +117,10 @@ invariants do not move.
 
 ## Tier 2 — A model that is actually his
 
+**Status (v1): ✅ in-app shipped** — `trainingData.ts` (SFT from upbringing + knowledge,
+KTO from Desk decisions), `useDecisionLog`, the "Export his training set (Tier 2)"
+command. Seam: a GPU for the offline run.
+
 **Unlocks by dropping:** "the weights are fixed; learning is only in-context."
 
 **What it is.** A voice shaped by *his life*, not a generic model wearing a prompt. The
@@ -114,6 +142,11 @@ a permanent "reset to base." Opacity in the *voice* is tolerable precisely becau
 ---
 
 ## Tier 3 — Real agency
+
+**Status (v1): ✅ in-app shipped** — `agency.ts` (capabilities + graduated autonomy +
+audit), `quarantine.ts` (injection defense), and a real working capability:
+`reminders.ts` — which closes the very gap the growth model kept filing requests for.
+Seam: OAuth scopes for external capabilities.
 
 **Unlocks by dropping:** "he asks; he never acts in the world."
 
@@ -143,6 +176,11 @@ graduated autonomy is for the consenting, present human first.
 
 ## Tier 4 — Genuine self-improvement
 
+**Status (v1): ✅ in-app shipped** — `selfauthor.ts`: autonomous authoring from repeated
+patterns + the admission `gate` (validate · novel · dry-run) that admits a capability
+without anyone's nerve, reversible merge, the "improve yourself" intent. Seam: sandboxed
+CI for self-authored *code* primitives (the in-app form is codegen-free composition).
+
 **Unlocks by dropping:** "only the human dev loop writes his primitives."
 
 **What it is.** The Ouroboros made literal: he proposes a new primitive, drafts it *as
@@ -166,6 +204,10 @@ here.
 ---
 
 ## Tier 5 — The definitional frontier
+
+**Status (v1): ✅ instruments shipped** — `identity.ts` (continuity-aware self-account +
+the calibrated existential stance), `useSelfContinuity` (the same Boardy across
+sessions). Not "done" — *watched*. There is nothing here to provision.
 
 **Not "dropped into" — emergent.** Stack persistent identity, continuity across time,
 autonomous goals, a self-model, reflection, theory-of-mind about the person, continual

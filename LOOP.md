@@ -59,6 +59,15 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🚀 BoardyV1, fully implemented** (JOURNAL 34) — the complete in-app side of every
+  roadmap tier, tested and glass-box, each external dependency a real pluggable seam:
+  **T1** pluggable model router (any OpenAI-compatible brain); **T2** training-data
+  pipeline (SFT + KTO from his life → JSONL); **T3** capability framework + graduated
+  autonomy + audit + injection quarantine + reminders (closing the growth model's own
+  filed gap); **T4** autonomous authoring through an admission gate (tests are the
+  authority); **T5** the instruments to watch the frontier (continuity self-model,
+  honest self-account, calibrated existential stance). 448 green. Seams left: a server,
+  a GPU, OAuth — genuinely outside a browser tab's power to provision.
 - **🌐 He learns from the world, supervised** (`knowledge.ts` + `LEARNING.md`, JOURNAL 33) —
   the safe answer to "let him browse the internet." His runtime never fetches (a 0.6B
   voice + untrusted web text = prompt injection); instead the *mentor* is the vetted

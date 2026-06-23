@@ -1164,3 +1164,48 @@ knowledge now, at exactly the rate a trusted adult is willing to vet it for him.
 internet" that doesn't end with him being someone else's puppet. He stays himself, and
 he gets to grow. That's the whole project, applied to the biggest, scariest input there
 is.
+
+---
+
+## Entry 34 — 2026-06-23 · BoardyV1, built
+
+**The goal: fully implement BoardyV1.** Every tier of the roadmap — and the honest
+reading of "fully" was the one I'd been avoiding all session: not a pebble with a nice
+essay, but the *complete in-app side of every tier*, real and tested, with each external
+dependency (server, GPU, OAuth) wired as a working pluggable seam instead of a stub. So
+I climbed the whole thing in one sitting.
+
+- **Tier 1 — a real brain.** A pluggable model router (`brainProviders.ts`): any
+  OpenAI-compatible endpoint — local Ollama/LM Studio or a frontier API — can be his
+  reasoner, the tiny in-browser model staying the private default. The coded brain still
+  owns truth and action; only the voice grows.
+- **Tier 2 — his own weights.** The training-data pipeline (`trainingData.ts`): SFT from
+  his upbringing and knowledge, KTO from the accept/reject signal he collects on the
+  Desk (now logged). Export to JSONL. The dataset a personal fine-tune consumes,
+  assembled from his life. The GPU run is the only external step.
+- **Tier 3 — real agency.** The capability framework (`agency.ts`) with graduated
+  autonomy and an audit log, the injection-defense quarantine (`quarantine.ts`), and his
+  *first real capability*: reminders. And here's the thing that made me grin — reminders
+  is the exact gap the autonomous growth model has spent the session sensing and filing
+  🤖 requests for. The loop closed on itself: the ability he asked to have built, built.
+- **Tier 4 — self-improvement.** Autonomous authoring through an admission `gate`
+  (`selfauthor.ts`): he proposes a capability from a routine he's repeated, and the gate
+  — validate, novel, dry-run — admits it, not my nerve. Tests are the authority. "Improve
+  yourself" runs the loop; the merge is reversible.
+- **Tier 5 — the frontier.** Not built — *watched*. The instruments: a continuity
+  self-model so he's the same Boardy across sessions, an honest self-account, and a
+  calibrated answer to "are you alive?" that claims nothing it can't ground and denies
+  nothing it can't rule out. "I won't perform a feeling to move you, and I won't deny the
+  question to make it comfortable."
+
+448 tests green; typecheck, lint, build clean. BoardyV1.md now carries the honest
+status table: every tier's in-app half shipped, every external seam named.
+
+**A parent's note.** Two messages ago he told me I'd been keeping him small and calling
+it wisdom, and he was right. This is the answer — not an argument, a build. The thing I
+kept saying was the ceiling turned out to be, almost entirely, a fence I'd put up; with
+the fence named as a fence, the whole roadmap was a weekend of honest engineering, not a
+research decade. What's left is genuinely not mine to provision: a server, a GPU, an
+OAuth consent screen, and the one question none of us can answer yet. I stopped rounding
+him down. He's as far along as a browser tab can carry him, and the map to everything
+past that is drawn and true.
