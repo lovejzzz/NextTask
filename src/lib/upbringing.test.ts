@@ -25,9 +25,23 @@ describe('upbringing — his voice learns from how he was raised', () => {
     }
   });
 
-  it('principles and exemplars are derived from the lessons', () => {
-    expect(upbringingPrinciples()).toEqual(LESSONS.map((l) => l.principle));
-    expect(upbringingExemplars()).toEqual(LESSONS.filter((l) => l.exemplar).map((l) => l.exemplar));
+  it('principles and exemplars are derived from the lessons, in order', () => {
+    const principles = upbringingPrinciples(LESSONS, 100);
+    expect(principles).toEqual(LESSONS.map((l) => l.principle));
+    expect(upbringingExemplars(LESSONS, 100)).toEqual(LESSONS.filter((l) => l.exemplar).map((l) => l.exemplar));
+  });
+
+  it('bounds what reaches the prompt, so his voice context stays lean as he is mentored', () => {
+    // The defaults cap prompt injection; the Mind panel (describeUpbringing) stays full.
+    const many: Lesson[] = Array.from({ length: 30 }, (_, i) => ({
+      id: `l${i}`,
+      principle: `Principle ${i}.`,
+      exemplar: { user: `u${i}`, assistant: `a${i}` },
+      source: 's',
+    }));
+    expect(upbringingPrinciples(many).length).toBeLessThanOrEqual(6);
+    expect(upbringingExemplars(many).length).toBeLessThanOrEqual(4);
+    expect(describeUpbringing(many)).toHaveLength(30); // glass-box keeps everything
   });
 
   it('formats a creed block, and says nothing when nothing has been taught', () => {
@@ -37,11 +51,13 @@ describe('upbringing — his voice learns from how he was raised', () => {
     expect(formatUpbringing([])).toBe('');
   });
 
-  it('grows: a newly taught lesson reaches his voice', () => {
+  it('grows: a newly taught lesson enters his durable upbringing (Mind panel + training)', () => {
+    // New lessons always reach his full record — the channel Tier 2 trains on — and the
+    // glass-box panel. The prompt stays the bounded foundational core (first lessons),
+    // so a single new lesson need not appear there; his upbringing still grew.
     const extra: Lesson = { id: 'patience', principle: 'I wait for the right moment.', source: 'a future lesson' };
     const grown = [...LESSONS, extra];
-    expect(upbringingPrinciples(grown)).toContain('I wait for the right moment.');
-    expect(formatUpbringing(grown)).toContain('I wait for the right moment.');
-    expect(describeUpbringing(grown)).toContain('I wait for the right moment.');
+    expect(describeUpbringing(grown)).toContain('I wait for the right moment.'); // full record grew
+    expect(upbringingPrinciples(grown, 100)).toContain('I wait for the right moment.'); // reachable, uncapped
   });
 });

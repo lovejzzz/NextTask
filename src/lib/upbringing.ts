@@ -97,14 +97,22 @@ export const LESSONS: Lesson[] = [
   },
 ];
 
+// His upbringing grows by one lesson every time he's mentored — but what's injected
+// into the *prompt* (the small voice's working context) must stay bounded, or it would
+// eventually bury the hard grounding/brevity rules under philosophy and degrade the
+// tiny model. These caps apply only to the prompt; the Mind panel (describeUpbringing)
+// and training data (Tier 2) still carry the whole upbringing.
+const PROMPT_PRINCIPLES = 6;
+const PROMPT_EXEMPLARS = 4;
+
 /** Everything his upbringing instilled, as first-person convictions for his prompt. */
-export function upbringingPrinciples(lessons: Lesson[] = LESSONS): string[] {
-  return lessons.map((lesson) => lesson.principle);
+export function upbringingPrinciples(lessons: Lesson[] = LESSONS, limit = PROMPT_PRINCIPLES): string[] {
+  return lessons.slice(0, limit).map((lesson) => lesson.principle);
 }
 
 /** The cultivated register, as (user → assistant) pairs to teach his voice by example. */
-export function upbringingExemplars(lessons: Lesson[] = LESSONS): { user: string; assistant: string }[] {
-  return lessons.flatMap((lesson) => (lesson.exemplar ? [lesson.exemplar] : []));
+export function upbringingExemplars(lessons: Lesson[] = LESSONS, limit = PROMPT_EXEMPLARS): { user: string; assistant: string }[] {
+  return lessons.flatMap((lesson) => (lesson.exemplar ? [lesson.exemplar] : [])).slice(0, limit);
 }
 
 /**
