@@ -929,6 +929,22 @@ export function App() {
     notify('success', `Daily ship goal: ${next}.`);
   }
 
+  // Tier 1 (BoardyV1): point Boardy's voice at a bigger, OpenAI-compatible reasoner —
+  // a local server (Ollama/LM Studio) or a frontier API. The coded brain and every
+  // action-gate are unchanged; only the voice grows. Endpoint + key stay on-device.
+  function connectBiggerBrain() {
+    const endpoint = window.prompt(
+      'Bigger brain — OpenAI-compatible endpoint:\n(e.g. http://localhost:11434/v1 for Ollama, or https://api.openai.com/v1)',
+      'http://localhost:11434/v1',
+    );
+    if (!endpoint) return;
+    const model = window.prompt('Model name on that endpoint:\n(e.g. llama3.1:8b, qwen2.5:14b, gpt-4o-mini)', 'llama3.1:8b');
+    if (!model) return;
+    const apiKey = window.prompt('API key (leave blank for a local server that needs none):', '') ?? '';
+    const label = brain.connectRemote({ endpoint: endpoint.trim(), model: model.trim(), apiKey: apiKey.trim() || undefined });
+    notify('success', `Connected a bigger brain → ${label}. The coded brain still runs the show; this is just a smarter voice.`);
+  }
+
   async function runBrainSelfTest() {
     notify('success', 'Running brain self-test…');
     const generate = async (text: string) =>
@@ -1444,6 +1460,13 @@ export function App() {
           } satisfies PaletteCommand,
         ]
       : []),
+    {
+      id: 'brain-connect-remote',
+      label: '🚀 Connect a bigger brain (Tier 1)…',
+      keywords: 'remote model ollama openai frontier endpoint api bigger smarter llama gpt tier1',
+      icon: BrainCircuit,
+      run: () => connectBiggerBrain(),
+    } satisfies PaletteCommand,
     ...(brain.status === 'ready'
       ? [
           {

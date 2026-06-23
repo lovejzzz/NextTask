@@ -9,6 +9,7 @@
  * rule-based companion if the model is unavailable or errors.
  */
 import { COMPANION_NAME, type Mood } from './companion';
+import { createRemoteGenerate, decodeRemoteId } from './brainProviders';
 
 // Major-pinned so the CDN always resolves a valid latest v3 build.
 const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
@@ -25,6 +26,8 @@ export const MODELS: BrainModel[] = [
 export const DEFAULT_MODEL_ID = MODELS[0].id;
 
 export function modelLabel(id: string): string {
+  const remote = decodeRemoteId(id);
+  if (remote) return remote.label || `Remote · ${remote.model}`;
   return (MODELS.find((model) => model.id === id) ?? MODELS[0]).label;
 }
 
@@ -171,6 +174,16 @@ const pipelines = new Map<string, Promise<GenerateFn>>();
 export async function loadBrain(modelId: string = DEFAULT_MODEL_ID, onProgress?: ProgressCb): Promise<GenerateFn> {
   const cached = pipelines.get(modelId);
   if (cached) return cached;
+
+  // Tier 1 (BoardyV1): a remote, OpenAI-compatible reasoner. No download — it's ready
+  // at once; the coded brain and all action-gating are unchanged, only the voice grows.
+  const remote = decodeRemoteId(modelId);
+  if (remote) {
+    onProgress?.(1);
+    const ready = Promise.resolve(createRemoteGenerate(remote));
+    pipelines.set(modelId, ready);
+    return ready;
+  }
 
   const promise = (async () => {
     const url = TRANSFORMERS_CDN; // variable specifier → not bundled by Vite

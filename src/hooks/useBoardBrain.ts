@@ -9,6 +9,7 @@ import {
   type GenerateFn,
   type OnToken,
 } from '../lib/companionBrain';
+import { encodeRemoteId, type RemoteBrainConfig } from '../lib/brainProviders';
 
 const ENABLED_KEY = 'next-task:brain';
 const MODEL_KEY = 'next-task:brain-model';
@@ -94,6 +95,27 @@ export function useBoardBrain(enabled: boolean) {
     return modelLabel(next);
   }, [load]);
 
+  /**
+   * Tier 1: connect a bigger brain — any OpenAI-compatible endpoint (local Ollama/LM
+   * Studio, or a frontier API). The config rides the existing model slot as an opaque
+   * id, so switching back to the in-browser model is unchanged. Loads immediately.
+   */
+  const connectRemote = useCallback(
+    (config: RemoteBrainConfig) => {
+      const id = encodeRemoteId(config);
+      modelRef.current = id;
+      setModel(id);
+      try {
+        window.localStorage.setItem(MODEL_KEY, id);
+      } catch {
+        // ignore storage failures
+      }
+      void load(id);
+      return modelLabel(id);
+    },
+    [load],
+  );
+
   // Auto-resume once if the user opted in on a previous visit.
   useEffect(() => {
     if (!enabled || autoTried.current) return;
@@ -124,5 +146,5 @@ export function useBoardBrain(enabled: boolean) {
     }
   }, []);
 
-  return { status, progress, model, modelName: modelLabel(model), enable, disable, cycleModel, run };
+  return { status, progress, model, modelName: modelLabel(model), enable, disable, cycleModel, connectRemote, run };
 }
