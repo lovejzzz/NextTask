@@ -94,6 +94,9 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('can you remind me to call the bank', NOW)).toMatchObject({ kind: 'remind' }); // politeness stripped
     // a normal task question is not a reminder
     expect(parseIntent("what's next", NOW)).toEqual({ kind: 'whats_next' });
+    // "remind me <question>" is a query, not a reminder-to-do — must not be captured
+    expect(parseIntent('remind me what is overdue', NOW)).toEqual({ kind: 'overdue' });
+    expect(parseIntent('remind me when the launch is', NOW)?.kind).not.toBe('remind');
   });
 
   it('recognizes the Tier 5 existential question, distinct from self-description', () => {

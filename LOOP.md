@@ -74,6 +74,12 @@ no more, no less. The bar, every beat:
 
 ## Done — most recent first
 
+- **🎯 Audit-loop iteration 3: fixed a remind-vs-question collision** — probed a fresh
+  surface (intent ordering) and found "remind me what's overdue" / "remind me when the
+  launch is" were captured as reminders-to-do, producing nonsense ("remind you to what
+  is overdue"). Guarded both the intent matcher and the parser so "remind me <question
+  word>" falls through to the right query handler (now → overdue/status). Locked into
+  the unit tests and the audit's routing corpus.
 - **🛡️ Audit-loop iteration 2: fixed an injection false-positive** — iteration 1
   broadened the patterns; iteration 2 verified the other direction and found benign
   "the new rules of the game are simple" wrongly blocked (the bare `new rules` pattern

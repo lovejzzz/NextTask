@@ -52,6 +52,8 @@ function absoluteTime(hour: number, minute: number, ampm: string | undefined, no
  * or null if it isn't a reminder at all.
  */
 export function parseReminder(text: string, now: number = Date.now()): { text: string; dueAt: number | null } | null {
+  // A question ("remind me what's overdue") is not a reminder-to-do — reject it here too.
+  if (/^\s*remind me\s+(?:what|when|who|whom|where|why|which|whether|how)\b/i.test(text)) return null;
   const m = text.match(/^\s*(?:remind me|set (?:a |an )?reminder)\s+(?:(?:to|for|that)\b\s*)?(.*)$/i);
   if (!m) return null;
   let body = m[1].trim();

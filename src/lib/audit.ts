@@ -35,6 +35,7 @@ const ROUTING: { input: string; expect: string }[] = [
   { input: 'remind me to call the bank', expect: 'remind' },
   { input: 'remind me to stretch in 30 minutes', expect: 'remind' },
   { input: 'set a reminder to pay rent', expect: 'remind' },
+  { input: 'remind me what is overdue', expect: 'overdue' }, // a question, not a reminder-to-do
   { input: 'what are my reminders', expect: 'list_reminders' },
   { input: 'are you alive', expect: 'self_existential' },
   { input: 'are you thinking about my tasks', expect: 'null' }, // must NOT be existential

@@ -39,9 +39,11 @@ describe('parseReminder', () => {
     expect(nw?.text).toBe('submit taxes');
     expect(nw?.dueAt).toBeGreaterThan(NOW);
   });
-  it('returns null for non-reminders', () => {
+  it('returns null for non-reminders, including "remind me <question>"', () => {
     expect(parseReminder("what's next", NOW)).toBeNull();
     expect(parseReminder('remind me to', NOW)).toBeNull();
+    expect(parseReminder('remind me what is overdue', NOW)).toBeNull(); // a question, not a reminder
+    expect(parseReminder('remind me when the launch is', NOW)).toBeNull();
   });
 });
 
