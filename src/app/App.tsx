@@ -73,6 +73,9 @@ import { decideAutonomy, describeAudit } from '../lib/agency';
 import { describeReminder, describeReminders, dueReminders, parseReminder } from '../lib/reminders';
 import { useReminders } from '../hooks/useReminders';
 import { useAuditLog } from '../hooks/useAuditLog';
+import { useDecisionLog } from '../hooks/useDecisionLog';
+import { buildTrainingSet, exportFiles } from '../lib/trainingData';
+import { LESSONS } from '../lib/upbringing';
 import { useBoardHistory } from '../hooks/useBoardHistory';
 import { useBoardyPursuit } from '../hooks/useBoardyPursuit';
 import { useClarifications } from '../hooks/useClarifications';
@@ -254,6 +257,7 @@ export function App() {
   const growth = useGrowthLedger(); // his developmental autobiography — written when growth happens
   const reminders = useReminders(); // Tier 3: his first real, reversible capability
   const audit = useAuditLog(); // Tier 3: the glass-box trail of every action he takes
+  const decisions = useDecisionLog(); // Tier 2: accept/reject signal → his training data
   // A capability he keeps being asked for and lacks — sensed from his own unmet asks.
   // Feeds his drives so the gap surfaces as a consent-gated request to *grow* that
   // ability, instead of being silently dropped (the autonomous growth model, growth.ts).
@@ -975,6 +979,23 @@ export function App() {
     notify('success', `Connected a bigger brain → ${label}. The coded brain still runs the show; this is just a smarter voice.`);
   }
 
+  // Tier 2 (BoardyV1): export the dataset a personal fine-tune consumes — assembled
+  // from his upbringing, his vetted knowledge, and your accept/reject signal on the
+  // Desk. The offline LoRA/KTO run (on a GPU you provide) is the only remaining step.
+  function exportTrainingSet() {
+    const set = buildTrainingSet({ lessons: LESSONS, learnings: LEARNINGS, decisions: decisions.decisions });
+    for (const file of exportFiles(set)) {
+      const blob = new Blob([file.content], { type: 'application/jsonl' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    notify('success', `Exported ${COMPANION_NAME}'s training set — ${set.summary}`);
+  }
+
   async function runBrainSelfTest() {
     notify('success', 'Running brain self-test…');
     const generate = async (text: string) =>
@@ -1120,7 +1141,12 @@ export function App() {
     };
   }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger, reminders.reminders, audit.log]);
 
+  // A compact board context for labeling a Desk decision (Tier 2 training signal).
+  const decisionContext = () => `board: ${insights.active} active, ${insights.overdue} overdue, ${momentum.shippedToday} shipped today`;
+
   async function acceptProposal(proposal: Proposal) {
+    decisions.record(decisionContext(), proposal.summary, true); // a desirable example
+
     if (proposal.kind === 'clear_overdue') {
       await chatWithBoard([{ role: 'user', content: 'clear overdue' }], () => {});
     } else if (proposal.kind === 'run_skill') {
@@ -1180,6 +1206,8 @@ export function App() {
   }
 
   function dismissProposal(id: string) {
+    const proposal = boardyProposals.find((p) => p.id === id);
+    if (proposal) decisions.record(decisionContext(), proposal.summary, false); // an undesirable example
     setDismissedProposals((current) => new Set(current).add(id));
   }
 
@@ -1514,6 +1542,13 @@ export function App() {
       keywords: 'remote model ollama openai frontier endpoint api bigger smarter llama gpt tier1',
       icon: BrainCircuit,
       run: () => connectBiggerBrain(),
+    } satisfies PaletteCommand,
+    {
+      id: 'brain-export-training',
+      label: '🧬 Export his training set (Tier 2)',
+      keywords: 'training data fine tune lora dpo kto dataset export jsonl his own model tier2',
+      icon: BrainCircuit,
+      run: () => exportTrainingSet(),
     } satisfies PaletteCommand,
     ...(brain.status === 'ready'
       ? [
