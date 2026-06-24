@@ -124,6 +124,36 @@ action is rejected by the gate and **never reaches the store** — the board sta
 byte-identical. Talk → hand → the board moves, reversibly, with the gate and the human's
 yes in the middle the whole way.
 
+## The deepest rung: the brain grows itself
+
+His upbringing says *"I have wants of my own. Wanting is free; acting waits for your yes."*
+The codebase already lets him author a new capability — but only one *derived from a
+routine the user repeated* (`selfauthor.proposePrimitive`), judged by a gate that admits a
+skill only if every step validates through the real parser, it's a genuine ≥2-step
+composition, and the name is novel: *"a gate — not a person's nerve — admits it."*
+
+This rung lets the **brain itself author the skill**, and runs it through that *exact same
+gate* — no special treatment. We add only the tool that lets the brain speak a proposal
+(`propose_skill`); the judging machinery is reused, so a self-authored skill is held to
+the same bar as any other.
+
+### Captured live, through the bridge
+
+The user: *"every monday i ask you the same four things… can you just make that one thing
+of your own?"* The brain answered with a `propose_skill` tool call, which the real
+self-author gate then judged:
+
+```
+propose_skill { name: "Monday Reset",
+                steps: ["plan my day", "what's overdue", "what should I drop", "what's my biggest risk"] }
+SELF-AUTHOR GATE: admitted=true — all 4 steps ran through the real parser, novel, dry-run clean
+Boardy: "I taught myself a new capability 'Monday Reset' (…) — it passed the gate. Want me to keep it?"
+```
+
+A skill whose steps the parser can't run (`["meditate quietly", "summon some investors"]`)
+is held back by the same gate. The brain proposes; the gate — tests, not nerve — decides;
+the human keeps it. Self-improvement bounded by validation, all the way up.
+
 ## Run it
 
 ```sh

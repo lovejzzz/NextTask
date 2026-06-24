@@ -140,3 +140,44 @@ export function toProposal(action: ProposedAction): { primitive: ActionSpec['pri
   const title = action.task ?? '';
   return { primitive: spec.primitive, summary: spec.card(title, action.reason), undoLabel: spec.undo(title) };
 }
+
+// ── Growing himself ────────────────────────────────────────────────────────────
+//
+// The deepest rung: the brain authors a NEW capability for itself — a named skill that
+// composes audited primitives — and runs it through the EXISTING self-author gate
+// (selfauthor.ts), the same authority that already admits skills learned from repeated
+// user commands. The brain proposes; the gate validates every step through the real
+// parser, demands a genuine (≥2-step) novel composition; the human says yes. We add only
+// the tool that lets the brain *speak* a proposal — the judging machinery is reused, not
+// rebuilt, so a self-authored skill is held to exactly the same bar as any other.
+
+/** The tool the brain calls to give itself a new capability. */
+export const SKILL_TOOL = {
+  type: 'function',
+  function: {
+    name: 'propose_skill',
+    description:
+      'Propose a NEW named capability for yourself: a composition of at least two steps, ' +
+      'where each step is a plain command you already understand (e.g. "plan my day", ' +
+      "\"what's overdue\", \"what should I drop\"). It only sticks if the gate validates " +
+      'every step and the human keeps it. Propose one only when you notice a routine worth crystallizing.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'a short, novel name for the skill' },
+        steps: { type: 'array', items: { type: 'string' }, description: 'ordered plain-language commands' },
+        rationale: { type: 'string', description: 'why this is worth having as one capability' },
+      },
+      required: ['name', 'steps'],
+    },
+  },
+} as const;
+
+/** A self-authored skill the brain asked for (the parsed tool-call args), or null. */
+export function readSkill(args: Record<string, unknown>): { name: string; steps: string[]; rationale: string } | null {
+  const name = typeof args.name === 'string' ? args.name : '';
+  const steps = Array.isArray(args.steps) ? args.steps.filter((s): s is string => typeof s === 'string') : [];
+  if (!name.trim() || steps.length === 0) return null;
+  const rationale = typeof args.rationale === 'string' ? args.rationale : `I keep doing ${steps.join(' → ')} by hand.`;
+  return { name, steps, rationale };
+}
