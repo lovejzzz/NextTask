@@ -5,6 +5,27 @@ goes before the climb changes character. Companion to
 [`live-agent-brain.md`](../experiments/live-agent-brain.md), which logs each rung as it
 was built.*
 
+## Status: what's wired vs. what's a vetted library
+
+Be precise about this, because it's easy to overclaim. Two of the rungs are wired into the
+app a user actually runs; the rest are a **vetted library** — correct, fully unit-tested
+logic that is **not yet imported by the app UI**, proven instead through a standalone bridge
+harness (`scripts/liveBridge.mjs`, driver scripts kept in scratchpad, not committed).
+
+| Rung | Code | In the running app? |
+|---|---|---|
+| 1–2 Voice + live brain | `companionBrain`, `brainProviders`, `useBoardBrain` | **Yes** — but in-app chat is text-only (no tools offered to the model) |
+| self-author gate | `selfauthor.gate` via `App.tsx` | **Yes** — reachable, audited; fires on a *detected repeated sequence* |
+| 3 a hand (`gateAction`) | `liveAction.ts` | **Library only** — not imported by app/components/hooks |
+| 4 action executes | inline in `liveAction.execute.test.ts` | **Library only** — no app path |
+| 5 `propose_skill` tool | `liveAction.ts` | **Library only** — app self-authors from repeats, not this tool |
+| 6 plans + execution | `liveAction.ts`, `liveExecute.ts` | **Library only** — `liveExecute` has no importers |
+
+In other words: the *logic and gates are real and tested*; the bridge demos are a real model
+emitting real tool calls judged by the real gates — but the tool-calling pathway is **not
+connected to the app's chat UI**. Treat the rest of this note as the spec for that library and
+the integration it's waiting for, not as a description of shipped app behavior.
+
 ## The one invariant
 
 Boardy's spine is deterministic: a real parser, audited primitives, an undo stack, a
