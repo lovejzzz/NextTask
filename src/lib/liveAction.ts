@@ -181,3 +181,103 @@ export function readSkill(args: Record<string, unknown>): { name: string; steps:
   const rationale = typeof args.rationale === 'string' ? args.rationale : `I keep doing ${steps.join(' → ')} by hand.`;
   return { name, steps, rationale };
 }
+
+// ── Multi-step plans (rung 6) ────────────────────────────────────────────────────
+//
+// The brain composes several board actions into ONE reviewable sequence. This adds reach
+// — a sequence reviewed together — but introduces no new authority: a plan is just actions,
+// and every step is run through the SAME gateAction it would face alone, against the same
+// board. The plan is admitted only if every step is admitted; the human accepts or rejects
+// the whole sequence; each executed step stays individually reversible. A brain can't smuggle
+// an invented task in by burying it in a list — one ungrounded step holds the entire plan.
+
+/** A plan the model asked for: an ordered list of actions plus why the sequence hangs together. */
+export type ProposedPlan = { steps: ProposedAction[]; rationale: string };
+
+/** The tool the brain is offered to propose a sequence of board changes at once. */
+export const PLAN_TOOL = {
+  type: 'function',
+  function: {
+    name: 'propose_plan',
+    description:
+      'Propose an ORDERED sequence of at least two safe, reversible board actions for the human ' +
+      'to accept or dismiss as one plan. Each step is shaped exactly like propose_board_action ' +
+      '(kind + verbatim board title). Use this only when several changes belong together; for a ' +
+      'single change use propose_board_action. Never invent a task in any step.',
+    parameters: {
+      type: 'object',
+      properties: {
+        rationale: { type: 'string', description: 'one line on why these steps belong together' },
+        steps: {
+          type: 'array',
+          description: 'the ordered actions',
+          items: {
+            type: 'object',
+            properties: {
+              kind: { type: 'string', enum: ACTION_KINDS, description: 'which action' },
+              task: { type: 'string', description: 'exact existing board title (omit for clear_overdue)' },
+              reason: { type: 'string', description: 'one short, honest justification' },
+            },
+            required: ['kind'],
+          },
+        },
+      },
+      required: ['steps'],
+    },
+  },
+} as const;
+
+/** Coerce loosely-typed tool-call args into a ProposedPlan, or null if unusable. */
+export function readPlan(args: Record<string, unknown>): ProposedPlan | null {
+  if (!Array.isArray(args.steps)) return null;
+  const steps = args.steps
+    .map((s) => (s && typeof s === 'object' ? readAction(s as Record<string, unknown>) : null))
+    .filter((a): a is ProposedAction => a !== null);
+  if (steps.length === 0) return null;
+  const rationale = typeof args.rationale === 'string' ? args.rationale : 'a few changes that belong together';
+  return { steps, rationale };
+}
+
+/** A gated plan: the per-step verdicts, and the resolved actions when (and only when) admitted. */
+export type PlanGateResult = {
+  admitted: boolean;
+  reasons: string[];
+  /** Per-step verdicts in order, each the full ActionGateResult from the shared gate. */
+  steps: ActionGateResult[];
+  /** Present only when admitted: every step's action, tasks normalized to exact board titles. */
+  actions?: ProposedAction[];
+};
+
+/**
+ * The admission gate for a plan. It introduces no new rule: it runs the EXISTING gateAction
+ * on every step against the same board, and admits the plan only if it is a genuine sequence
+ * (≥2 steps) AND every step is independently admitted. One ungrounded or irreversible step
+ * holds the whole plan — the brain can't bury an invented task in a list. On admit, every
+ * step's task is normalized to the board's exact title, exactly as a single action is.
+ */
+export function gatePlan(plan: ProposedPlan | null, board: ActionBoard): PlanGateResult {
+  if (!plan || plan.steps.length === 0) return { admitted: false, reasons: ['no valid plan proposed'], steps: [] };
+  const steps = plan.steps.map((step) => gateAction(step, board));
+  const reasons: string[] = [];
+
+  if (plan.steps.length < 2) reasons.push('a plan needs at least two steps; for one change, propose a single action');
+  steps.forEach((s, i) => {
+    if (!s.admitted) reasons.push(`step ${i + 1} held: ${s.reasons.join('; ')}`);
+  });
+
+  const admitted = plan.steps.length >= 2 && steps.every((s) => s.admitted);
+  if (!admitted) return { admitted, reasons, steps };
+
+  const actions = steps.map((s) => s.action!);
+  reasons.unshift(`all ${actions.length} steps grounded and reversible`);
+  return { admitted, reasons, steps, actions };
+}
+
+/** A first-person account of a plan verdict, for the chat + glass-box trail. */
+export function explainPlan(plan: ProposedPlan, result: PlanGateResult): string {
+  if (result.admitted) {
+    const seq = result.actions!.map((a) => toProposal(a).undoLabel).join(' → ');
+    return `Here's a plan — ${plan.rationale}: ${seq}. ${result.reasons[0]}. Accept the whole thing, or dismiss it.`;
+  }
+  return `I drafted a plan (${plan.rationale}), but the gate held it: ${result.reasons.join('; ')}. The whole plan waits until every step is clean.`;
+}
