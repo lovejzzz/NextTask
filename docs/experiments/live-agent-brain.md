@@ -106,6 +106,24 @@ GATE (hallucinated "Delete all finished tasks"): admitted=false
 The brain gained a hand; the gate and the human's yes still own the board. A model guess —
 even a destructive, invented one — cannot mutate anything. The ceiling moved; the spine held.
 
+### Closing the loop: the board actually moves
+
+A proposal that can't execute is still theatre. The last rung runs an *admitted* action
+through the **real store the app uses** (`mockApi` over `localStorage`), via the same
+audited mutation + undo wiring as `App.tsx`:
+
+```
+brain tool_call → gateAction (admit, normalize to exact title)
+   → mockApi.updateTask(id, {status: 'done'})   // the board really moves
+   → undo: mockApi.updateTask(id, {status: prev}) // and reverses, cleanly
+```
+
+Verified end to end (`liveAction.execute.test.ts`): a grounded `complete_task` flips a
+real task to `done` and the proposal's undo restores it to `in_progress`; a hallucinated
+action is rejected by the gate and **never reaches the store** — the board stays
+byte-identical. Talk → hand → the board moves, reversibly, with the gate and the human's
+yes in the middle the whole way.
+
 ## Run it
 
 ```sh
