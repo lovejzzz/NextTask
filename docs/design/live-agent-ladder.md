@@ -88,3 +88,19 @@ The shape, kept faithful to the invariant:
 
 No new authority is introduced. A plan is just actions, reviewed together, each held to the
 bar it would face alone.
+
+### Follow-through: the plan actually moves the board
+
+Mirroring rung 4, an admitted plan is wired to the **real store** (`mockApi` over
+`localStorage`) via `executePlan` (`liveExecute.ts`): it runs each gated step in order,
+captures a precise inverse from the live board just before each step, and returns **one undo
+that reverses the whole sequence** in reverse order. The human accepted the sequence as a
+unit; it undoes as a unit. Only already-admitted actions (tasks normalized to exact titles by
+`gatePlan`) are ever passed in — the executor applies, it never resolves or invents.
+
+Verified end to end (`liveExecute.test.ts`): a plan of `clear_overdue → drop "Old onboarding
+doc" → complete "Reply to Dana"` clears the overdue pile, removes the doc, and completes Dana
+on the real board — and a single `run.undo()` restores all three. A plan the gate holds never
+reaches the store: the board stays byte-identical. (Honest caveat: a dropped task is restored
+by re-creating it with its prior content, so drop is reversible in substance, not in identity
+— the restored card carries a fresh id.)
