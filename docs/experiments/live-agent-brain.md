@@ -60,6 +60,52 @@ the WIP lesson ("stop starting"), and reasons that the *blocked* task is the rea
 the deadline — all while quoting only tasks that exist on the board. A stub cannot do that;
 it required actually understanding the situation.
 
+## Pushing further: from voice to hand (gated actions)
+
+Voicing Boardy is still only *talking*. The next ceiling: let the brain **act**. But the
+codebase has a hard invariant — the model can only widen *understanding* (`intentFallback`
+classifies into safe, read-only intents); every *mutation* belongs to the deterministic
+parser, so a fuzzy guess can never silently change the board.
+
+The apex keeps that invariant and breaks the talking-only ceiling at the same time, by
+extending the existing safety machinery rather than going around it:
+
+- **A hand, in the seam.** `brainProviders` gains tool-calling — `buildChatCompletionBody`
+  passes `tools`, `parseToolCall` extracts a chosen call, `createRemoteToolCall` returns
+  prose *or* a structured action. The plain voice path is byte-identical to before.
+- **An action gate (`src/lib/liveAction.ts`).** The brain is offered ONE tool,
+  `propose_board_action`, over a closed set of safe, reversible kinds (`complete_task`,
+  `reschedule_task`, `drop_task`, `clear_overdue`). `gateAction` — modeled on the
+  self-author gate, "the authority that replaces supervision" — admits a call only if it
+  is grounded in a task that **actually exists** (enforcing "never invent a task" at the
+  action layer, exactly as the voice prompt enforces it for words) and is reversible. On
+  admit it normalizes to the board's exact title, so the model's paraphrase never executes.
+- **Still consensual, still undoable.** An admitted action becomes a `toProposal` card the
+  human accepts or dismisses, mapped to an already-audited primitive with an undo label.
+
+### A real action (captured live, through the bridge)
+
+Board includes `"Fix Stripe webhook"`. The user, via the app's real tool-call path:
+
+> the stripe webhook is finally passing in prod. close that one out for me and tell me
+> what still matters for thursday.
+
+The brain (the agent) answered not with prose but a **tool call**, which the gate then judged:
+
+```
+tool_call: propose_board_action { kind: complete_task, task: "Fix Stripe webhook",
+                                   reason: "you said it's passing in prod, blocking the Thursday path" }
+GATE (admit):  grounded in "Fix Stripe webhook", reversible
+  → card: Mark "Fix Stripe webhook" done — …? You decide; it undoes.
+  → on YES routes to audited primitive: complete  |  undo: complete "Fix Stripe webhook"
+
+GATE (hallucinated "Delete all finished tasks"): admitted=false
+  → "Delete all finished tasks" is not a task on the board — I won't invent one
+```
+
+The brain gained a hand; the gate and the human's yes still own the board. A model guess —
+even a destructive, invented one — cannot mutate anything. The ceiling moved; the spine held.
+
 ## Run it
 
 ```sh

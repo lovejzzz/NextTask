@@ -56,7 +56,7 @@ export function chatCompletionsUrl(endpoint: string): string {
 export function buildChatCompletionBody(
   messages: BrainMessage[],
   model: string,
-  opts: { maxTokens?: number; temperature?: number; stream?: boolean } = {},
+  opts: { maxTokens?: number; temperature?: number; stream?: boolean; tools?: unknown[]; toolChoice?: unknown } = {},
 ): Record<string, unknown> {
   return {
     model,
@@ -64,7 +64,36 @@ export function buildChatCompletionBody(
     max_tokens: opts.maxTokens ?? 256,
     temperature: opts.temperature ?? 0.7,
     stream: opts.stream ?? false,
+    // Tool-calling (Tier 1+, experimental): only included when the caller offers tools,
+    // so the plain voice path sends byte-identical bodies to before.
+    ...(opts.tools ? { tools: opts.tools, tool_choice: opts.toolChoice ?? 'auto' } : {}),
   };
+}
+
+/** A parsed function/tool call the model chose to make. */
+export type ToolCall = { name: string; args: Record<string, unknown> };
+
+/**
+ * Extract the first tool call from an OpenAI-compatible response — pure and defensive.
+ * Returns null when the model answered with prose instead of calling a tool, so the
+ * caller can fall back to treating the reply as a normal message.
+ */
+export function parseToolCall(json: unknown): ToolCall | null {
+  const call = (
+    json as { choices?: Array<{ message?: { tool_calls?: Array<{ function?: { name?: unknown; arguments?: unknown } }> } }> }
+  )?.choices?.[0]?.message?.tool_calls?.[0]?.function;
+  if (!call || typeof call.name !== 'string') return null;
+  let args: Record<string, unknown> = {};
+  if (typeof call.arguments === 'string') {
+    try {
+      args = JSON.parse(call.arguments || '{}');
+    } catch {
+      return null; // malformed arguments → no call, never a half-parsed action
+    }
+  } else if (call.arguments && typeof call.arguments === 'object') {
+    args = call.arguments as Record<string, unknown>;
+  }
+  return { name: call.name, args };
 }
 
 /** Extract the assistant text from an OpenAI-compatible response — pure and defensive. */
@@ -106,5 +135,33 @@ export function createRemoteGenerate(
       }
     }
     return text;
+  };
+}
+
+/** A remote reasoner that may answer with EITHER prose or a tool call. */
+export type ToolGenerateFn = (
+  messages: BrainMessage[],
+  tools: unknown[],
+) => Promise<{ text: string; toolCall: ToolCall | null }>;
+
+/**
+ * Like {@link createRemoteGenerate}, but offers the model a set of tools and returns
+ * whichever it chose — a parsed {@link ToolCall} or prose. This is how Boardy gains a
+ * *hand*: the model can propose a board action instead of only describing one. It does
+ * NOT execute anything — the call is just a structured intention that still has to pass
+ * the action gate and earn the human's yes. Throws on a failed request, same as the
+ * voice path, so the caller falls back to the deterministic brain.
+ */
+export function createRemoteToolCall(config: RemoteBrainConfig, fetchImpl: typeof fetch = fetch): ToolGenerateFn {
+  const url = chatCompletionsUrl(config.endpoint);
+  return async (messages, tools) => {
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      headers: authHeaders(config.apiKey),
+      body: JSON.stringify(buildChatCompletionBody(messages, config.model, { stream: false, tools })),
+    });
+    if (!res.ok) throw new Error(`remote brain ${res.status}`);
+    const json = await res.json();
+    return { text: parseChatCompletion(json).trim(), toolCall: parseToolCall(json) };
   };
 }

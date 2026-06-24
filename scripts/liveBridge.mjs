@@ -67,14 +67,36 @@ const server = http.createServer((req, res) => {
     writeFileSync(reqPath, JSON.stringify({ id, model: payload.model, messages: payload.messages }, null, 2));
     console.error(`[bridge] parked request ${id} (${payload.messages?.length ?? 0} messages) — waiting for the agent…`);
     try {
-      const content = (await waitForReply(id)).trim();
-      console.error(`[bridge] agent answered ${id} (${content.length} chars)`);
+      const raw = (await waitForReply(id)).trim();
+      console.error(`[bridge] agent answered ${id} (${raw.length} chars)`);
+      // The agent may answer with prose OR a tool call. A reply of the form
+      // {"tool_call":{"name":...,"arguments":{...}}} is relayed as an OpenAI
+      // tool_calls message; anything else is plain assistant content.
+      let message = { role: 'assistant', content: raw };
+      let finish = 'stop';
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.tool_call && typeof parsed.tool_call.name === 'string') {
+          message = {
+            role: 'assistant',
+            content: parsed.content ?? null,
+            tool_calls: [{
+              id: `call-${id}`,
+              type: 'function',
+              function: { name: parsed.tool_call.name, arguments: JSON.stringify(parsed.tool_call.arguments ?? {}) },
+            }],
+          };
+          finish = 'tool_calls';
+        }
+      } catch {
+        // not JSON — plain prose, leave as content
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         id: `chatcmpl-${id}`,
         object: 'chat.completion',
         model: payload.model || 'boardy-live-agent',
-        choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
+        choices: [{ index: 0, message, finish_reason: finish }],
       }));
     } catch (err) {
       res.writeHead(504, { 'Content-Type': 'application/json' });
