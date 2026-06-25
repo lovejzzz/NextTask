@@ -5,6 +5,7 @@ import {
   buildChatMessages,
   buildSystemPrompt,
   cleanLine,
+  collapseRepetition,
   FEW_SHOT,
   generationConfig,
   isGemmaModel,
@@ -187,6 +188,28 @@ describe('cleanLine', () => {
     expect(cleanLine('model railways are the one task you keep dodging.')).toBe(
       'model railways are the one task you keep dodging.',
     );
+  });
+
+  it('tames small-model repetition loops through cleanLine', () => {
+    expect(cleanLine('Ship it. Ship it. Ship it.')).toBe('Ship it.');
+    expect(cleanLine('You have the the the overdue task.')).toBe('You have the overdue task.');
+  });
+});
+
+describe('collapseRepetition', () => {
+  it('folds a runaway word loop to a single word but keeps a deliberate double', () => {
+    expect(collapseRepetition('go go go go now')).toBe('go now');
+    expect(collapseRepetition('no, no — slow down')).toBe('no, no — slow down'); // 2 survives
+  });
+
+  it('drops an immediately-repeated sentence but keeps distinct ones', () => {
+    expect(collapseRepetition('Three overdue. Three overdue.')).toBe('Three overdue.');
+    expect(collapseRepetition('Three overdue. Two in progress.')).toBe('Three overdue. Two in progress.');
+  });
+
+  it('leaves clean text untouched', () => {
+    const clean = "Breathe. Pick the one that's on fire — the rest can wait.";
+    expect(collapseRepetition(clean)).toBe(clean);
   });
 });
 

@@ -183,6 +183,31 @@ export function buildChatMessages(parts: PromptParts & { history: ChatTurn[]; ex
   return [{ role: 'system', content: system }, ...anchors, ...recent.map((turn) => ({ role: turn.role, content: turn.content }))];
 }
 
+/**
+ * Collapse runaway repetition — the signature failure of small, heavily-quantized
+ * models (the q4 Gemma E2B / Qwen tiers included), which can fall into looping a
+ * word or a whole sentence. Folds 3+ identical consecutive words down to one and
+ * drops a sentence that merely repeats the one before it. Conservative on purpose:
+ * a doubled word for emphasis ("no, no") survives — only a clear loop is trimmed.
+ * Pure + unit-tested, so the guard is verified without a GPU.
+ */
+export function collapseRepetition(text: string): string {
+  // "the the the" → "the" (3+ only, so deliberate doubles are left alone).
+  let out = text.replace(/\b(\w+)(?:\s+\1\b){2,}/gi, '$1');
+  // "Ship it. Ship it. Ship it." → "Ship it." — drop a sentence equal to the last.
+  const sentences = out.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g);
+  if (sentences) {
+    const kept: string[] = [];
+    for (const sentence of sentences) {
+      const norm = sentence.trim().toLowerCase();
+      if (kept.length && kept[kept.length - 1].trim().toLowerCase() === norm) continue;
+      kept.push(sentence);
+    }
+    out = kept.join('').trim() || out;
+  }
+  return out;
+}
+
 /** Trim model output down to a clean line/short reply. */
 export function cleanLine(raw: string): string {
   let line = raw
@@ -193,6 +218,7 @@ export function cleanLine(raw: string): string {
     .replace(/^\s*model\s*\n/i, '') // Gemma can leak the bare role tag that opens its turn ("model\n…")
     .trim()
     .replace(/^["'`]+|["'`]+$/g, '');
+  line = collapseRepetition(line); // tame small-model loops before we truncate
   if (line.length > 240) line = `${line.slice(0, 237).trimEnd()}…`;
   return line.trim();
 }
