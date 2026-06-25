@@ -56,6 +56,26 @@ describe('CompanionChat', () => {
     expect(accept).toHaveBeenCalledTimes(1);
   });
 
+  it('never leaks streamed JSON — shows a drafting placeholder, then the card', async () => {
+    const chat = vi.fn(async (_history, onToken: (c: string) => void) => {
+      onToken('{"name":"propose_board_action",');
+      onToken('"arguments":{"kind":"clear_overdue"}}');
+      return {
+        kind: 'proposal' as const,
+        proposal: { summary: 'Clear the overdue pile?' },
+        accept: async () => 'done',
+      };
+    });
+    render(<CompanionChat chat={chat} onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Message the board'), { target: { value: 'clear overdue' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    // The raw JSON is never rendered; the card appears once parsing resolves.
+    expect(screen.queryByText(/propose_board_action/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Clear the overdue pile\?/)).toBeInTheDocument());
+    expect(screen.queryByText(/"kind"/)).not.toBeInTheDocument();
+  });
+
   it('dismisses a proposal without running it', async () => {
     const accept = vi.fn(async () => 'ran');
     const chat = vi.fn(async () => ({

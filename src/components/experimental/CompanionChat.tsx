@@ -5,7 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import { COMPANION_NAME } from '../../lib/companion';
 import type { ChatTurn } from '../../lib/companionBrain';
 import { cx } from '../../lib/utils';
+import { looksLikeToolCall } from '../../lib/brainProviders';
 import { ActionProposalCard, type ProposalView } from './ActionProposalCard';
+
+const DRAFTING = 'drafting a suggestion…';
 
 const OPENER: ChatTurn = {
   role: 'assistant',
@@ -108,7 +111,11 @@ export function CompanionChat({
       setMessages((current) => {
         const copy = [...current];
         const last = copy[copy.length - 1];
-        if (last && !isProposalItem(last)) copy[copy.length - 1] = { role: 'assistant', content: streamed };
+        // Streaming hygiene: if the reply is turning into a JSON tool call, show a
+        // "drafting…" placeholder rather than leaking raw JSON into the bubble.
+        if (last && !isProposalItem(last)) {
+          copy[copy.length - 1] = { role: 'assistant', content: looksLikeToolCall(streamed) ? DRAFTING : streamed };
+        }
         return copy;
       });
     });

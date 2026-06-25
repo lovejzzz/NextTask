@@ -12,6 +12,7 @@ import {
   encodeRemoteId,
   extractFirstJsonObject,
   isRemoteId,
+  looksLikeToolCall,
   parseChatCompletion,
   parseJsonToolCall,
   type RemoteBrainConfig,
@@ -119,6 +120,20 @@ describe('in-browser tool calling (the local agentic path)', () => {
       expect(parseJsonToolCall('Three overdue — pick one.')).toBeNull();
       expect(parseJsonToolCall('{"name": "x", oops}')).toBeNull();
       expect(parseJsonToolCall('{"hello":"world"}')).toBeNull(); // no name, no inferable shape
+    });
+  });
+
+  describe('looksLikeToolCall (streaming hygiene)', () => {
+    it('fires when the stream opens like a tool call', () => {
+      expect(looksLikeToolCall('{')).toBe(true);
+      expect(looksLikeToolCall('  {"name"')).toBe(true);
+      expect(looksLikeToolCall('```json\n{')).toBe(true);
+      expect(looksLikeToolCall('"name": "propose')).toBe(true);
+    });
+    it('stays quiet on prose, even prose with a brace mid-sentence', () => {
+      expect(looksLikeToolCall('Three overdue — pick one.')).toBe(false);
+      expect(looksLikeToolCall('Use the {placeholder} like so.')).toBe(false);
+      expect(looksLikeToolCall('')).toBe(false);
     });
   });
 

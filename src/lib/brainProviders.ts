@@ -258,6 +258,18 @@ export function parseJsonToolCall(text: string): ToolCall | null {
   return null;
 }
 
+/**
+ * Does an in-progress streamed reply look like it's becoming a JSON tool call rather than
+ * prose? Used for streaming hygiene: the UI shows a "drafting…" placeholder instead of
+ * leaking raw JSON into the chat. Conservative — fires only when the text *opens* like a
+ * tool call (a brace, a ```json fence, or a leading name/tool key), never on prose that
+ * merely contains a brace mid-sentence. Pure + unit-tested.
+ */
+export function looksLikeToolCall(partial: string): boolean {
+  const head = partial.replace(/^[\s>*-]+/, '');
+  return head.startsWith('{') || /^```(?:json|tool_call)?/i.test(head) || /^"?(?:name|tool|function)"?\s*:/i.test(head);
+}
+
 /** Minimal shape we read off the OpenAI-style tool consts to describe them in a prompt. */
 type ToolLike = { function?: { name?: unknown; description?: unknown; parameters?: { required?: unknown } } };
 
