@@ -21,6 +21,7 @@ export type MindView = {
   learned: string[]; // durable knowledge his mentor taught him from vetted sources
   reminders: string[]; // what he's holding to remind you about (Tier 3 capability)
   did: string[]; // the audit trail of actions he's actually taken (Tier 3)
+  proposed: string[]; // his agentic glass-box trail: what he proposed, and what you decided
 };
 
 function Section({ title, items }: { title: string; items: string[] }) {
@@ -77,6 +78,7 @@ export function BoardyMind({ mind, onForget, onClose }: { mind: MindView; onForg
           <Section title="What I see on the board" items={mind.board} />
           <Section title="What I’ll remind you about" items={mind.reminders} />
           <Section title="What I’ve actually done (audit trail)" items={mind.did} />
+          <Section title="What I’ve proposed — and what you decided" items={mind.proposed} />
           <Section title="What I’ve noticed about how you work" items={mind.noticed} />
           <Section title="What I’m pursuing" items={mind.pursuit ? [mind.pursuit] : []} />
           <Section title="What I want right now" items={mind.wants} />

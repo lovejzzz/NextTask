@@ -25,6 +25,7 @@ export type ProposalReply = {
   lead?: string; // optional prose shown above the card
   proposal: ProposalView;
   accept: () => Promise<string>;
+  dismiss?: () => void; // optional: let the owner record the dismissal (glass-box trail)
 };
 
 /** What a chat turn can produce: prose, nothing, or an action proposal card. */
@@ -167,7 +168,10 @@ export function CompanionChat({
               proposal={item.proposal}
               decided={item.decided}
               onAccept={() => acceptProposal(index, item)}
-              onDismiss={() => decideProposal(index, 'dismissed')}
+              onDismiss={() => {
+                item.dismiss?.();
+                decideProposal(index, 'dismissed');
+              }}
             />
           ) : (
             <div key={index} className={cx('companion-chat-msg', `is-${item.role}`)}>

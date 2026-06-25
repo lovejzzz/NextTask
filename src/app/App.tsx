@@ -109,6 +109,8 @@ import {
   type ProposedAction,
 } from '../lib/liveAction';
 import { runReversibleSteps } from '../lib/liveExecute';
+import { useAgentTrail } from '../hooks/useAgentTrail';
+import { summarizeTrail } from '../lib/agentTrail';
 import type { ChatReply } from '../components/experimental/CompanionChat';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
@@ -283,6 +285,7 @@ export function App() {
   const sensedGap = useMemo(() => senseCapabilityGaps(unmetAsks.unmet)[0] ?? null, [unmetAsks.unmet]);
   const capabilityGap = useMemo(() => sensedGap?.example ?? null, [sensedGap]);
   const { pursuit, set: setPursuit } = useBoardyPursuit(); // his standing intention, across sessions
+  const agentTrail = useAgentTrail(); // glass-box record of what he proposed and what you decided
   const { clarifications, learn: learnClarification } = useClarifications(); // what ambiguous phrases meant, once told
   const pendingClarifyRef = useRef<{ phrase: string; ids: string[] } | null>(null);
   const [goal, setGoal] = useState<number>(() => {
@@ -473,6 +476,7 @@ export function App() {
     const { ranLabels, undo } = await runReversibleSteps(actions.map((a) => () => applyProposedAction(a)));
     companion.registerActivity();
     if (!ranLabels.length) return 'Nothing to do, it turned out.';
+    agentTrail.record('accepted', ranLabels.join(', '));
     setUndo(ranLabels.join(' + '), undo);
     return `Done: ${ranLabels.join(', ')}. Undo's right there if you change your mind.`;
   }
@@ -484,24 +488,38 @@ export function App() {
       const plan = readPlan(toolCall.args);
       if (!plan) return null;
       const gated = gatePlan(plan, board);
-      if (!gated.admitted) return explainPlan(plan, gated); // honest refusal text
+      const phrase = `plan (${plan.steps.map((s) => s.kind).join(' → ')})`;
+      if (!gated.admitted) {
+        agentTrail.record('held', phrase, gated.reasons.join('; '));
+        return explainPlan(plan, gated); // honest refusal text
+      }
       const actions = gated.actions!;
+      const steps = actions.map((a) => toProposal(a).undoLabel);
+      agentTrail.record('admitted', `plan: ${steps.join(' → ')}`);
       return {
         kind: 'proposal',
         lead: `Here's a plan — ${plan.rationale}.`,
-        proposal: { summary: 'Run this plan? Each step is reversible.', steps: actions.map((a) => toProposal(a).undoLabel) },
+        proposal: { summary: 'Run this plan? Each step is reversible.', steps },
         accept: () => executeProposed(actions),
+        dismiss: () => agentTrail.record('dismissed', `plan: ${steps.join(' → ')}`),
       };
     }
     const action = readAction(toolCall.args);
     if (!action) return null;
     const gated = gateAction(action, board);
-    if (!gated.admitted) return `I thought about doing something, but held back: ${gated.reasons.join('; ')}.`;
+    const phrase = `${action.kind}${action.task ? ` "${action.task}"` : ''}`;
+    if (!gated.admitted) {
+      agentTrail.record('held', phrase, gated.reasons.join('; '));
+      return `I thought about doing something, but held back: ${gated.reasons.join('; ')}.`;
+    }
     const view = toProposal(gated.action!);
+    const label = view.undoLabel;
+    agentTrail.record('admitted', label);
     return {
       kind: 'proposal',
       proposal: { summary: view.summary, reason: gated.reasons[0] },
       accept: () => executeProposed([gated.action!]),
+      dismiss: () => agentTrail.record('dismissed', label),
     };
   }
 
@@ -1306,8 +1324,9 @@ export function App() {
       learned: describeLearnings(),
       reminders: describeReminders(reminders.reminders),
       did: describeAudit(audit.log),
+      proposed: summarizeTrail(agentTrail.entries),
     };
-  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger, reminders.reminders, audit.log, selfModel]);
+  }, [tasks, boardHistory, pursuit, momentum.shippedToday, experience.history, insights, companionNotes.notes, capabilityGap, growth.ledger, reminders.reminders, audit.log, selfModel, agentTrail.entries]);
 
   // A compact board context for labeling a Desk decision (Tier 2 training signal).
   const decisionContext = () => `board: ${insights.active} active, ${insights.overdue} overdue, ${momentum.shippedToday} shipped today`;
