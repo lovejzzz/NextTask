@@ -470,10 +470,19 @@ export function App() {
     }
     if (action.kind === 'reschedule_task') {
       const prev = task.due_date;
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: tomorrow.toISOString().slice(0, 10) } });
-      return { label: `reschedule "${task.title}"`, undo: async () => void (await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: prev } })) };
+      let due = action.due_date ?? null;
+      if (!due) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        due = tomorrow.toISOString().slice(0, 10);
+      }
+      await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: due } });
+      return { label: `reschedule "${task.title}" → ${due}`, undo: async () => void (await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: prev } })) };
+    }
+    if (action.kind === 'set_priority') {
+      const prev = task.priority;
+      await mutations.updateTask.mutateAsync({ id: task.id, input: { priority: action.priority! } });
+      return { label: `reprioritize "${task.title}" → ${action.priority}`, undo: async () => void (await mutations.updateTask.mutateAsync({ id: task.id, input: { priority: prev } })) };
     }
     // drop_task
     const snap = { title: task.title, description: task.description, status: task.status, priority: task.priority, due_date: task.due_date, assignee_ids: [], label_ids: [] };

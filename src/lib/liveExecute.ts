@@ -114,8 +114,14 @@ export async function executePlan(actions: ProposedAction[]): Promise<PlanRun> {
       }
       if (action.kind === 'reschedule_task') {
         const prev = target.due_date;
-        await mockApi.updateTask(target.id, { due_date: addDaysIso(1) });
+        const due = action.due_date ?? addDaysIso(1);
+        await mockApi.updateTask(target.id, { due_date: due });
         return { label: `reschedule "${target.title}"`, undo: async () => void (await mockApi.updateTask(target.id, { due_date: prev })) };
+      }
+      if (action.kind === 'set_priority' && action.priority) {
+        const prev = target.priority;
+        await mockApi.updateTask(target.id, { priority: action.priority });
+        return { label: `reprioritize "${target.title}"`, undo: async () => void (await mockApi.updateTask(target.id, { priority: prev })) };
       }
       // drop_task
       const snap = { title: target.title, description: target.description, status: target.status, priority: target.priority, due_date: target.due_date };

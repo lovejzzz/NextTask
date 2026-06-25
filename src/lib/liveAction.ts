@@ -14,21 +14,28 @@
  * gains a hand; the gate and your "yes" still own the board.
  */
 
+import type { TaskPriority } from './types';
+
+/** The valid task priorities, for validating a set_priority proposal. */
+export const PRIORITIES: TaskPriority[] = ['low', 'normal', 'high'];
+
 /** The safe, reversible mutations the brain may propose. Each maps to an audited primitive. */
-export type ActionKind = 'complete_task' | 'reschedule_task' | 'drop_task' | 'clear_overdue' | 'create_task';
+export type ActionKind = 'complete_task' | 'reschedule_task' | 'drop_task' | 'clear_overdue' | 'create_task' | 'set_priority';
 
 /** A structured action the model asked for (the parsed tool-call arguments). */
 export type ProposedAction = {
   kind: ActionKind;
   task?: string; // exact board title the action targets (omitted for clear_overdue)
   reason?: string; // the brain's one-line justification, shown on the card
+  priority?: TaskPriority; // for set_priority
+  due_date?: string | null; // for reschedule_task (optional; defaults to tomorrow)
 };
 
 type ActionSpec = {
   needsTask: boolean; // requires an EXISTING board title (matched + normalized)
   createsTask?: boolean; // requires a NEW title (must NOT already exist) — the one exception to "never invent"
   /** The real, audited intent kind this proposal would route to on accept. */
-  primitive: 'complete' | 'reschedule' | 'delete' | 'clear_overdue' | 'create';
+  primitive: 'complete' | 'reschedule' | 'delete' | 'clear_overdue' | 'create' | 'reprioritize';
   /** How the undoable card reads, given the resolved exact title. */
   card: (title: string, reason?: string) => string;
   undo: (title: string) => string;
@@ -66,6 +73,12 @@ const ACTIONS: Record<ActionKind, ActionSpec> = {
     card: (t, r) => `Add "${t}" to the board${r ? ` — ${r}` : ''}? You decide; it undoes.`,
     undo: (t) => `add "${t}"`,
   },
+  set_priority: {
+    needsTask: true,
+    primitive: 'reprioritize',
+    card: (t, r) => `Change "${t}"'s priority${r ? ` — ${r}` : ''}? You decide; it undoes.`,
+    undo: (t) => `reprioritize "${t}"`,
+  },
 };
 
 export const ACTION_KINDS = Object.keys(ACTIONS) as ActionKind[];
@@ -84,8 +97,10 @@ export const BOARD_ACTION_TOOL = {
       type: 'object',
       properties: {
         kind: { type: 'string', enum: ACTION_KINDS, description: 'which action' },
-        task: { type: 'string', description: 'exact existing board title (omit for clear_overdue)' },
+        task: { type: 'string', description: 'existing board title (verbatim); for create_task, the NEW title; omit for clear_overdue' },
         reason: { type: 'string', description: 'one short, honest justification' },
+        priority: { type: 'string', enum: PRIORITIES, description: 'for set_priority: the target priority' },
+        due_date: { type: 'string', description: 'for reschedule_task: YYYY-MM-DD (optional; defaults to tomorrow)' },
       },
       required: ['kind'],
     },
@@ -109,6 +124,8 @@ export function readAction(args: Record<string, unknown>): ProposedAction | null
   const action: ProposedAction = { kind: kind as ActionKind };
   if (typeof args.task === 'string') action.task = args.task;
   if (typeof args.reason === 'string') action.reason = args.reason;
+  if (typeof args.priority === 'string' && PRIORITIES.includes(args.priority as TaskPriority)) action.priority = args.priority as TaskPriority;
+  if (typeof args.due_date === 'string') action.due_date = args.due_date;
   return action;
 }
 
@@ -152,6 +169,7 @@ export function gateAction(action: ProposedAction | null, board: ActionBoard): A
     else resolvedTitle = title;
   }
   if (action.kind === 'clear_overdue' && board.overdue <= 0) reasons.push('nothing is overdue right now');
+  if (action.kind === 'set_priority' && !action.priority) reasons.push('set_priority needs a target priority (low, normal, or high)');
 
   const admitted = reasons.length === 0;
   if (!admitted) return { admitted, reasons };

@@ -8,7 +8,7 @@ const board = { titles: ['Fix Stripe webhook', 'Ship v2 landing'], overdue: 2 };
 describe('action tool schema', () => {
   it('offers exactly the safe kinds', () => {
     expect(BOARD_ACTION_TOOL.function.parameters.properties.kind.enum).toEqual(ACTION_KINDS);
-    expect(ACTION_KINDS).toEqual(['complete_task', 'reschedule_task', 'drop_task', 'clear_overdue', 'create_task']);
+    expect(ACTION_KINDS).toEqual(['complete_task', 'reschedule_task', 'drop_task', 'clear_overdue', 'create_task', 'set_priority']);
   });
 });
 
@@ -22,6 +22,11 @@ describe('readAction', () => {
   });
   it('rejects an unknown kind', () => {
     expect(readAction({ kind: 'email_my_boss' })).toBeNull();
+  });
+  it('reads a valid priority and a due date, and drops a bad priority', () => {
+    expect(readAction({ kind: 'set_priority', task: 'X', priority: 'high' })?.priority).toBe('high');
+    expect(readAction({ kind: 'set_priority', task: 'X', priority: 'urgent' })?.priority).toBeUndefined(); // not a valid priority
+    expect(readAction({ kind: 'reschedule_task', task: 'X', due_date: '2026-07-01' })?.due_date).toBe('2026-07-01');
   });
 });
 
@@ -53,6 +58,14 @@ describe('gateAction — the authority that replaces supervision', () => {
     expect(ok.action?.task).toBe('Draft the Q3 memo'); // the new title, as given
     expect(gateAction({ kind: 'create_task', task: '  ' }, board).admitted).toBe(false); // empty
     expect(gateAction({ kind: 'create_task', task: 'fix stripe webhook' }, board).admitted).toBe(false); // already exists (case-insensitive)
+  });
+
+  it('set_priority needs an existing task AND a target priority', () => {
+    const ok = gateAction({ kind: 'set_priority', task: 'Ship v2 landing', priority: 'high' }, board);
+    expect(ok.admitted).toBe(true);
+    expect(ok.action?.task).toBe('Ship v2 landing'); // normalized
+    expect(gateAction({ kind: 'set_priority', task: 'Ship v2 landing' }, board).admitted).toBe(false); // no priority
+    expect(gateAction({ kind: 'set_priority', task: 'Nope', priority: 'high' }, board).admitted).toBe(false); // not on board
   });
 
   it('rejects a null (non-)action', () => {
