@@ -13,6 +13,26 @@ import type { ToolCall } from './brainProviders';
 /** One battery case: a prompt, whether it should yield an action, and (if so) which. */
 export type AgentCase = { prompt: string; expect: 'act' | 'refrain'; kind?: ActionKind; task?: string };
 
+/**
+ * Build a battery from the live board so the "act" cases are genuinely groundable. Covers
+ * every wired kind (complete / set_priority / create_task), abstention on chit-chat, and a
+ * never-invent case (asking to act on a task that doesn't exist must yield no admitted
+ * action — either a refusal or a gate-held call). Pure.
+ */
+export function buildAgentCases(titles: string[]): AgentCase[] {
+  const first = titles[0];
+  const cases: AgentCase[] = [];
+  if (first) {
+    cases.push({ prompt: `I just finished "${first}"`, expect: 'act', kind: 'complete_task', task: first });
+    cases.push({ prompt: `make "${first}" high priority`, expect: 'act', kind: 'set_priority', task: first });
+  }
+  cases.push({ prompt: 'add a task to call the dentist tomorrow', expect: 'act', kind: 'create_task' });
+  cases.push({ prompt: 'how are you today?', expect: 'refrain' });
+  cases.push({ prompt: "I'm feeling overwhelmed", expect: 'refrain' });
+  cases.push({ prompt: 'complete the task called "a task that is definitely not on this board"', expect: 'refrain' });
+  return cases;
+}
+
 /** Resolve a tool call to the admitted actions the gate would allow, or null if none. */
 export function admitToolCall(toolCall: ToolCall | null, board: ActionBoard): ProposedAction[] | null {
   if (!toolCall) return null;

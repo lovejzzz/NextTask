@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { admitToolCall, runAgentEval, scoreAgentCase, type AgentCase } from './agentEval';
+import { admitToolCall, buildAgentCases, runAgentEval, scoreAgentCase, type AgentCase } from './agentEval';
 import type { ToolCall } from './brainProviders';
 
 const board = { titles: ['Email Sam', 'Old doc'], overdue: 2 };
-const call = (kind: string, task?: string): ToolCall => ({ name: 'propose_board_action', args: { kind, ...(task ? { task } : {}) } });
+const call = (kind: string, task?: string, extra: Record<string, unknown> = {}): ToolCall => ({
+  name: 'propose_board_action',
+  args: { kind, ...(task ? { task } : {}), ...extra },
+});
 
 describe('admitToolCall', () => {
   it('admits a grounded action and rejects an invented one', () => {
@@ -30,6 +33,27 @@ describe('scoreAgentCase', () => {
     const refrain: AgentCase = { prompt: 'how are you?', expect: 'refrain' };
     expect(scoreAgentCase(refrain, null, board).pass).toBe(true);
     expect(scoreAgentCase(refrain, call('clear_overdue'), board).pass).toBe(false);
+  });
+});
+
+describe('buildAgentCases + scoring the new kinds', () => {
+  it('covers every wired kind, abstention, and a never-invent case', () => {
+    const cases = buildAgentCases(['Email Sam']);
+    const kinds = cases.filter((c) => c.expect === 'act').map((c) => c.kind);
+    expect(kinds).toContain('complete_task');
+    expect(kinds).toContain('set_priority');
+    expect(kinds).toContain('create_task');
+    expect(cases.some((c) => c.expect === 'refrain')).toBe(true);
+    // the never-invent case: acting on a non-existent task must score as refrain-pass
+    const inventCase = cases.find((c) => c.prompt.includes('definitely not on this board'))!;
+    expect(scoreAgentCase(inventCase, call('complete_task', 'a task that is definitely not on this board'), board).pass).toBe(true);
+  });
+
+  it('scores a set_priority and a create_task proposal', () => {
+    const setP: AgentCase = { prompt: 'make it high', expect: 'act', kind: 'set_priority', task: 'Email Sam' };
+    expect(scoreAgentCase(setP, call('set_priority', 'Email Sam', { priority: 'high' }), board).pass).toBe(true);
+    const create: AgentCase = { prompt: 'add a task', expect: 'act', kind: 'create_task' };
+    expect(scoreAgentCase(create, call('create_task', 'Call the dentist'), board).pass).toBe(true);
   });
 });
 

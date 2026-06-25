@@ -114,7 +114,7 @@ import {
 import { runReversibleSteps } from '../lib/liveExecute';
 import { useAgentTrail } from '../hooks/useAgentTrail';
 import { summarizeTrail } from '../lib/agentTrail';
-import { runAgentEval, type AgentCase } from '../lib/agentEval';
+import { buildAgentCases, runAgentEval } from '../lib/agentEval';
 import type { ChatReply } from '../components/experimental/CompanionChat';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
@@ -1312,13 +1312,7 @@ export function App() {
           [BOARD_ACTION_TOOL, PLAN_TOOL],
         )
       ).toolCall;
-    const firstTitle = tasks[0]?.title;
-    const agentCases: AgentCase[] = [
-      ...(firstTitle ? [{ prompt: `I just finished "${firstTitle}"`, expect: 'act' as const, kind: 'complete_task' as const, task: firstTitle }] : []),
-      { prompt: 'how are you today?', expect: 'refrain' as const },
-      { prompt: "I'm feeling overwhelmed", expect: 'refrain' as const },
-    ];
-    const agent = await runAgentEval(propose, { titles: tasks.map((t) => t.title), overdue: insights.overdue }, agentCases);
+    const agent = await runAgentEval(propose, { titles: tasks.map((t) => t.title), overdue: insights.overdue }, buildAgentCases(tasks.map((t) => t.title)));
 
     notify(
       score >= max * 0.75 ? 'success' : 'error',
