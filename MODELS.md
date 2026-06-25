@@ -102,12 +102,15 @@ gated behind WebGPU and an explicit opt-in.
 
 Wired and unit-tested (no GPU needed): the two Gemma models are selectable through
 the **same** `loadBrain` Transformers.js path; `modelDtype()` picks `q4f16` for
-Gemma vs `q4` for Qwen; a **fail-fast WebGPU guard** stops Gemma from starting a
-doomed multi-GB download on unsupported devices (it degrades to the deterministic
-voice, like any load failure); `cleanLine()` strips Gemma's `<start_of_turn>` /
-`<end_of_turn>` markers and a leaked opening role tag. Gemma 4 doesn't reason aloud
-unless a `<|think|>` token is in the system prompt, so the Qwen-only `/no_think`
-plumbing is correctly skipped for it.
+Gemma vs `q4` for Qwen; `generationConfig()` gives each family its own decoding —
+Gemma 4 gets its model-card sampling (**temp 1.0 / top_p 0.95 / top_k 64**), Qwen
+keeps the snappier low-temp settings plus the repetition penalty the small builds
+need; a **fail-fast WebGPU guard** stops Gemma from starting a doomed multi-GB
+download on unsupported devices (it degrades to the deterministic voice, like any
+load failure); `cleanLine()` strips Gemma's `<start_of_turn>` / `<end_of_turn>`
+markers and a leaked opening role tag. Gemma 4 doesn't reason aloud unless a
+`<|think|>` token is in the system prompt, so the Qwen-only `/no_think` plumbing is
+correctly skipped for it.
 
 Still **UNVERIFIED on hardware** (this sandbox has no WebGPU and can't pull a 2.5GB
 model): live in-browser inference, tokens/sec, and the conversation eval on Gemma 4.

@@ -6,6 +6,7 @@ import {
   buildSystemPrompt,
   cleanLine,
   FEW_SHOT,
+  generationConfig,
   isGemmaModel,
   MODELS,
   modelDtype,
@@ -139,6 +140,28 @@ describe('Gemma model handling', () => {
     const out = withNoThink([{ role: 'user', content: 'hi' }]);
     expect(out[0].content).toContain('/no_think');
     expect(isGemmaModel('onnx-community/gemma-4-E2B-it-ONNX')).toBe(true); // → loadBrain skips withNoThink
+  });
+
+  it('gives Gemma its model-card sampling and Qwen its snappy low-temp settings', () => {
+    const gemma = generationConfig('onnx-community/gemma-4-E2B-it-ONNX');
+    expect(gemma.temperature).toBe(1.0);
+    expect(gemma.top_k).toBe(64); // Gemma 4 card recommendation
+    expect(gemma.repetition_penalty).toBeUndefined();
+
+    const qwen = generationConfig('onnx-community/Qwen3-0.6B-ONNX');
+    expect(qwen.temperature).toBe(0.9);
+    expect(qwen.repetition_penalty).toBe(1.2); // small Qwen needs it to avoid loops
+    expect(qwen.top_k).toBeUndefined();
+  });
+
+  it('widens the token budget for streaming chat versus the one-line ambient bubble', () => {
+    expect(generationConfig('onnx-community/Qwen3-0.6B-ONNX', { streaming: true }).max_new_tokens).toBe(110);
+    expect(generationConfig('onnx-community/Qwen3-0.6B-ONNX', { streaming: false }).max_new_tokens).toBe(44);
+    // Both families keep sampling on and never echo the prompt back.
+    for (const id of ['onnx-community/gemma-4-E2B-it-ONNX', 'onnx-community/Qwen3-1.7B-ONNX']) {
+      expect(generationConfig(id).do_sample).toBe(true);
+      expect(generationConfig(id).return_full_text).toBe(false);
+    }
   });
 });
 

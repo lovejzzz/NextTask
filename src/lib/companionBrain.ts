@@ -46,6 +46,33 @@ export function modelDtype(modelId: string): 'q4' | 'q4f16' {
   return isGemmaModel(modelId) ? 'q4f16' : 'q4';
 }
 
+/** Decoding params handed to the Transformers.js generator. */
+export type GenerationConfig = {
+  max_new_tokens: number;
+  temperature: number;
+  top_p: number;
+  top_k?: number;
+  do_sample: boolean;
+  repetition_penalty?: number;
+  return_full_text: boolean;
+};
+
+/**
+ * Per-family sampling — the single biggest live-quality lever, so it's a pure,
+ * unit-tested function rather than inline magic numbers. Gemma 4's model card
+ * recommends temperature 1.0 / top_p 0.95 / top_k 64; the Qwen3 voice tier keeps the
+ * snappier low-temperature settings with a repetition penalty that the small Qwen
+ * builds need to avoid loops. `streaming` widens the token budget for interactive
+ * chat versus the one-line ambient bubble.
+ */
+export function generationConfig(modelId: string, opts: { streaming?: boolean } = {}): GenerationConfig {
+  const max_new_tokens = opts.streaming ? 110 : 44;
+  if (isGemmaModel(modelId)) {
+    return { max_new_tokens, temperature: 1.0, top_p: 0.95, top_k: 64, do_sample: true, return_full_text: false };
+  }
+  return { max_new_tokens, temperature: 0.9, top_p: 0.95, do_sample: true, repetition_penalty: 1.2, return_full_text: false };
+}
+
 export function modelLabel(id: string): string {
   const remote = decodeRemoteId(id);
   if (remote) return remote.label || `Remote · ${remote.model}`;
@@ -252,12 +279,7 @@ export async function loadBrain(modelId: string = DEFAULT_MODEL_ID, onProgress?:
       // Qwen3 thinks aloud unless told not to; keep the voice snappy and grounded.
       const prepared = modelId.includes('Qwen3') ? withNoThink(messages) : messages;
       const output = await generator(prepared, {
-        max_new_tokens: onToken ? 110 : 44,
-        temperature: 0.9,
-        top_p: 0.95,
-        do_sample: true,
-        repetition_penalty: 1.2,
-        return_full_text: false,
+        ...generationConfig(modelId, { streaming: Boolean(onToken) }),
         streamer,
       });
       const generated = output?.[0]?.generated_text;

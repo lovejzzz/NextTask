@@ -81,7 +81,8 @@ Every tick: `typecheck` + `lint` + `test` + `build` must stay green before push.
 ## Backlog (pull from here)
 
 **The Board Has Feelings — deepen the headline**
-- ~~Model picker: Qwen3-0.6B (default) ↔ Qwen3-1.7B for a sharper voice~~ ✅ + **Gemma 4 E2B/E4B agentic tier** (`companionBrain.ts`)
+- ~~Model picker: Qwen3-0.6B (default) ↔ Qwen3-1.7B for a sharper voice~~ ✅ + **Gemma 4 E2B/E4B agentic tier**, per-family sampling (`companionBrain.ts`)
+- ~~"Talk to him" pass: drove real utterances through `parseIntent`, routed natural focus/urgency/summary/reflect phrasings ("what should I focus on", "what's on fire", "summarize my board", "reflect on the week") to reliable deterministic answers instead of the small LLM~~ ✅ (`companionActions.ts`)
 - Wire Gemma 4's function-calling through the action gates on the in-browser path (next rung)
 - Proactive lines: the board speaks up on real events (a ship, an overdue flip)
 - ~~Chat-driven actions: "add a high-priority task to email Sam Friday"~~ ✅ (deterministic intent parser — `companionActions.ts`)

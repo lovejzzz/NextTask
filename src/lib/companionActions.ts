@@ -231,7 +231,9 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   if (
     /\b(?:what have you noticed|notice(?:d)? (?:anything|any patterns?)|any patterns?|what (?:do|have) you (?:notice|see|observe)|what'?s your (?:read|take) on (?:how i|me)|patterns? (?:in|about) (?:my|how i))\b/.test(
       lower,
-    )
+    ) ||
+    // Direct invitation to reflect ("reflect on the week", "take a step back").
+    /\breflect(?:\s+on)?\b|\btake a step back\b/.test(lower)
   ) {
     return { kind: 'reflect' };
   }
@@ -252,7 +254,12 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   ) {
     return { kind: 'self_describe' };
   }
-  if (/\bwhat'?s next\b/.test(lower) || /^(?:next(?: up| task)?\??|what should i (?:do|work on)\??)$/.test(lower)) {
+  if (
+    /\bwhat'?s next\b/.test(lower) ||
+    /^(?:next(?: up| task)?\??|what should i (?:do|work on|focus on|prioriti[sz]e|tackle)\??)$/.test(lower) ||
+    // "what's on fire" / "anything burning" — asking for the single most pressing thing.
+    /\b(?:what'?s|anything|something)\s+(?:on fire|burning)\b/.test(lower)
+  ) {
     return { kind: 'whats_next' };
   }
   if (/\b(overdue|late|behind)\b/.test(lower) && /\b(what|any|anything|show|list|i have|are|is)\b/.test(lower)) {
@@ -262,6 +269,10 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
   // numeric status report and checked first so "board" isn't read as progress.
   if (
     /\b(?:how(?:'?s| is| does)?\s+(?:my |the )?board\b|read the room|big picture|what shape (?:is|of)|board shape|the (?:overall|whole) (?:picture|board))/.test(
+      lower,
+    ) ||
+    // "summarize my board", "board overview", "give me a rundown" — a holistic read.
+    /\b(?:summari[sz]e|sum up)\s+(?:my |the )?board\b|\bboard (?:summary|overview|rundown)\b|\b(?:summary|overview|rundown) of (?:my|the) board\b|\bgive me (?:a|the) (?:rundown|overview)\b/.test(
       lower,
     )
   ) {

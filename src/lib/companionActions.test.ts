@@ -61,6 +61,14 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('next', NOW)).toEqual({ kind: 'whats_next' });
   });
 
+  it('routes natural focus/urgency phrasings to the deterministic next-action read', () => {
+    // Found by "talking to him": these used to fall through to the small LLM.
+    expect(parseIntent('what should I focus on?', NOW)).toEqual({ kind: 'whats_next' });
+    expect(parseIntent('what should I prioritize', NOW)).toEqual({ kind: 'whats_next' });
+    expect(parseIntent("what's on fire?", NOW)).toEqual({ kind: 'whats_next' });
+    expect(parseIntent('anything burning', NOW)).toEqual({ kind: 'whats_next' });
+  });
+
   it('recognizes overdue and status questions', () => {
     expect(parseIntent('what is overdue?', NOW)).toEqual({ kind: 'overdue' });
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' });
@@ -71,6 +79,8 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('how does the board look', NOW)).toEqual({ kind: 'board_shape' });
     expect(parseIntent('read the room', NOW)).toEqual({ kind: 'board_shape' });
     expect(parseIntent('give me the big picture', NOW)).toEqual({ kind: 'board_shape' });
+    expect(parseIntent('summarize my board', NOW)).toEqual({ kind: 'board_shape' });
+    expect(parseIntent('give me a rundown', NOW)).toEqual({ kind: 'board_shape' });
     expect(parseIntent('how am I doing', NOW)).toEqual({ kind: 'status' }); // still status
   });
 
@@ -125,6 +135,8 @@ describe('parseIntent — questions', () => {
     expect(parseIntent('what have you noticed?', NOW)).toEqual({ kind: 'reflect' });
     expect(parseIntent('notice any patterns', NOW)).toEqual({ kind: 'reflect' });
     expect(parseIntent('what do you notice about how i work', NOW)).toEqual({ kind: 'reflect' });
+    expect(parseIntent('reflect on the week', NOW)).toEqual({ kind: 'reflect' });
+    expect(parseIntent('take a step back', NOW)).toEqual({ kind: 'reflect' });
     // must NOT steal the current-state board read
     expect(parseIntent("how's my board", NOW)).toEqual({ kind: 'board_shape' });
   });
