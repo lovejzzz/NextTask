@@ -455,6 +455,12 @@ export function App() {
         },
       };
     }
+    if (action.kind === 'create_task') {
+      const title = action.task?.trim();
+      if (!title) return null;
+      const created = await mutations.createTask.mutateAsync({ title, description: '', status: 'todo', priority: 'normal', due_date: null, assignee_ids: [], label_ids: [] });
+      return { label: `add "${title}"`, undo: async () => void (await mutations.deleteTask.mutateAsync(created.id)) };
+    }
     const task = tasks.find((t) => t.title === action.task);
     if (!task) return null; // gate already grounded this; defensive only
     if (action.kind === 'complete_task') {

@@ -15,7 +15,7 @@
  */
 
 /** The safe, reversible mutations the brain may propose. Each maps to an audited primitive. */
-export type ActionKind = 'complete_task' | 'reschedule_task' | 'drop_task' | 'clear_overdue';
+export type ActionKind = 'complete_task' | 'reschedule_task' | 'drop_task' | 'clear_overdue' | 'create_task';
 
 /** A structured action the model asked for (the parsed tool-call arguments). */
 export type ProposedAction = {
@@ -25,9 +25,10 @@ export type ProposedAction = {
 };
 
 type ActionSpec = {
-  needsTask: boolean;
+  needsTask: boolean; // requires an EXISTING board title (matched + normalized)
+  createsTask?: boolean; // requires a NEW title (must NOT already exist) — the one exception to "never invent"
   /** The real, audited intent kind this proposal would route to on accept. */
-  primitive: 'complete' | 'reschedule' | 'delete' | 'clear_overdue';
+  primitive: 'complete' | 'reschedule' | 'delete' | 'clear_overdue' | 'create';
   /** How the undoable card reads, given the resolved exact title. */
   card: (title: string, reason?: string) => string;
   undo: (title: string) => string;
@@ -58,6 +59,13 @@ const ACTIONS: Record<ActionKind, ActionSpec> = {
     card: (_t, r) => `Clear the overdue pile${r ? ` — ${r}` : ''}? One yes, and it all undoes.`,
     undo: () => `clear overdue`,
   },
+  create_task: {
+    needsTask: false,
+    createsTask: true,
+    primitive: 'create',
+    card: (t, r) => `Add "${t}" to the board${r ? ` — ${r}` : ''}? You decide; it undoes.`,
+    undo: (t) => `add "${t}"`,
+  },
 };
 
 export const ACTION_KINDS = Object.keys(ACTIONS) as ActionKind[];
@@ -69,7 +77,8 @@ export const BOARD_ACTION_TOOL = {
     name: 'propose_board_action',
     description:
       'Propose ONE safe, reversible change to the board for the human to accept or dismiss. ' +
-      'Never invent a task: `task` must be copied verbatim from a title that exists on the board. ' +
+      'For complete_task / reschedule_task / drop_task, `task` must be copied verbatim from a title ' +
+      'that exists on the board — never invent one. For create_task, `task` is the NEW title to add. ' +
       'Only propose when the conversation clearly calls for an action; otherwise just talk.',
     parameters: {
       type: 'object',
@@ -134,12 +143,26 @@ export function gateAction(action: ProposedAction | null, board: ActionBoard): A
       if (!resolvedTitle) reasons.push(`"${action.task}" is not a task on the board — I won't invent one`);
     }
   }
+  // create_task is the one kind that may name a NEW title — but it must be non-empty and must
+  // not duplicate an existing task (so "create" can't be used to silently act on a real one).
+  if (spec.createsTask) {
+    const title = action.task?.trim();
+    if (!title) reasons.push('a new task needs a title');
+    else if (board.titles.some((t) => t.toLowerCase() === title.toLowerCase())) reasons.push(`"${title}" is already on the board`);
+    else resolvedTitle = title;
+  }
   if (action.kind === 'clear_overdue' && board.overdue <= 0) reasons.push('nothing is overdue right now');
 
   const admitted = reasons.length === 0;
   if (!admitted) return { admitted, reasons };
 
-  reasons.unshift(spec.needsTask ? `grounded in "${resolvedTitle}", reversible` : 'reversible, and there is overdue work');
+  reasons.unshift(
+    spec.createsTask
+      ? `a new task "${resolvedTitle}", reversible`
+      : spec.needsTask
+        ? `grounded in "${resolvedTitle}", reversible`
+        : 'reversible, and there is overdue work',
+  );
   return { admitted, reasons, action: { ...action, task: resolvedTitle } };
 }
 

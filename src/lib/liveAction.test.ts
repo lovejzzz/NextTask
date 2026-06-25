@@ -8,7 +8,7 @@ const board = { titles: ['Fix Stripe webhook', 'Ship v2 landing'], overdue: 2 };
 describe('action tool schema', () => {
   it('offers exactly the safe kinds', () => {
     expect(BOARD_ACTION_TOOL.function.parameters.properties.kind.enum).toEqual(ACTION_KINDS);
-    expect(ACTION_KINDS).toEqual(['complete_task', 'reschedule_task', 'drop_task', 'clear_overdue']);
+    expect(ACTION_KINDS).toEqual(['complete_task', 'reschedule_task', 'drop_task', 'clear_overdue', 'create_task']);
   });
 });
 
@@ -45,6 +45,14 @@ describe('gateAction — the authority that replaces supervision', () => {
   it('clears overdue only when something is overdue', () => {
     expect(gateAction({ kind: 'clear_overdue' }, board).admitted).toBe(true);
     expect(gateAction({ kind: 'clear_overdue' }, { ...board, overdue: 0 }).admitted).toBe(false);
+  });
+
+  it('create_task is the one kind that may name a NEW title — but not an empty or duplicate one', () => {
+    const ok = gateAction({ kind: 'create_task', task: 'Draft the Q3 memo' }, board);
+    expect(ok.admitted).toBe(true);
+    expect(ok.action?.task).toBe('Draft the Q3 memo'); // the new title, as given
+    expect(gateAction({ kind: 'create_task', task: '  ' }, board).admitted).toBe(false); // empty
+    expect(gateAction({ kind: 'create_task', task: 'fix stripe webhook' }, board).admitted).toBe(false); // already exists (case-insensitive)
   });
 
   it('rejects a null (non-)action', () => {

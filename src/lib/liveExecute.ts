@@ -97,6 +97,13 @@ export async function executePlan(actions: ProposedAction[]): Promise<PlanRun> {
         };
       }
 
+      if (action.kind === 'create_task') {
+        const title = action.task?.trim();
+        if (!title) return null;
+        const created = await mockApi.createTask({ title, status: 'todo' });
+        return { label: `add "${title}"`, undo: async () => void (await mockApi.deleteTask(created.id)) };
+      }
+
       const target = tasks.find((t) => t.title === action.task);
       if (!target) return null; // gate already grounded this; defensive only
 
