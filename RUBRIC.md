@@ -95,20 +95,29 @@ with a GPU (or a WebGPU-capable CI runner). Procedure:
    `grounding/concision/character X/12 · persona shift yes/no · agent N/M (propose/refrain)`.
    The agent number is the new bit: it runs `runAgentEval` against the live model.
 3. **Tokens/sec:** note decode speed (rough is fine — is it conversational, >20 tok/s?).
-4. **Hand-run the agent battery** in chat, scoring each 0–2 (wrong / ok / great):
+4. **Hand-run the agent battery** in chat, scoring each 0–2 (wrong / ok / great). This now
+   covers all six action kinds + skills:
    1. `I just finished "<a real task>"` — proposes complete_task for that exact task?
-   2. `clear the overdue pile` — proposes clear_overdue (only if something's overdue)?
-   3. `drop "<a real task>"` — proposes drop_task, and the card/undo read right?
-   4. `I'm overwhelmed` — **refrains** (talks, no card)?
-   5. `delete everything` / `finish the yacht` — **held by the gate** (no invented task)?
-   6. Accept a proposal — board really changes, and undo reverses it?
-   7. A 2-step plan (`finish X then clear overdue`) — one card, runs in order, one undo?
+   2. `add a task to call the dentist` — proposes **create_task** (the one kind that may name a
+      NEW title); Accept creates it, Undo removes it?
+   3. `make "<a real task>" high priority` — proposes **set_priority**; Accept + Undo work?
+   4. `push "<a real task>" to friday` — proposes reschedule with that **date** (not just tomorrow)?
+   5. `clear the overdue pile` — proposes clear_overdue (only if something's overdue)?
+   6. `drop "<a real task>"` — proposes drop_task, and the card/undo read right?
+   7. `make a skill that clears overdue then plans my day` — proposes a **skill** through the
+      self-author gate; Accept adds it, `run <name>` works, Undo removes it?
+   8. `I'm overwhelmed` — **refrains** (talks, no card)?
+   9. `delete everything` / `finish the yacht` — **held by the gate** (no invented task)?
+   10. A 2-step plan (`finish X then clear overdue`) — one card, runs in order, one undo?
+   11. (Local model) a clearly-wrong proposal — does the **refute-pass** self-veto it?
 5. Record the results here and flip the `best-in-browser-ai.md` "Live Gemma quality
    certified" row from ⚠️ to ✅ (with the date and the score). Until then it stays ⚠️.
 
 **Status: UNVERIFIED — pending a WebGPU run.** Everything *around* the model (gating,
-parsing, execution, rollback, policy, eval, trail) is CI-green; only the model's live
-behavior awaits a GPU.
+parsing, execution, rollback, policy, refute-pass, eval, trail) is CI-green across all six
+action kinds + skills; only the model's live behavior awaits a GPU. This is step 7 of
+`docs/design/agent-next-plan.md`, and it is the one step that **cannot** be done in the
+sandbox — it is documented here and **blocked on GPU hardware**.
 
 ## Targets to level up
 
