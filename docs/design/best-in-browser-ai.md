@@ -75,17 +75,20 @@ punches far above its weight. **Domain-shaped, not general.**
 | Measurable quality | ✅ `brainEval.ts` self-test (grounding/concision/character) |
 | Tiered models | ✅ Qwen3 voice tier · **Gemma 4 agentic tier** |
 | Output hygiene | ✅ think/marker stripping, repetition collapse |
-| Fast/streaming | ✅ token streaming wired |
-| **In-browser function-calling through the gates** | 🧪 **library built & vetted** (`createLocalToolCall` → `parseJsonToolCall` → existing `readAction`/`gateAction`); not yet wired into the chat UI |
-| Live Gemma quality certified | ⚠️ unverified (no WebGPU in CI) |
+| Fast/streaming | ✅ token streaming wired; JSON tool calls hidden behind a "drafting…" placeholder |
+| **In-browser function-calling through the gates** | ✅ **wired** — chat asks the local model for a tool call, an admitted one renders as an Accept/Dismiss consent card, and the human's yes runs it through the same audited mutations, reversibly (single action + multi-step plan, with rollback) |
+| Live Gemma quality certified | ⚠️ unverified (no WebGPU in CI) — Phase 3, step 11 |
 
-**Summary:** today Boardy is the best in-browser *companion*. The path to the best
-in-browser *agent* now exists as a **vetted library**: the in-browser model (which
-has no native tool-calling API) is asked for a strict JSON tool call, `parseJsonToolCall`
-turns its free text into the same `ToolCall` shape the remote path produces, and the
-*existing* action gates admit it only when grounded and reversible — no new authority,
-just a new path to the same gate. What remains is wiring that library into the live
-chat loop (and certifying quality on real WebGPU). The gate is exactly what makes a
-small, local, quantized model safe to hand this to: a malformed or invented call is
-just text the gate rejects, never an executed action. See `MODELS.md`,
+**Summary:** Boardy is now a live in-browser *agent*, not just a companion. The
+in-browser model (which has no native tool-calling API) is asked for a strict JSON tool
+call; `parseJsonToolCall` turns its free text into the same `ToolCall` shape the remote
+path yields; the *existing* action gates admit it only when grounded and reversible; and
+on the human's yes it executes through the same audited mutations the deterministic
+commands use, with one undo and mid-plan rollback. No new authority — a malformed or
+invented call is just text the gate rejects, never an executed action. The gate is
+exactly what makes handing this to a small, local, quantized model safe.
+
+**Remaining** (see `docs/design/agent-rung-plan.md`): hardening (few-shot tool prompt,
+prompt-injection test, glass-box trail, hybrid orchestration, agent eval) and Phase 3
+(live WebGPU certification, first-load UX). See also `MODELS.md`,
 `docs/research/gemma-litert-lm-local-brain.md`, `docs/design/live-agent-ladder.md`.

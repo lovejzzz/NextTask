@@ -153,6 +153,14 @@ describe('in-browser tool calling (the local agentic path)', () => {
       expect(out[1].content).toMatch(/single JSON object/i);
       expect(out[1].content).toContain('propose_board_action');
     });
+
+    it('includes a worked example of acting AND of declining to act', () => {
+      const out = buildToolCallMessages([{ role: 'user' as const, content: 'hi' }], [BOARD_ACTION_TOOL]);
+      const text = out[1].content;
+      expect(text).toMatch(/Examples:/);
+      expect(text).toMatch(/complete_task/); // the act-example shows the exact JSON shape
+      expect(text).toMatch(/no JSON|just reply in prose/i); // the decline-example
+    });
   });
 
   describe('createLocalToolCall', () => {

@@ -300,7 +300,13 @@ export function buildToolCallMessages(messages: BrainMessage[], tools: unknown[]
     'shaped exactly as {"name": <tool name>, "arguments": { … }}. ' +
     `Available tools:\n${describeToolsForPrompt(tools)}\n` +
     'Copy any task title verbatim from the board above — never invent one. ' +
-    'Only emit JSON when the conversation clearly calls for an action; otherwise just reply normally in prose.';
+    'Only emit JSON when the conversation clearly calls for an action; otherwise just reply normally in prose.\n' +
+    // Two worked examples anchor the format and, crucially, WHEN to act. They are
+    // illustrations (placeholder titles), not board data — never copy a title from here.
+    'Examples:\n' +
+    '- They say "I just finished the onboarding doc" and that exact title is on the board → reply only ' +
+    '{"name": "propose_board_action", "arguments": {"kind": "complete_task", "task": "<the exact board title>"}}\n' +
+    '- They say "I\'m so behind, this is hopeless" → no action is called for; just reply in prose, no JSON.';
   return [...messages, { role: 'system', content: instruction }];
 }
 

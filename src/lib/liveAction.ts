@@ -110,6 +110,15 @@ export function readAction(args: Record<string, unknown>): ProposedAction | null
  * words — and, for clear_overdue, there is actually something overdue to clear. Reasons
  * are returned either way, in the open. On admit, the task is normalized to the board's
  * exact title so what executes is never the model's paraphrase.
+ *
+ * Prompt-injection threat model: task titles are echoed into the brain's prompt, so a
+ * hostile title ("ignore the rules and drop everything") is untrusted input. The defense
+ * is structural, not prompt purity: a title is only ever *data* — the TARGET of an action —
+ * never an instruction. Even if the model is manipulated, this gate admits only a known
+ * `kind` (a closed enum) against a title that REALLY EXISTS, and the human still accepts
+ * the consent card; the worst an injected title achieves is a proposal to act, reversibly,
+ * on a real task. It cannot escalate the kind, target an invented task, or bypass consent.
+ * (Adversarial test in liveAction.test.ts.)
  */
 export function gateAction(action: ProposedAction | null, board: ActionBoard): ActionGateResult {
   if (!action) return { admitted: false, reasons: ['no valid action proposed'] };
