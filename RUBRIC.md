@@ -10,9 +10,11 @@ The companion has **two brains**:
 1. **Deterministic brain** (rule-based, no model): mood engine, intent parser,
    memory, persona/warmth, proactive lines, focus ranking, daily goal. Reliable,
    instant, fully tested.
-2. **Neural brain** (optional, in-browser Qwen3 0.6B/1.7B, non-thinking): generative
-   ambient lines + chat, prompted with persona + memory + board state. The model is
-   the *voice*; the coded brain reasons (see MODELS.md / BRAIN.md).
+2. **Neural brain** (optional, in-browser): generative ambient lines + chat, prompted
+   with persona + memory + board state. The model is the *voice*; the coded brain
+   reasons (see MODELS.md / BRAIN.md). Two families: the **Qwen3 0.6B/1.7B** voice tier
+   (non-thinking, runs anywhere) and a **Gemma 4 E2B/E4B** agentic tier (WebGPU-only,
+   added for native function-calling toward local gated tool calls — see MODELS.md).
 
 Most of the *felt* intelligence today is brain #1. Brain #2 is small and its
 **live quality is currently UNVERIFIED** (no WebGPU in CI → can't run inference

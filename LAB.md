@@ -44,6 +44,15 @@ downloads only after the user opts in (cached after). If WebGPU is missing it
 falls back to WASM/CPU; if anything fails it silently reverts to the
 deterministic quips. Persona + prompt live in `companionBrain.ts` (tested).
 
+**Now with a Gemma 4 agentic tier** — alongside the tiny Qwen3 voice models, the
+picker offers Google's on-device **Gemma 4 E2B / E4B** (ONNX, WebGPU-only, ~2.5–3.6GB,
+fetched lazily like the rest). They're added not for a richer voice but for **native
+function-calling / structured JSON** — the route toward a local, keyless *agentic*
+brain whose tool calls still pass the same audited gates. A fail-fast WebGPU guard
+keeps Gemma from starting a doomed multi-GB download on unsupported devices.
+Rationale + the honest "unverified on hardware" caveat live in `MODELS.md`; research
+in `docs/research/gemma-litert-lm-local-brain.md`.
+
 **Deepened (it's a real companion now):**
 - **Memory** — it remembers you across sessions: days known, visits, all-time
   ships, best/current streak, days away. Fed into every prompt. (`companionMemory.ts`, `useCompanionMemory.ts`)
@@ -72,7 +81,8 @@ Every tick: `typecheck` + `lint` + `test` + `build` must stay green before push.
 ## Backlog (pull from here)
 
 **The Board Has Feelings — deepen the headline**
-- Model picker: Qwen3-0.6B (default) ↔ Qwen3-1.7B for a sharper voice
+- ~~Model picker: Qwen3-0.6B (default) ↔ Qwen3-1.7B for a sharper voice~~ ✅ + **Gemma 4 E2B/E4B agentic tier** (`companionBrain.ts`)
+- Wire Gemma 4's function-calling through the action gates on the in-browser path (next rung)
 - Proactive lines: the board speaks up on real events (a ship, an overdue flip)
 - ~~Chat-driven actions: "add a high-priority task to email Sam Friday"~~ ✅ (deterministic intent parser — `companionActions.ts`)
 - More moods & a wider quip pool; reduce repetition with better seeding

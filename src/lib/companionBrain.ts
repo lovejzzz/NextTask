@@ -14,16 +14,37 @@ import { createRemoteGenerate, decodeRemoteId } from './brainProviders';
 // Major-pinned so the CDN always resolves a valid latest v3 build.
 const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 
-// Selectable chat models — Transformers.js-compatible Qwen3 instruct, run in
-// NON-THINKING mode. The model is Boardy's *voice*; his coded brain does the
-// reasoning (see BRAIN.md / MODELS.md), so we want a small, snappy, modern model
-// that runs everywhere — not a bigger one that thinks aloud. Smallest first.
+// Selectable chat models, smallest first. Two families with two different jobs:
+//   • Qwen3 (voice tier) — tiny, snappy, runs everywhere. The model is Boardy's
+//     *voice*; his coded brain does the reasoning (see BRAIN.md / MODELS.md), so
+//     small-and-everywhere wins on purpose. Run NON-THINKING.
+//   • Gemma 4 (agentic tier) — Google's on-device E2B/E4B, run in-browser via
+//     Transformers.js + WebGPU. Bigger and WebGPU-only, chosen for one reason the
+//     voice models can't give: native function-calling / structured-JSON output,
+//     the path to a *local* agentic brain whose tool calls still pass the same
+//     action gates. A deliberate exception to "smallest wins" — see MODELS.md.
 export type BrainModel = { id: string; label: string; note: string };
 export const MODELS: BrainModel[] = [
   { id: 'onnx-community/Qwen3-0.6B-ONNX', label: 'Qwen3 0.6B', note: 'default · runs anywhere · ~0.5GB' },
   { id: 'onnx-community/Qwen3-1.7B-ONNX', label: 'Qwen3 1.7B', note: 'richer voice · ~1.2GB · wants a decent GPU' },
+  { id: 'onnx-community/gemma-4-E2B-it-ONNX', label: 'Gemma 4 E2B', note: 'agentic · function-calling · ~2.5GB · needs WebGPU' },
+  { id: 'onnx-community/gemma-4-E4B-it-ONNX', label: 'Gemma 4 E4B', note: 'agentic · sharpest · ~3.6GB · needs a strong GPU' },
 ];
 export const DEFAULT_MODEL_ID = MODELS[0].id;
+
+/** True for the Gemma 4 family — they need WebGPU + fp16 weights and a different chat template than Qwen3. */
+export function isGemmaModel(modelId: string): boolean {
+  return /gemma/i.test(modelId);
+}
+
+/**
+ * Transformers.js quantization per model. The Gemma 4 ONNX builds ship fp16 weights
+ * and are meant to run on WebGPU (`q4f16`); the Qwen3 builds use plain `q4` so they
+ * also run on the WASM/CPU fallback. Pure, so it's unit-tested without a GPU.
+ */
+export function modelDtype(modelId: string): 'q4' | 'q4f16' {
+  return isGemmaModel(modelId) ? 'q4f16' : 'q4';
+}
 
 export function modelLabel(id: string): string {
   const remote = decodeRemoteId(id);
@@ -141,6 +162,8 @@ export function cleanLine(raw: string): string {
     .replace(/<think>[\s\S]*?<\/think>/gi, '') // drop any completed reasoning block
     .replace(/<think>[\s\S]*$/i, '') // ...and a dangling one if generation was cut off
     .replace(/\s*\/no_?think\s*/gi, ' ') // never echo the control token back
+    .replace(/<\/?(?:start_of_turn|end_of_turn)>/gi, '') // Gemma turn markers (defensive; the streamer usually strips these)
+    .replace(/^\s*model\s*\n/i, '') // Gemma can leak the bare role tag that opens its turn ("model\n…")
     .trim()
     .replace(/^["'`]+|["'`]+$/g, '');
   if (line.length > 240) line = `${line.slice(0, 237).trimEnd()}…`;
@@ -192,11 +215,17 @@ export async function loadBrain(modelId: string = DEFAULT_MODEL_ID, onProgress?:
     const TextStreamer = mod.TextStreamer;
 
     const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator;
+    // Gemma 4's fp16 weights only run on WebGPU. Fail fast on unsupported devices so
+    // we never kick off a multi-GB download that can't finish — the caller's guard
+    // then falls back to the deterministic voice, same as any other load failure.
+    if (isGemmaModel(modelId) && !hasWebGPU) {
+      throw new Error('Gemma 4 needs WebGPU; this browser has none');
+    }
     let lastRatio = 0;
 
     const generator = (await pipeline('text-generation', modelId, {
       device: hasWebGPU ? 'webgpu' : 'wasm',
-      dtype: 'q4',
+      dtype: modelDtype(modelId),
       progress_callback: (info: any) => {
         if (info?.status === 'progress' && typeof info.progress === 'number') {
           lastRatio = Math.max(lastRatio, Math.min(1, info.progress / 100));
