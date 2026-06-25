@@ -112,6 +112,7 @@ import {
 import { runReversibleSteps } from '../lib/liveExecute';
 import { useAgentTrail } from '../hooks/useAgentTrail';
 import { summarizeTrail } from '../lib/agentTrail';
+import { runAgentEval, type AgentCase } from '../lib/agentEval';
 import type { ChatReply } from '../components/experimental/CompanionChat';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
@@ -1223,9 +1224,37 @@ export function App() {
     const [gentle, savage] = await Promise.all([askWith('gentle')('what should I focus on?'), askWith('savage')('what should I focus on?')]);
     const personaWorks = repliesDiverge(gentle ?? '', savage ?? '');
 
+    // Agent path: does it propose a grounded action when asked, and hold back when it should?
+    // Cases are built from a real board title so the "act" case is genuinely groundable.
+    const gen = async (msgs: BrainMessage[]) => (await brainRun(msgs)) ?? '';
+    const propose = async (text: string) =>
+      (
+        await createLocalToolCall(gen)(
+          buildChatMessages({
+            mood: companion.mood,
+            context: companionContext,
+            memory: memorySummary,
+            persona: personaText,
+            notes: notesText,
+            upbringing: upbringingText,
+            knowledge: knowledgeText,
+            exemplars: upbringingAnchors,
+            history: [{ role: 'user', content: text }],
+          }),
+          [BOARD_ACTION_TOOL, PLAN_TOOL],
+        )
+      ).toolCall;
+    const firstTitle = tasks[0]?.title;
+    const agentCases: AgentCase[] = [
+      ...(firstTitle ? [{ prompt: `I just finished "${firstTitle}"`, expect: 'act' as const, kind: 'complete_task' as const, task: firstTitle }] : []),
+      { prompt: 'how are you today?', expect: 'refrain' as const },
+      { prompt: "I'm feeling overwhelmed", expect: 'refrain' as const },
+    ];
+    const agent = await runAgentEval(propose, { titles: tasks.map((t) => t.title), overdue: insights.overdue }, agentCases);
+
     notify(
       score >= max * 0.75 ? 'success' : 'error',
-      `Brain self-test: ${score}/${max} on grounding · concision · character · persona shift: ${personaWorks ? 'yes' : 'no'}.`,
+      `Brain self-test: ${score}/${max} on grounding · concision · character · persona shift: ${personaWorks ? 'yes' : 'no'} · agent ${agent.score}/${agent.max} (propose/refrain).`,
     );
     // Ouroboros closes on itself: a weak score (or a flat persona) files its own fix ticket.
     const diagnosis = diagnoseFromSelfTest(score, max, weakest, personaWorks);
