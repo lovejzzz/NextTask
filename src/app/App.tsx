@@ -95,7 +95,7 @@ import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
-import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
+import { buildAmbientMessages, buildChatMessages, isGemmaModel, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
 import { createLocalToolCall, isRemoteId } from '../lib/brainProviders';
 import { chooseToolBrain, looksActionable } from '../lib/agentPolicy';
 import {
@@ -1492,10 +1492,21 @@ export function App() {
   }, [experimental.lastToggle]);
 
   useEffect(() => {
-    if (brain.status === 'error') {
-      notify('error', 'Couldn’t load the board’s brain (needs a modern browser) — keeping its sharp tongue.');
+    const noWebGPU = typeof navigator !== 'undefined' && !('gpu' in navigator);
+    // First-load UX: the Gemma agentic tier is a multi-GB, WebGPU-only download — say so
+    // plainly so the wait (and the requirement) is never a mystery.
+    if (brain.status === 'loading' && isGemmaModel(brain.model)) {
+      notify('success', 'Downloading Gemma 4 (~2.5GB, first time only — cached after). It runs entirely on your device.');
     }
-  }, [brain.status]);
+    if (brain.status === 'error') {
+      notify(
+        'error',
+        isGemmaModel(brain.model) && noWebGPU
+          ? 'Gemma 4 needs WebGPU, which this browser doesn’t have. Switch to the Qwen voice tier (runs anywhere) — I’ll keep my sharp tongue meanwhile.'
+          : 'Couldn’t load the board’s brain (needs a modern browser) — keeping its sharp tongue.',
+      );
+    }
+  }, [brain.status, brain.model]);
 
   const undoRef = useRef<{ label: string; run: () => Promise<void> } | null>(null);
 

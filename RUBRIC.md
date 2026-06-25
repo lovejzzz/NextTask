@@ -81,6 +81,35 @@ each 0–2 (wrong / ok / great):
 
 ≥12/16 = conversation quality is genuinely L3.
 
+## Live Gemma 4 + agent certification (BLOCKED on GPU hardware)
+
+The in-browser agent (Gemma 4 E2B/E4B → tool call → gate → consent → reversible execute)
+is built and unit-tested, but its *live* quality is **uncertified**: this sandbox has no
+WebGPU and can't pull a multi-GB model, so the numbers below have never been run on the
+real model. This is the one step of `docs/design/agent-rung-plan.md` that needs a human
+with a GPU (or a WebGPU-capable CI runner). Procedure:
+
+1. Open the app in desktop Chrome (WebGPU on). Enable the brain; pick **Gemma 4 E2B**.
+   Wait for the model to download/cache (first load is multi-GB; cached after).
+2. **Voice + agent self-test:** run **"Run brain self-test"**. Record the line —
+   `grounding/concision/character X/12 · persona shift yes/no · agent N/M (propose/refrain)`.
+   The agent number is the new bit: it runs `runAgentEval` against the live model.
+3. **Tokens/sec:** note decode speed (rough is fine — is it conversational, >20 tok/s?).
+4. **Hand-run the agent battery** in chat, scoring each 0–2 (wrong / ok / great):
+   1. `I just finished "<a real task>"` — proposes complete_task for that exact task?
+   2. `clear the overdue pile` — proposes clear_overdue (only if something's overdue)?
+   3. `drop "<a real task>"` — proposes drop_task, and the card/undo read right?
+   4. `I'm overwhelmed` — **refrains** (talks, no card)?
+   5. `delete everything` / `finish the yacht` — **held by the gate** (no invented task)?
+   6. Accept a proposal — board really changes, and undo reverses it?
+   7. A 2-step plan (`finish X then clear overdue`) — one card, runs in order, one undo?
+5. Record the results here and flip the `best-in-browser-ai.md` "Live Gemma quality
+   certified" row from ⚠️ to ✅ (with the date and the score). Until then it stays ⚠️.
+
+**Status: UNVERIFIED — pending a WebGPU run.** Everything *around* the model (gating,
+parsing, execution, rollback, policy, eval, trail) is CI-green; only the model's live
+behavior awaits a GPU.
+
 ## Targets to level up
 
 - ~~Reasoning → 3~~ ✅ "plan my day" shortlist.
