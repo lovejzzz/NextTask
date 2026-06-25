@@ -13,6 +13,8 @@
  * Whatever the choice, the gate is still the real authority and every downstream failure
  * degrades to plain talk — this only decides whether it's worth *trying*.
  */
+import type { BrainMessage } from './companionBrain';
+
 export type ToolBrainChoice = { attempt: boolean; reason: string };
 
 // Verbs/phrasings that suggest the user wants something *done* to the board. Recall-biased:
@@ -37,4 +39,34 @@ export function chooseToolBrain(signals: { brainReady: boolean; isRemote: boolea
   if (signals.isRemote) return { attempt: true, reason: 'capable remote brain — always offer tools' };
   if (signals.actionable) return { attempt: true, reason: 'local model + the message looks actionable' };
   return { attempt: false, reason: 'local model + chit-chat — just talk, skip the tool attempt' };
+}
+
+// ── Adversarial proposal check ───────────────────────────────────────────────────
+// A small local model can propose a plausible-but-wrong action. Before surfacing one, give
+// the same model a focused second look ("does this match what they asked?") and drop it on a
+// clear "no". A capable remote brain skips this. The human's consent is still the real gate,
+// so the check is biased toward KEEPING (ambiguous → survive) — it only suppresses obvious
+// misses, never silently overrides the person.
+
+/** Run the refute-pass only for a small local model (a remote brain is trusted to be capable). */
+export function shouldVerifyProposal(isRemote: boolean): boolean {
+  return !isRemote;
+}
+
+/** A focused yes/no refute prompt: does the proposed action match what the user asked? */
+export function buildVerifyMessages(userText: string, proposalSummary: string): BrainMessage[] {
+  return [
+    { role: 'system', content: 'You are a strict checker. Answer with ONLY "yes" or "no".' },
+    {
+      role: 'user',
+      content: `The user said: "${userText}". I'm about to propose this board action: "${proposalSummary}". Does that action correctly match what the user asked for? Answer yes or no.`,
+    },
+  ];
+}
+
+/** Read a yes/no verdict. Ambiguous → survive, because the human's consent is the real gate. */
+export function parseVerdict(reply: string): boolean {
+  const match = reply.trim().toLowerCase().match(/^[^a-z]*(yes|no|y|n)\b/);
+  if (!match) return true; // couldn't read a clear verdict → keep the proposal
+  return match[1] === 'yes' || match[1] === 'y';
 }

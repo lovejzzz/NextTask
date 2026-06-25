@@ -97,7 +97,7 @@ import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, cleanLine, isGemmaModel, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
 import { createLocalToolCall, isRemoteId, looksLikeToolCall } from '../lib/brainProviders';
-import { chooseToolBrain, looksActionable } from '../lib/agentPolicy';
+import { buildVerifyMessages, chooseToolBrain, looksActionable, parseVerdict, shouldVerifyProposal } from '../lib/agentPolicy';
 import {
   BOARD_ACTION_TOOL,
   PLAN_TOOL,
@@ -1167,7 +1167,16 @@ export function App() {
       ]);
       if (toolCall) {
         const reply = agentReply(toolCall);
-        if (reply) return reply;
+        if (typeof reply === 'string') return reply; // an honest gate refusal
+        if (reply) {
+          // Adversarial check: for a small local model, give it a focused second look before
+          // surfacing the card; drop it only on a clear "no" (the human's yes is still the gate).
+          const verified =
+            !shouldVerifyProposal(isRemoteId(brain.model)) ||
+            parseVerdict(await generate(buildVerifyMessages(text, reply.proposal.summary)));
+          if (verified) return reply;
+          agentTrail.record('held', `self-vetoed: ${reply.proposal.summary}`, 'the refute-pass wasn’t confident this is what you meant');
+        }
       }
       // No usable proposal — reuse the prose from THIS generation rather than generating
       // again (one model call per turn). Skip the reuse only if the text looks like a botched
