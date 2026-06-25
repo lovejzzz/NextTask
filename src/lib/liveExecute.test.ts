@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { mockApi } from './mockApi';
 import { gatePlan, readPlan } from './liveAction';
-import { executePlan } from './liveExecute';
+import { executePlan, runReversibleSteps } from './liveExecute';
 
 /**
  * Rung 6 follow-through, against the REAL store: a brain plan → gatePlan → executePlan runs
@@ -79,5 +79,54 @@ describe('an admitted plan moves the real board and undoes as a unit', () => {
     // Nothing executes, because nothing was admitted — the board is byte-identical.
     const after = JSON.stringify((await mockApi.getBoard()).tasks.map((t) => `${t.title}:${t.status}`));
     expect(after).toBe(before);
+  });
+});
+
+describe('runReversibleSteps — the shared orchestrator', () => {
+  it('runs steps in order and one undo reverses them in reverse order', async () => {
+    const log: string[] = [];
+    const { ranLabels, undo } = await runReversibleSteps([
+      async () => {
+        log.push('do A');
+        return { label: 'A', undo: async () => void log.push('undo A') };
+      },
+      async () => {
+        log.push('do B');
+        return { label: 'B', undo: async () => void log.push('undo B') };
+      },
+    ]);
+    expect(ranLabels).toEqual(['A', 'B']);
+    await undo();
+    expect(log).toEqual(['do A', 'do B', 'undo B', 'undo A']);
+  });
+
+  it('skips a step that returns null without recording a label', async () => {
+    const { ranLabels } = await runReversibleSteps([
+      async () => null,
+      async () => ({ label: 'only', undo: async () => {} }),
+    ]);
+    expect(ranLabels).toEqual(['only']);
+  });
+
+  it('rolls back the steps that already ran when a later step throws', async () => {
+    const log: string[] = [];
+    await expect(
+      runReversibleSteps([
+        async () => {
+          log.push('do A');
+          return { label: 'A', undo: async () => void log.push('undo A') };
+        },
+        async () => {
+          log.push('do B');
+          return { label: 'B', undo: async () => void log.push('undo B') };
+        },
+        async () => {
+          log.push('do C');
+          throw new Error('C failed');
+        },
+      ]),
+    ).rejects.toThrow('C failed');
+    // A and B are reversed (reverse order); the throwing step left nothing to undo.
+    expect(log).toEqual(['do A', 'do B', 'do C', 'undo B', 'undo A']);
   });
 });
