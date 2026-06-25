@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { COMPANION_NAME } from '../../lib/companion';
 import type { ChatTurn } from '../../lib/companionBrain';
 import { cx } from '../../lib/utils';
+import { ActionProposalCard, type ProposalView } from './ActionProposalCard';
 
 const OPENER: ChatTurn = {
   role: 'assistant',
@@ -12,18 +13,46 @@ const OPENER: ChatTurn = {
 };
 
 /**
+ * A gate-admitted proposal the brain wants the human to accept or dismiss, returned
+ * by `chat` instead of plain text. `accept` performs the real, reversible board
+ * change (owned upstream) and resolves to a confirmation line shown in the chat.
+ */
+export type ProposalReply = {
+  kind: 'proposal';
+  lead?: string; // optional prose shown above the card
+  proposal: ProposalView;
+  accept: () => Promise<string>;
+};
+
+/** What a chat turn can produce: prose, nothing, or an action proposal card. */
+export type ChatReply = string | null | ProposalReply;
+
+function isProposalReply(reply: ChatReply): reply is ProposalReply {
+  return reply !== null && typeof reply === 'object' && reply.kind === 'proposal';
+}
+
+type ProposalItem = ProposalReply & { itemKind: 'proposal'; decided?: 'accepted' | 'dismissed' };
+type ChatItem = ChatTurn | ProposalItem;
+
+function isProposalItem(item: ChatItem): item is ProposalItem {
+  return (item as ProposalItem).itemKind === 'proposal';
+}
+
+/**
  * Talk to your board. A compact chat that streams the board's in-character,
  * memory- and task-aware replies token by token. Requires the brain to be ready;
- * `chat` builds the full prompt (persona + memory + board state) upstream.
+ * `chat` builds the full prompt (persona + memory + board state) upstream and may
+ * return an action proposal, which renders as an Accept / Dismiss consent card —
+ * the brain proposes, your "yes" disposes, every accepted action is reversible.
  */
 export function CompanionChat({
   chat,
   onClose,
 }: {
-  chat: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<string | null>;
+  chat: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<ChatReply>;
   onClose: () => void;
 }) {
-  const [messages, setMessages] = useState<ChatTurn[]>([OPENER]);
+  const [messages, setMessages] = useState<ChatItem[]>([OPENER]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,32 +67,71 @@ export function CompanionChat({
     inputRef.current?.focus();
   }, []);
 
+  function decideProposal(index: number, decided: 'accepted' | 'dismissed', confirmation?: string) {
+    setMessages((current) => {
+      const copy = [...current];
+      const item = copy[index];
+      if (item && isProposalItem(item)) copy[index] = { ...item, decided };
+      if (confirmation) copy.push({ role: 'assistant', content: confirmation });
+      return copy;
+    });
+  }
+
+  async function acceptProposal(index: number, item: ProposalItem) {
+    if (item.decided) return;
+    setBusy(true);
+    try {
+      const confirmation = await item.accept();
+      decideProposal(index, 'accepted', confirmation || 'Done — and reversible.');
+    } catch {
+      decideProposal(index, 'accepted', "I tried, but the board didn't take it. Nothing changed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send(event: React.FormEvent) {
     event.preventDefault();
     const text = input.trim();
     if (!text || busy) return;
 
-    const history: ChatTurn[] = [...messages, { role: 'user', content: text }];
-    setMessages([...history, { role: 'assistant', content: '' }]);
+    // History for the model is text turns only — the proposal cards aren't dialogue.
+    const priorTurns = messages.filter((item): item is ChatTurn => !isProposalItem(item));
+    const history: ChatTurn[] = [...priorTurns, { role: 'user', content: text }];
+    setMessages((current) => [...current, { role: 'user', content: text }, { role: 'assistant', content: '' }]);
     setInput('');
     setBusy(true);
 
     let streamed = '';
-    const final = await chat(history, (chunk) => {
+    const reply = await chat(history, (chunk) => {
       streamed += chunk;
       setMessages((current) => {
         const copy = [...current];
-        copy[copy.length - 1] = { role: 'assistant', content: streamed };
+        const last = copy[copy.length - 1];
+        if (last && !isProposalItem(last)) copy[copy.length - 1] = { role: 'assistant', content: streamed };
         return copy;
       });
     });
 
-    const reply = final || streamed || '…(the board went quiet. it does that.)';
-    setMessages((current) => {
-      const copy = [...current];
-      copy[copy.length - 1] = { role: 'assistant', content: reply };
-      return copy;
-    });
+    if (isProposalReply(reply)) {
+      // Replace the streaming placeholder with the optional lead line (or drop it),
+      // then append the consent card as its own item.
+      setMessages((current) => {
+        const copy = [...current];
+        if (reply.lead) copy[copy.length - 1] = { role: 'assistant', content: reply.lead };
+        else copy.pop();
+        copy.push({ itemKind: 'proposal', ...reply });
+        return copy;
+      });
+    } else {
+      const final = typeof reply === 'string' ? reply : null;
+      const resolved = final || streamed || '…(the board went quiet. it does that.)';
+      setMessages((current) => {
+        const copy = [...current];
+        copy[copy.length - 1] = { role: 'assistant', content: resolved };
+        return copy;
+      });
+    }
     setBusy(false);
   }
 
@@ -85,11 +153,21 @@ export function CompanionChat({
       </header>
 
       <div className="companion-chat-log" ref={scrollRef}>
-        {messages.map((message, index) => (
-          <div key={index} className={cx('companion-chat-msg', `is-${message.role}`)}>
-            {message.content || <span className="companion-chat-dots">…</span>}
-          </div>
-        ))}
+        {messages.map((item, index) =>
+          isProposalItem(item) ? (
+            <ActionProposalCard
+              key={index}
+              proposal={item.proposal}
+              decided={item.decided}
+              onAccept={() => acceptProposal(index, item)}
+              onDismiss={() => decideProposal(index, 'dismissed')}
+            />
+          ) : (
+            <div key={index} className={cx('companion-chat-msg', `is-${item.role}`)}>
+              {item.content || <span className="companion-chat-dots">…</span>}
+            </div>
+          ),
+        )}
       </div>
 
       <form className="companion-chat-input" onSubmit={send}>

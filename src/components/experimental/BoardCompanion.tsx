@@ -6,7 +6,7 @@ import type { Mood } from '../../lib/companion';
 import type { ChatTurn } from '../../lib/companionBrain';
 import { cx } from '../../lib/utils';
 import type { BrainStatus } from '../../hooks/useBoardBrain';
-import { CompanionChat } from './CompanionChat';
+import { CompanionChat, type ChatReply } from './CompanionChat';
 
 type MouthShape = 'flat' | 'smile' | 'frown' | 'open' | 'wavy';
 type Face = { eyes: string; mouth: MouthShape };
@@ -50,7 +50,7 @@ export function BoardCompanion({
   brainStatus?: BrainStatus;
   brainProgress?: number;
   generate?: (mood: Mood) => Promise<string | null>;
-  chat?: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<string | null>;
+  chat?: (history: ChatTurn[], onToken: (chunk: string) => void) => Promise<ChatReply>;
   flash?: { text: string; nonce: number };
   goalProgress?: number;
   goalMet?: boolean;

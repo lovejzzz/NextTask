@@ -95,7 +95,21 @@ import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
-import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type ChatTurn } from '../lib/companionBrain';
+import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
+import { createLocalToolCall } from '../lib/brainProviders';
+import {
+  BOARD_ACTION_TOOL,
+  PLAN_TOOL,
+  gateAction,
+  gatePlan,
+  readAction,
+  readPlan,
+  toProposal,
+  explainPlan,
+  type ProposedAction,
+} from '../lib/liveAction';
+import { runReversibleSteps } from '../lib/liveExecute';
+import type { ChatReply } from '../components/experimental/CompanionChat';
 import { parseIntent } from '../lib/companionActions';
 import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
@@ -403,14 +417,92 @@ export function App() {
     return reply && acceptExplanation(reply, task) ? reply : fallback;
   }
 
-  // Run a composed tool: execute each step through the same chat pipeline.
+  // Run a composed tool: execute each step through the same chat pipeline. Proposals are
+  // off here — a composed tool reports text; it doesn't open interactive consent cards.
   async function runSteps(steps: string[]): Promise<string> {
     const results: string[] = [];
     for (const step of steps) {
-      const result = await chatWithBoard([{ role: 'user', content: step }], () => {});
-      results.push(`• ${result ?? '…'}`);
+      const reply = await chatWithBoard([{ role: 'user', content: step }], () => {}, { propose: false });
+      results.push(`• ${typeof reply === 'string' ? reply : '…'}`);
     }
     return results.join('\n');
+  }
+
+  // ── Live agentic path (experimental) ────────────────────────────────────────────
+  // The brain may PROPOSE a board action or plan as a structured tool call; it never
+  // executes one. An admitted proposal becomes a consent card, and the human's "yes" runs
+  // it through the SAME audited mutations the deterministic commands use — every step
+  // reversible, and the whole sequence rolled back if any step fails (runReversibleSteps).
+
+  /** Apply one already-admitted action via the app's mutations; returns its label + inverse. */
+  async function applyProposedAction(action: ProposedAction): Promise<{ label: string; undo: () => Promise<void> } | null> {
+    if (action.kind === 'clear_overdue') {
+      const overdue = tasks.filter((task) => dueTone(task) === 'overdue');
+      if (!overdue.length) return null;
+      const snapshot = overdue.map((t) => ({ id: t.id, status: t.status }));
+      await Promise.all(overdue.map((t) => mutations.updateTask.mutateAsync({ id: t.id, input: { status: 'done' } })));
+      return {
+        label: `clear ${snapshot.length} overdue`,
+        undo: async () => {
+          await Promise.all(snapshot.map((s) => mutations.updateTask.mutateAsync({ id: s.id, input: { status: s.status } })));
+        },
+      };
+    }
+    const task = tasks.find((t) => t.title === action.task);
+    if (!task) return null; // gate already grounded this; defensive only
+    if (action.kind === 'complete_task') {
+      const prev = task.status;
+      await mutations.updateTask.mutateAsync({ id: task.id, input: { status: 'done' } });
+      return { label: `complete "${task.title}"`, undo: async () => void (await mutations.updateTask.mutateAsync({ id: task.id, input: { status: prev } })) };
+    }
+    if (action.kind === 'reschedule_task') {
+      const prev = task.due_date;
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: tomorrow.toISOString().slice(0, 10) } });
+      return { label: `reschedule "${task.title}"`, undo: async () => void (await mutations.updateTask.mutateAsync({ id: task.id, input: { due_date: prev } })) };
+    }
+    // drop_task
+    const snap = { title: task.title, description: task.description, status: task.status, priority: task.priority, due_date: task.due_date, assignee_ids: [], label_ids: [] };
+    await mutations.deleteTask.mutateAsync(task.id);
+    return { label: `drop "${task.title}"`, undo: async () => void (await mutations.createTask.mutateAsync(snap)) };
+  }
+
+  /** Run admitted actions in order (reversible; rolled back on failure); wire one undo; confirm. */
+  async function executeProposed(actions: ProposedAction[]): Promise<string> {
+    const { ranLabels, undo } = await runReversibleSteps(actions.map((a) => () => applyProposedAction(a)));
+    companion.registerActivity();
+    if (!ranLabels.length) return 'Nothing to do, it turned out.';
+    setUndo(ranLabels.join(' + '), undo);
+    return `Done: ${ranLabels.join(', ')}. Undo's right there if you change your mind.`;
+  }
+
+  /** Turn an admitted tool call into a proposal reply (or an honest refusal, or null = just talk). */
+  function agentReply(toolCall: { name: string; args: Record<string, unknown> }): ChatReply | null {
+    const board = { titles: tasks.map((t) => t.title), overdue: insights.overdue };
+    if (toolCall.name === 'propose_plan') {
+      const plan = readPlan(toolCall.args);
+      if (!plan) return null;
+      const gated = gatePlan(plan, board);
+      if (!gated.admitted) return explainPlan(plan, gated); // honest refusal text
+      const actions = gated.actions!;
+      return {
+        kind: 'proposal',
+        lead: `Here's a plan — ${plan.rationale}.`,
+        proposal: { summary: 'Run this plan? Each step is reversible.', steps: actions.map((a) => toProposal(a).undoLabel) },
+        accept: () => executeProposed(actions),
+      };
+    }
+    const action = readAction(toolCall.args);
+    if (!action) return null;
+    const gated = gateAction(action, board);
+    if (!gated.admitted) return `I thought about doing something, but held back: ${gated.reasons.join('; ')}.`;
+    const view = toProposal(gated.action!);
+    return {
+      kind: 'proposal',
+      proposal: { summary: view.summary, reason: gated.reasons[0] },
+      accept: () => executeProposed([gated.action!]),
+    };
   }
 
   async function runTool(tool: Tool): Promise<string> {
@@ -419,7 +511,11 @@ export function App() {
 
   // Chat handler: tools, then deterministic actions/answers (reliable, no model
   // needed), then fall through to the LLM for open conversation.
-  async function chatWithBoard(history: ChatTurn[], onToken: (chunk: string) => void): Promise<string | null> {
+  async function chatWithBoard(
+    history: ChatTurn[],
+    onToken: (chunk: string) => void,
+    opts: { propose?: boolean } = {},
+  ): Promise<ChatReply> {
     const text = history[history.length - 1]?.content ?? '';
 
     // Tool composition + multi-step execution (checked first so "create a tool…"
@@ -968,20 +1064,34 @@ export function App() {
       });
     }
 
-    return brainRun(
-      buildChatMessages({
-        mood: companion.mood,
-        context: companionContext,
-        memory: memorySummary,
-        persona: personaText,
-        notes: notesText,
-        upbringing: upbringingText,
-        knowledge: knowledgeText,
-        exemplars: upbringingAnchors,
-        history,
-      }),
-      onToken,
-    );
+    const parts = {
+      mood: companion.mood,
+      context: companionContext,
+      memory: memorySummary,
+      persona: personaText,
+      notes: notesText,
+      upbringing: upbringingText,
+      knowledge: knowledgeText,
+      exemplars: upbringingAnchors,
+    };
+
+    // Live agentic path: when the brain is on and proposals are allowed, first let it
+    // PROPOSE an action as a structured tool call. An admitted one becomes a consent card;
+    // a refusal or pure prose falls through to the normal streamed reply below. The gate —
+    // not the model — decides what's groundable, so a small local model is safe to ask.
+    if (opts.propose !== false && brain.status === 'ready') {
+      const generate = async (msgs: BrainMessage[]) => (await brainRun(msgs)) ?? '';
+      const { toolCall } = await createLocalToolCall(generate)(buildChatMessages({ ...parts, history }), [
+        BOARD_ACTION_TOOL,
+        PLAN_TOOL,
+      ]);
+      if (toolCall) {
+        const reply = agentReply(toolCall);
+        if (reply) return reply;
+      }
+    }
+
+    return brainRun(buildChatMessages({ ...parts, history }), onToken);
   }
 
   function flashCompanion(text: string) {
