@@ -165,3 +165,142 @@ export function createRemoteToolCall(config: RemoteBrainConfig, fetchImpl: typeo
     return { text: parseChatCompletion(json).trim(), toolCall: parseToolCall(json) };
   };
 }
+
+// ── In-browser tool calling (the local agentic path) ─────────────────────────────
+//
+// The remote OpenAI-compatible path gets native `tool_calls` for free. The in-browser
+// Transformers.js path (Gemma 4, Qwen3) does NOT expose a tool-calling API — it's
+// text-in/text-out — so we reach the SAME destination a different way: ask the model to
+// emit a strict JSON tool call as its text, then parse that JSON into the identical
+// {@link ToolCall} shape `parseToolCall` produces. From there the existing action gates
+// (readAction/gateAction, readPlan/gatePlan in liveAction.ts) take over unchanged — so a
+// small, local, quantized model gains a *hand* without gaining any *authority*: a
+// malformed or ungrounded call is just text that the gate rejects, never an executed one.
+//
+// This is exactly the route the research recommended (Gemma 4 emits structured JSON; the
+// app parses it) and it is all pure + unit-tested, no GPU required.
+
+/** Strip a Markdown code fence (```json … ```), which small models love to add. */
+function stripFences(text: string): string {
+  return text.replace(/```(?:json|tool_call)?\s*([\s\S]*?)\s*```/i, '$1').trim();
+}
+
+/**
+ * Pull the first balanced top-level `{…}` object out of free text, respecting quoted
+ * strings and escapes so a brace inside a string value never throws off the depth count.
+ * Returns the JSON substring, or null if there's no complete object. Pure.
+ */
+export function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null; // unbalanced — generation was probably cut off
+}
+
+const CALL_NAME_KEYS = ['name', 'tool', 'function'];
+const CALL_ARG_KEYS = ['arguments', 'args', 'parameters', 'input'];
+
+/**
+ * Parse a tool call out of a model's free-text reply — the in-browser counterpart to
+ * {@link parseToolCall}. Lenient on shape because small models are: it accepts
+ *   • `{ "name": "propose_board_action", "arguments": { … } }` (the asked-for shape),
+ *   • the same with `tool`/`function` and `args`/`parameters`/`input` aliases,
+ *   • a name with the args spread flat alongside it, and
+ *   • bare args with no name, inferring the tool from their shape (`steps` → a plan,
+ *     `kind` → a single action) — safe, because the gate validates regardless.
+ * Returns null on prose or malformed JSON, so the caller treats the reply as plain text.
+ */
+export function parseJsonToolCall(text: string): ToolCall | null {
+  const json = extractFirstJsonObject(stripFences(text));
+  if (!json) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const obj = parsed as Record<string, unknown>;
+
+  const name = CALL_NAME_KEYS.map((k) => obj[k]).find((v): v is string => typeof v === 'string');
+  const argsHolder = CALL_ARG_KEYS.map((k) => obj[k]).find(
+    (v): v is Record<string, unknown> => Boolean(v) && typeof v === 'object' && !Array.isArray(v),
+  );
+  if (name) {
+    if (argsHolder) return { name, args: argsHolder };
+    // Args spread flat next to the name — take everything but the call-shape keys.
+    const args: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (!CALL_NAME_KEYS.includes(k) && !CALL_ARG_KEYS.includes(k)) args[k] = v;
+    }
+    return { name, args };
+  }
+  // No name: infer from the args' own shape. The gate is the real check, so this is safe.
+  if (Array.isArray(obj.steps)) return { name: 'propose_plan', args: obj };
+  if (typeof obj.kind === 'string') return { name: 'propose_board_action', args: obj };
+  return null;
+}
+
+/** Minimal shape we read off the OpenAI-style tool consts to describe them in a prompt. */
+type ToolLike = { function?: { name?: unknown; description?: unknown; parameters?: { required?: unknown } } };
+
+/**
+ * Render the offered tools as a compact instruction the small model can follow, since
+ * it has no native tool schema. Lists each tool's name, description, and required args.
+ * Pure, so the prompt wording is unit-tested.
+ */
+export function describeToolsForPrompt(tools: unknown[]): string {
+  const lines = tools.map((t) => {
+    const fn = (t as ToolLike).function ?? {};
+    const name = typeof fn.name === 'string' ? fn.name : 'tool';
+    const desc = typeof fn.description === 'string' ? fn.description : '';
+    const required = Array.isArray(fn.parameters?.required) ? (fn.parameters!.required as unknown[]).join(', ') : '';
+    return `- ${name}${required ? ` (required: ${required})` : ''}: ${desc}`;
+  });
+  return lines.join('\n');
+}
+
+/**
+ * Augment a chat for the local tool-call path: append one system instruction telling the
+ * model it MAY answer with a single JSON tool call, and how. Returns a new array — the
+ * caller's messages are never mutated.
+ */
+export function buildToolCallMessages(messages: BrainMessage[], tools: unknown[]): BrainMessage[] {
+  const instruction =
+    'You may take ONE action by replying with a single JSON object and NOTHING else, ' +
+    'shaped exactly as {"name": <tool name>, "arguments": { … }}. ' +
+    `Available tools:\n${describeToolsForPrompt(tools)}\n` +
+    'Copy any task title verbatim from the board above — never invent one. ' +
+    'Only emit JSON when the conversation clearly calls for an action; otherwise just reply normally in prose.';
+  return [...messages, { role: 'system', content: instruction }];
+}
+
+/**
+ * A {@link ToolGenerateFn} backed by the in-browser model: it asks for a JSON tool call,
+ * then parses whichever the model gave — a {@link ToolCall} or prose — into the same
+ * shape the remote path returns, so callers and the action gates don't care which brain
+ * answered. Never executes anything; it only produces a structured *intention*.
+ */
+export function createLocalToolCall(generate: GenerateFn): ToolGenerateFn {
+  return async (messages, tools) => {
+    const text = (await generate(buildToolCallMessages(messages, tools))).trim();
+    return { text, toolCall: parseJsonToolCall(text) };
+  };
+}

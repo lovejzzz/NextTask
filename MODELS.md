@@ -114,11 +114,17 @@ correctly skipped for it.
 
 Still **UNVERIFIED on hardware** (this sandbox has no WebGPU and can't pull a 2.5GB
 model): live in-browser inference, tokens/sec, and the conversation eval on Gemma 4.
-And **not yet wired**: Gemma 4's function-calling is *not* routed through the action
-gates on the in-browser path — that's the next rung (parse structured JSON from the
-text output, then feed the existing `readAction`/`gateAction`), and the gate layer
-is exactly what makes a small quantized model safe to try, since malformed tool
-calls are held by the gate, never executed.
+
+**The local function-calling library now exists** (`brainProviders.ts`): the
+in-browser model has no native tool-calling API, so `createLocalToolCall` asks it for
+a strict JSON tool call and `parseJsonToolCall` turns that free text into the same
+`ToolCall` shape the remote path yields — which then flows through the *existing*
+`readAction`/`gateAction` (and `readPlan`/`gatePlan`) unchanged. Lenient parsing
+(code fences, prose around the JSON, arg aliases, shape inference) absorbs small-model
+sloppiness; the gate is exactly what makes that safe, since a malformed or invented
+call is just text the gate rejects, never an executed action. Vetted by tests
+(including an end-to-end local-JSON → gate admit/reject); **not yet wired** into the
+live chat loop — that's the remaining step.
 
 **Addendum decision, in one line:** *Gemma 4 E2B/E4B join as a WebGPU-only agentic
 tier — added for function-calling, not eloquence — with live quality still waiting

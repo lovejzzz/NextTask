@@ -76,10 +76,16 @@ punches far above its weight. **Domain-shaped, not general.**
 | Tiered models | ✅ Qwen3 voice tier · **Gemma 4 agentic tier** |
 | Output hygiene | ✅ think/marker stripping, repetition collapse |
 | Fast/streaming | ✅ token streaming wired |
-| **In-browser function-calling through the gates** | ⚠️ **next rung** — Gemma 4 can, not yet wired locally |
+| **In-browser function-calling through the gates** | 🧪 **library built & vetted** (`createLocalToolCall` → `parseJsonToolCall` → existing `readAction`/`gateAction`); not yet wired into the chat UI |
 | Live Gemma quality certified | ⚠️ unverified (no WebGPU in CI) |
 
-**Summary:** today Boardy is the best in-browser *companion*; the open rung to being
-the best in-browser *agent* is routing Gemma 4's function-calling through the
-existing action gates on the in-browser path. See `MODELS.md`,
+**Summary:** today Boardy is the best in-browser *companion*. The path to the best
+in-browser *agent* now exists as a **vetted library**: the in-browser model (which
+has no native tool-calling API) is asked for a strict JSON tool call, `parseJsonToolCall`
+turns its free text into the same `ToolCall` shape the remote path produces, and the
+*existing* action gates admit it only when grounded and reversible — no new authority,
+just a new path to the same gate. What remains is wiring that library into the live
+chat loop (and certifying quality on real WebGPU). The gate is exactly what makes a
+small, local, quantized model safe to hand this to: a malformed or invented call is
+just text the gate rejects, never an executed action. See `MODELS.md`,
 `docs/research/gemma-litert-lm-local-brain.md`, `docs/design/live-agent-ladder.md`.
