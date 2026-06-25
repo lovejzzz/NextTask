@@ -1,0 +1,30 @@
+import { describe, expect, it } from 'vitest';
+
+import { chooseToolBrain, looksActionable } from './agentPolicy';
+
+describe('looksActionable', () => {
+  it('fires on phrasings that want a board action', () => {
+    expect(looksActionable('I just finished the onboarding doc')).toBe(true);
+    expect(looksActionable('drop the stale ticket')).toBe(true);
+    expect(looksActionable('can you reschedule the launch')).toBe(true);
+    expect(looksActionable('clear the overdue pile')).toBe(true);
+  });
+  it('stays quiet on chit-chat and pure questions', () => {
+    expect(looksActionable('how are you?')).toBe(false);
+    expect(looksActionable("I'm feeling overwhelmed")).toBe(false);
+    expect(looksActionable('what should I focus on?')).toBe(false);
+  });
+});
+
+describe('chooseToolBrain', () => {
+  it('never attempts when no brain is ready', () => {
+    expect(chooseToolBrain({ brainReady: false, isRemote: true, actionable: true }).attempt).toBe(false);
+  });
+  it('always offers tools to a capable remote brain', () => {
+    expect(chooseToolBrain({ brainReady: true, isRemote: true, actionable: false }).attempt).toBe(true);
+  });
+  it('asks a local model only when the message looks actionable', () => {
+    expect(chooseToolBrain({ brainReady: true, isRemote: false, actionable: true }).attempt).toBe(true);
+    expect(chooseToolBrain({ brainReady: true, isRemote: false, actionable: false }).attempt).toBe(false);
+  });
+});

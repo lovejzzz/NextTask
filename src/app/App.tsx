@@ -96,7 +96,8 @@ import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
 import { buildAmbientMessages, buildChatMessages, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
-import { createLocalToolCall } from '../lib/brainProviders';
+import { createLocalToolCall, isRemoteId } from '../lib/brainProviders';
+import { chooseToolBrain, looksActionable } from '../lib/agentPolicy';
 import {
   BOARD_ACTION_TOOL,
   PLAN_TOOL,
@@ -1093,11 +1094,17 @@ export function App() {
       exemplars: upbringingAnchors,
     };
 
-    // Live agentic path: when the brain is on and proposals are allowed, first let it
-    // PROPOSE an action as a structured tool call. An admitted one becomes a consent card;
-    // a refusal or pure prose falls through to the normal streamed reply below. The gate —
-    // not the model — decides what's groundable, so a small local model is safe to ask.
-    if (opts.propose !== false && brain.status === 'ready') {
+    // Live agentic path: when policy says it's worth trying, let the brain PROPOSE an action
+    // as a structured tool call. An admitted one becomes a consent card; a refusal or pure
+    // prose falls through to the normal streamed reply below. The gate — not the model —
+    // decides what's groundable, so a small local model is safe to ask. chooseToolBrain keeps
+    // us from spending a slow local generation on chit-chat.
+    const choice = chooseToolBrain({
+      brainReady: brain.status === 'ready',
+      isRemote: isRemoteId(brain.model),
+      actionable: looksActionable(text),
+    });
+    if (opts.propose !== false && choice.attempt) {
       const generate = async (msgs: BrainMessage[]) => (await brainRun(msgs)) ?? '';
       const { toolCall } = await createLocalToolCall(generate)(buildChatMessages({ ...parts, history }), [
         BOARD_ACTION_TOOL,
