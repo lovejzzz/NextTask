@@ -175,6 +175,12 @@ describe('in-browser tool calling (the local agentic path)', () => {
       expect(result.toolCall).toBeNull();
       expect(result.text).toBe('Nothing pressing — go get a coffee.');
     });
+
+    it('invokes the model exactly once — its prose can be reused without a second generation', async () => {
+      const generate = vi.fn(async () => 'Nothing pressing — go get a coffee.');
+      await createLocalToolCall(generate)([{ role: 'user', content: 'hi' }], [BOARD_ACTION_TOOL]);
+      expect(generate).toHaveBeenCalledTimes(1);
+    });
   });
 
   // The point of the whole rung: a local model's text becomes a structured intention

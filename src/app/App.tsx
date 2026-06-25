@@ -95,8 +95,8 @@ import { useTheme } from '../hooks/useTheme';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { PRIORITIES, STATUSES } from '../lib/constants';
 import type { Mood } from '../lib/companion';
-import { buildAmbientMessages, buildChatMessages, isGemmaModel, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
-import { createLocalToolCall, isRemoteId } from '../lib/brainProviders';
+import { buildAmbientMessages, buildChatMessages, cleanLine, isGemmaModel, recommendUpgrade, type BrainMessage, type ChatTurn } from '../lib/companionBrain';
+import { createLocalToolCall, isRemoteId, looksLikeToolCall } from '../lib/brainProviders';
 import { chooseToolBrain, looksActionable } from '../lib/agentPolicy';
 import {
   BOARD_ACTION_TOOL,
@@ -1160,7 +1160,7 @@ export function App() {
     });
     if (opts.propose !== false && choice.attempt) {
       const generate = async (msgs: BrainMessage[]) => (await brainRun(msgs)) ?? '';
-      const { toolCall } = await createLocalToolCall(generate)(buildChatMessages({ ...parts, history }), [
+      const { text, toolCall } = await createLocalToolCall(generate)(buildChatMessages({ ...parts, history }), [
         BOARD_ACTION_TOOL,
         PLAN_TOOL,
         SKILL_TOOL,
@@ -1169,6 +1169,11 @@ export function App() {
         const reply = agentReply(toolCall);
         if (reply) return reply;
       }
+      // No usable proposal — reuse the prose from THIS generation rather than generating
+      // again (one model call per turn). Skip the reuse only if the text looks like a botched
+      // tool call, in which case fall through to a clean prose reply instead of echoing JSON.
+      const cleaned = cleanLine(text);
+      if (cleaned && !looksLikeToolCall(text)) return cleaned;
     }
 
     return brainRun(buildChatMessages({ ...parts, history }), onToken);
