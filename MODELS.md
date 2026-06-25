@@ -122,9 +122,18 @@ a strict JSON tool call and `parseJsonToolCall` turns that free text into the sa
 `readAction`/`gateAction` (and `readPlan`/`gatePlan`) unchanged. Lenient parsing
 (code fences, prose around the JSON, arg aliases, shape inference) absorbs small-model
 sloppiness; the gate is exactly what makes that safe, since a malformed or invented
-call is just text the gate rejects, never an executed action. Vetted by tests
-(including an end-to-end local-JSON → gate admit/reject); **not yet wired** into the
-live chat loop — that's the remaining step.
+call is just text the gate rejects, never an executed action.
+
+**This is now WIRED into the live chat** (`docs/design/agent-rung-plan.md`, Phases 1–2):
+when policy (`agentPolicy.ts`) says a turn is worth it, the chat asks the model for a tool
+call; an admitted one renders as an Accept/Dismiss consent card (`ActionProposalCard`); the
+human's yes executes it through the same audited mutations the deterministic commands use,
+reversibly (single action + multi-step plan, with mid-plan rollback via `runReversibleSteps`).
+A few-shot prompt steers the small model toward valid JSON only when warranted; an
+adversarial test pins the prompt-injection threat model (titles are data, never instructions);
+proposals/verdicts are logged to a glass-box trail (Mind panel); and `agentEval.ts` scores
+the path (propose-grounded / refrain / never-invent) in CI and live via the self-test. The
+one thing still **uncertified** is the *live model's* behavior on real WebGPU — see RUBRIC.md.
 
 **Addendum decision, in one line:** *Gemma 4 E2B/E4B join as a WebGPU-only agentic
 tier — added for function-calling, not eloquence — with live quality still waiting

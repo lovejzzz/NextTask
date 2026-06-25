@@ -7,24 +7,28 @@ was built.*
 
 ## Status: what's wired vs. what's a vetted library
 
-Be precise about this, because it's easy to overclaim. Two of the rungs are wired into the
-app a user actually runs; the rest are a **vetted library** — correct, fully unit-tested
-logic that is **not yet imported by the app UI**, proven instead through a standalone bridge
-harness (`scripts/liveBridge.mjs`, driver scripts kept in scratchpad, not committed).
+Be precise about this, because it's easy to overclaim. As of the agent-rung work
+(`docs/design/agent-rung-plan.md`), the tool-calling pathway is **wired into the app's chat**
+with an in-browser model — no longer just a bridge-harness demo.
 
 | Rung | Code | In the running app? |
 |---|---|---|
-| 1–2 Voice + live brain | `companionBrain`, `brainProviders`, `useBoardBrain` | **Yes** — but in-app chat is text-only (no tools offered to the model) |
-| self-author gate | `selfauthor.gate` via `App.tsx` | **Yes** — reachable, audited; fires on a *detected repeated sequence* |
-| 3 a hand (`gateAction`) | `liveAction.ts` | **Library only** — not imported by app/components/hooks |
-| 4 action executes | inline in `liveAction.execute.test.ts` | **Library only** — no app path |
+| 1–2 Voice + live brain | `companionBrain`, `brainProviders`, `useBoardBrain` | **Yes** |
+| self-author gate | `selfauthor.gate` via `App.tsx` | **Yes** — fires on a *detected repeated sequence* |
+| 3 a hand (`gateAction`) | `liveAction.ts` | **Yes** — chat asks the model for a tool call; an admitted action becomes a consent card |
+| 4 action executes | `App.tsx` `applyProposedAction` + `runReversibleSteps` | **Yes** — Accept runs the audited mutation, reversibly |
 | 5 `propose_skill` tool | `liveAction.ts` | **Library only** — app self-authors from repeats, not this tool |
-| 6 plans + execution | `liveAction.ts`, `liveExecute.ts` | **Library only** — `liveExecute` has no importers |
+| 6 plans + execution | `liveAction.ts`, `liveExecute.ts` | **Yes** — an admitted plan runs in order, one undo, mid-plan rollback |
 
-In other words: the *logic and gates are real and tested*; the bridge demos are a real model
-emitting real tool calls judged by the real gates — but the tool-calling pathway is **not
-connected to the app's chat UI**. Treat the rest of this note as the spec for that library and
-the integration it's waiting for, not as a description of shipped app behavior.
+How it's wired (chat turn): `chooseToolBrain` (policy) → `createLocalToolCall` (the in-browser
+model emits JSON) → `parseJsonToolCall` → `readAction`/`gateAction` (or plan) → an
+`ActionProposalCard` consent card → the human's yes → `applyProposedAction` via the app's real
+mutations, reversibly. Proposals/verdicts are logged to a glass-box trail (Mind panel) and the
+path is scored by `agentEval` (CI + live self-test). The remaining gaps are rung 5's
+`propose_skill` tool (the app still self-authors from repeats, not this tool) and **certifying
+the live model's quality on real WebGPU** (`RUBRIC.md`) — everything around the model is
+CI-green. The bridge harness (`scripts/liveBridge.mjs`) remains as an out-of-app way to drive a
+frontier model through the same gates.
 
 ## The one invariant
 
