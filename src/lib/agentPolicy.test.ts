@@ -9,6 +9,11 @@ describe('looksActionable', () => {
     expect(looksActionable('can you reschedule the launch')).toBe(true);
     expect(looksActionable('clear the overdue pile')).toBe(true);
   });
+  it('also fires on skill-creation requests', () => {
+    expect(looksActionable('make a skill that clears overdue then plans my day')).toBe(true);
+    expect(looksActionable('can you automate my monday reset')).toBe(true);
+    expect(looksActionable('teach yourself to triage and plan')).toBe(true);
+  });
   it('stays quiet on chit-chat and pure questions', () => {
     expect(looksActionable('how are you?')).toBe(false);
     expect(looksActionable("I'm feeling overwhelmed")).toBe(false);

@@ -21,9 +21,14 @@ export type ToolBrainChoice = { attempt: boolean; reason: string };
 const ACTION_HINT =
   /\b(finish|finished|complete[d]?|done with|wrap up|close|knock out|cross off|mark|drop|delete|remove|ditch|trash|reschedule|postpone|push (?:back|out|to)|defer|move|clear|cancel|tidy|clean up|sort out|deal with|take care of|handle)\b/i;
 
-/** A cheap heuristic: does this message plausibly ask for a board action? Pure + tested. */
+// Skill-creation phrasings — so a local model is offered the propose_skill tool when the
+// user clearly asks for a new capability (explicit "create a tool called X" is already
+// handled deterministically; this catches the looser asks).
+const SKILL_HINT = /\b(automate|give yourself|teach yourself)\b|\b(make|create|build|turn .+ into)\b.*\b(skill|tool|routine|capability|habit|macro)\b/i;
+
+/** A cheap heuristic: does this message plausibly ask for a board action or a new skill? Pure + tested. */
 export function looksActionable(text: string): boolean {
-  return ACTION_HINT.test(text);
+  return ACTION_HINT.test(text) || SKILL_HINT.test(text);
 }
 
 /** Decide whether to attempt a structured tool-call proposal for this turn. */

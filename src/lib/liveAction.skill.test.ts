@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SKILL_TOOL, readSkill } from './liveAction';
 import { gate, explainGate } from './selfauthor';
+import { parseJsonToolCall } from './brainProviders';
 
 /**
  * The brain improving the brain: a self-authored skill (proposed via the propose_skill
@@ -45,5 +46,15 @@ describe('a brain-authored skill faces the real gate', () => {
   it('holds back a skill whose name already exists', () => {
     const skill = readSkill({ name: 'Monday Reset', steps: ['plan my day', "what's overdue"] })!;
     expect(gate(skill, ['monday reset']).admitted).toBe(false);
+  });
+
+  // The wired rung 5 path: the in-browser model emits a propose_skill tool call as JSON,
+  // which is parsed and run through the gate — no special treatment for being model-authored.
+  it('end to end: model JSON → parseJsonToolCall → readSkill → gate', () => {
+    const reply = 'Sure: {"name":"propose_skill","arguments":{"name":"Reset","steps":["plan my day","what\'s overdue"],"rationale":"I keep doing this"}}';
+    const toolCall = parseJsonToolCall(reply)!;
+    expect(toolCall.name).toBe('propose_skill');
+    const skill = readSkill(toolCall.args)!;
+    expect(gate(skill, []).admitted).toBe(true);
   });
 });

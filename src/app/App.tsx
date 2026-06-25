@@ -101,10 +101,12 @@ import { chooseToolBrain, looksActionable } from '../lib/agentPolicy';
 import {
   BOARD_ACTION_TOOL,
   PLAN_TOOL,
+  SKILL_TOOL,
   gateAction,
   gatePlan,
   readAction,
   readPlan,
+  readSkill,
   toProposal,
   explainPlan,
   type ProposedAction,
@@ -486,6 +488,42 @@ export function App() {
   /** Turn an admitted tool call into a proposal reply (or an honest refusal, or null = just talk). */
   function agentReply(toolCall: { name: string; args: Record<string, unknown> }): ChatReply | null {
     const board = { titles: tasks.map((t) => t.title), overdue: insights.overdue };
+
+    // Rung 5: the model proposes a NEW skill (a composition of audited steps). It faces the
+    // SAME self-author gate as a skill learned from repeats; the human keeps it or not.
+    if (toolCall.name === 'propose_skill') {
+      const skill = readSkill(toolCall.args);
+      if (!skill) return null;
+      const existing = toolbox.tools.map((t) => t.name);
+      const result = gate(skill, existing);
+      if (!result.admitted) {
+        agentTrail.record('held', `skill "${skill.name}"`, result.reasons.join('; '));
+        return explainGate(skill, result);
+      }
+      const steps = result.validSteps;
+      agentTrail.record('admitted', `skill "${skill.name}" (${steps.join(' → ')})`);
+      return {
+        kind: 'proposal',
+        lead: `I could give myself a new skill — ${skill.rationale}`,
+        proposal: { summary: `Teach myself "${skill.name}"?`, steps, reason: result.reasons[0] },
+        accept: async () => {
+          toolbox.add({ name: skill.name, steps });
+          const move = { by: 'self' as const, act: 'compose_tool' as const, steps, summary: skill.rationale };
+          growth.record({ kind: 'repetition', steps }, move);
+          const at = audit.record({ capability: 'self-author', summary: `Authored a new capability "${skill.name}"`, autonomy: 'confirm' });
+          setUndo(`learn "${skill.name}"`, () => {
+            toolbox.remove(skill.name);
+            audit.undo(at);
+            return Promise.resolve(undefined);
+          });
+          companion.registerActivity();
+          agentTrail.record('accepted', `skill "${skill.name}"`);
+          return `Kept it — I taught myself "${skill.name}" (${steps.join(' → ')}). Say "run ${skill.name}" anytime. Undo's right there.`;
+        },
+        dismiss: () => agentTrail.record('dismissed', `skill "${skill.name}"`),
+      };
+    }
+
     if (toolCall.name === 'propose_plan') {
       const plan = readPlan(toolCall.args);
       if (!plan) return null;
@@ -1110,6 +1148,7 @@ export function App() {
       const { toolCall } = await createLocalToolCall(generate)(buildChatMessages({ ...parts, history }), [
         BOARD_ACTION_TOOL,
         PLAN_TOOL,
+        SKILL_TOOL,
       ]);
       if (toolCall) {
         const reply = agentReply(toolCall);
