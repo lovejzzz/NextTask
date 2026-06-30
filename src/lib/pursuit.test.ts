@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Intention, WorldState } from './drives';
-import { adoptPursuit, reviewPursuit } from './pursuit';
+import { adoptPursuit, pursuitGoalMet, reviewPursuit } from './pursuit';
 
 const DAY = 86_400_000;
 const NOW = 1_000 * DAY;
@@ -55,5 +55,24 @@ describe('reviewPursuit', () => {
     const pursuit = adoptPursuit(grow, world({ shippedRecently: 1 }), NOW);
     expect(pursuit.metric).toBe('throughput');
     expect(reviewPursuit(pursuit, world({ shippedRecently: 4 }), NOW).direction).toBe('progress');
+  });
+
+  it('exposes the current metric value alongside the verdict', () => {
+    const pursuit = adoptPursuit(orderIntent, world({ overdue: 5 }), NOW);
+    expect(reviewPursuit(pursuit, world({ overdue: 2 }), NOW).current).toBe(2);
+  });
+});
+
+describe('pursuitGoalMet', () => {
+  it('is met only for a lower-is-better metric that has reached zero', () => {
+    const pursuit = adoptPursuit(orderIntent, world({ overdue: 5 }), NOW); // metric: 'order'
+    expect(pursuitGoalMet(pursuit, reviewPursuit(pursuit, world({ overdue: 0 }), NOW))).toBe(true);
+    expect(pursuitGoalMet(pursuit, reviewPursuit(pursuit, world({ overdue: 1 }), NOW))).toBe(false);
+  });
+
+  it('a throughput pursuit (higher-is-better) never reports goal met', () => {
+    const grow: Intention = { drive: 'growth', kind: 'compose_tool', intensity: 0.5, summary: 'learn', rationale: 'x' };
+    const pursuit = adoptPursuit(grow, world({ shippedRecently: 0 }), NOW);
+    expect(pursuitGoalMet(pursuit, reviewPursuit(pursuit, world({ shippedRecently: 50 }), NOW))).toBe(false);
   });
 });

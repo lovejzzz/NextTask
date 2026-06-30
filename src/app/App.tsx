@@ -114,6 +114,9 @@ import {
 import { runReversibleSteps } from '../lib/liveExecute';
 import { useAgentTrail } from '../hooks/useAgentTrail';
 import { summarizeTrail } from '../lib/agentTrail';
+import { reviewOutcome, snapshotBoard, targetTitlesOf } from '../lib/reviewOutcome';
+import { describeStop, nextStopReason, type RoundResult } from '../lib/loop';
+import { api } from '../lib/api';
 import { buildAgentCases, runAgentEval } from '../lib/agentEval';
 import type { ChatReply } from '../components/experimental/CompanionChat';
 import { parseIntent } from '../lib/companionActions';
@@ -292,6 +295,10 @@ export function App() {
   const agentTrail = useAgentTrail(); // glass-box record of what he proposed and what you decided
   const { clarifications, learn: learnClarification } = useClarifications(); // what ambiguous phrases meant, once told
   const pendingClarifyRef = useRef<{ phrase: string; ids: string[] } | null>(null);
+  // The self-improvement loop's round history — in-memory, THIS SESSION ONLY (not
+  // persisted). A stop condition that resets each session can't quietly calcify
+  // into "Boardy refuses to ever try again." See loop.ts for the full rationale.
+  const loopHistoryRef = useRef<RoundResult[]>([]);
   const [goal, setGoal] = useState<number>(() => {
     try {
       const value = Number(window.localStorage.getItem('next-task:goal'));
@@ -490,14 +497,56 @@ export function App() {
     return { label: `drop "${task.title}"`, undo: async () => void (await mutations.createTask.mutateAsync(snap)) };
   }
 
-  /** Run admitted actions in order (reversible; rolled back on failure); wire one undo; confirm. */
+  /**
+   * Run admitted actions in order (reversible; rolled back on failure); wire one
+   * undo; confirm. Then — the loop's REVIEW + PLAN-NEXT stages — score whether the
+   * board actually moved the way the plan said it would, and decide honestly
+   * whether to offer another round. Both stages are pure cognition: they READ the
+   * board (via a fresh, unfiltered api.getBoard() read, not the possibly-stale
+   * react-query cache) and never call a mutation themselves. The human still has
+   * to click Accept on whatever comes next — see loop.ts's header for why that
+   * is a hard rule here, not a convention.
+   */
   async function executeProposed(actions: ProposedAction[]): Promise<string> {
+    const titles = targetTitlesOf(actions);
+    const before = snapshotBoard((await api.getBoard()).tasks, titles);
+
     const { ranLabels, undo } = await runReversibleSteps(actions.map((a) => () => applyProposedAction(a)));
     companion.registerActivity();
     if (!ranLabels.length) return 'Nothing to do, it turned out.';
-    agentTrail.record('accepted', ranLabels.join(', '));
     setUndo(ranLabels.join(' + '), undo);
-    return `Done: ${ranLabels.join(', ')}. Undo's right there if you change your mind.`;
+
+    const afterTasks = (await api.getBoard()).tasks;
+    const after = snapshotBoard(afterTasks, titles);
+    const review = reviewOutcome(actions, before, after);
+    agentTrail.record('accepted', ranLabels.join(', '), review.summary);
+
+    // Plan-next: re-review the standing pursuit (if any) against the post-round
+    // board, so the stop condition can recognize a genuinely satisfied goal, not
+    // just a nudge. Reuses the SAME WorldState shape self_intent/boardyMind already
+    // build; overdue/stale/ownBacklog are recomputed fresh from the post-round
+    // board, the rest (shippedRecently/idleDays/repeatedPattern/capabilityGap)
+    // carries over unchanged from this render — an honest, bounded simplification,
+    // since none of those move within the span of one round's execution.
+    const staleAfter = afterTasks.filter((task) => task.status !== 'done' && taskAgeDays(task) >= 14).length;
+    const worldAfter: WorldState = {
+      overdue: after.insights.overdue,
+      stale: staleAfter,
+      active: after.insights.active,
+      shippedRecently: momentum.shippedToday,
+      idleDays: momentum.shippedToday > 0 ? 0 : 1,
+      repeatedPattern: detectRepeatedSequence(experience.history),
+      capabilityGap,
+      ownBacklog: proposeImprovements(0, 10, afterTasks.map((task) => task.title)).length,
+    };
+    const pursuitAfter = pursuit ? reviewPursuit(pursuit, worldAfter) : null;
+
+    loopHistoryRef.current = [...loopHistoryRef.current, { review, pursuitAfter }].slice(-50);
+    const stop = nextStopReason(loopHistoryRef.current, pursuit ?? null);
+    if (stop) loopHistoryRef.current = []; // chain closed — a fresh "what's next" starts clean
+
+    const tail = stop ? describeStop(stop) : '';
+    return `Done: ${ranLabels.join(', ')}. Undo's right there if you change your mind. ${review.summary}${tail ? ` ${tail}` : ''}`;
   }
 
   /** Turn an admitted tool call into a proposal reply (or an honest refusal, or null = just talk). */

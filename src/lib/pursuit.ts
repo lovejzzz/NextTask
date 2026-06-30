@@ -58,7 +58,7 @@ export function adoptPursuit(intention: Intention, world: WorldState, now: numbe
   return { goal: GOAL_TEXT[metric], drive: intention.drive, metric, baseline: metricValue(metric, world), adoptedAt: now, lastReviewedAt: now };
 }
 
-export type PursuitReview = { direction: 'progress' | 'stalled' | 'slipped'; reflection: string };
+export type PursuitReview = { direction: 'progress' | 'stalled' | 'slipped'; reflection: string; current: number };
 
 function sinceLabel(days: number): string {
   if (days <= 0) return 'today';
@@ -80,5 +80,17 @@ export function reviewPursuit(pursuit: Pursuit, world: WorldState, now: number =
       : direction === 'slipped'
         ? `It's gone the wrong way (${pursuit.baseline} → ${current}) — I should refocus there.`
         : `No real movement yet (still ${current}). I'm staying on it.`;
-  return { direction, reflection: `${head} ${body}` };
+  return { direction, reflection: `${head} ${body}`, current };
+}
+
+/**
+ * Has the pursuit's metric reached a natural "done" floor? Only meaningful for
+ * lower-is-better metrics (order/self, where 0 is a real finish line); throughput
+ * has no natural ceiling, so it never reports "met" here — only ongoing progress.
+ * Used by the self-improvement loop's stop condition (loop.ts) to know when to
+ * stop offering another round because the goal is actually satisfied, not just
+ * nudged. Pure; `current` comes straight off the `PursuitReview` already computed.
+ */
+export function pursuitGoalMet(pursuit: Pursuit, review: PursuitReview): boolean {
+  return LOWER_IS_BETTER[pursuit.metric] && review.current <= 0;
 }
