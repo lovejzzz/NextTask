@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseIntent } from './companionActions';
+import { parseIntent, parseTimeBudget } from './companionActions';
 
 const NOW = new Date(2026, 5, 20, 9); // Sat Jun 20 2026
 
@@ -209,5 +209,35 @@ describe('parseIntent — passthrough', () => {
   it('returns null for open conversation', () => {
     expect(parseIntent('you are mean to me', NOW)).toBeNull();
     expect(parseIntent('lol', NOW)).toBeNull();
+  });
+});
+
+describe('parseTimeBudget — constraint-aware quick planning (RUBRIC Reasoning → 5)', () => {
+  it('reads an explicit minute or hour count', () => {
+    expect(parseTimeBudget('give me 15 minutes of work')).toBe(15);
+    expect(parseTimeBudget('I have 2 hours today')).toBe(120);
+    expect(parseTimeBudget('quick plan for 45 min')).toBe(45);
+  });
+
+  it('reads named durations', () => {
+    expect(parseTimeBudget('if I only have an hour')).toBe(60);
+    expect(parseTimeBudget('I have half an hour')).toBe(30);
+  });
+
+  it('returns null for vague phrasings rather than guessing a number', () => {
+    expect(parseTimeBudget('short on time')).toBeNull();
+    expect(parseTimeBudget('I have a few minutes')).toBeNull();
+    expect(parseTimeBudget('quick plan please')).toBeNull();
+  });
+});
+
+describe('parseIntent — quick_plan carries the stated time budget', () => {
+  it('attaches the parsed minutes to the intent', () => {
+    expect(parseIntent('if I only have an hour', NOW)).toEqual({ kind: 'quick_plan', minutes: 60 });
+    expect(parseIntent('I have 20 minutes', NOW)).toEqual({ kind: 'quick_plan', minutes: 20 });
+  });
+
+  it('carries null when no duration was actually stated', () => {
+    expect(parseIntent('short on time', NOW)).toEqual({ kind: 'quick_plan', minutes: null });
   });
 });

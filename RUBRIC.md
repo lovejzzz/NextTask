@@ -127,8 +127,13 @@ sandbox — it is documented here and **blocked on GPU hardware**.
 - ~~Agency → 5~~ ✅ bulk-clear overdue + one-level undo (labels/assignees still TODO).
 - ~~Reasoning → 4~~ ✅ triage / quick-win / biggest-risk advice.
 - **Conversation → measured:** run the browser eval set; record a real score.
-- **Reasoning → 5:** multi-turn + constraint-aware ("if I only have an hour",
-  "given X is blocked, replan").
+- **Reasoning → 5 (partial):** ~~constraint-aware time budgets~~ ✅ "if I only
+  have an hour" / "give me 20 minutes" now scales the quick-plan shortlist to
+  the stated duration (`parseTimeBudget` + `quickPlanLimit`, ~20 min/task,
+  capped at 5) instead of always returning a fixed 2 — CI-graded. Still open:
+  multi-turn planning and "given X is blocked, replan" (re-planning around a
+  task the user explicitly declares blocked, distinct from the existing
+  heuristic `detectBlocked`).
 - ~~Memory → 5~~ ✅ durable cross-session notes ("remember that…", recall).
 - ~~Comprehension → 5~~ ✅ broad synonyms + pleasantry-stripping + LLM intent-fallback; 102-case CI corpus at 100%.
 - **Conversation → measured:** the one rung that needs your WebGPU hardware.

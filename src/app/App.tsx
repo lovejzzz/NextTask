@@ -119,8 +119,8 @@ import { describeStop, nextStopReason, type RoundResult } from '../lib/loop';
 import { api } from '../lib/api';
 import { buildAgentCases, runAgentEval } from '../lib/agentEval';
 import type { ChatReply } from '../components/experimental/CompanionChat';
-import { parseIntent } from '../lib/companionActions';
-import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker } from '../lib/companionAdvice';
+import { parseIntent, parseTimeBudget } from '../lib/companionActions';
+import { detectBlocked, focusConfidence, honestStatus, pickBiggestRisk, pickDropCandidatesWithReasons, pickNextActionable, pickQuickWin, pickQuickWins, pickUnblocker, quickPlanLimit } from '../lib/companionAdvice';
 import { acceptExplanation, repliesDiverge, runBrainEval } from '../lib/brainEval';
 import { isToolListRequest, parseToolDefinitionDetailed, parseToolInvocation, type Tool } from '../lib/tools';
 import { generateProposals, type Proposal } from '../lib/proposals';
@@ -669,7 +669,9 @@ export function App() {
     // safe parameter-less queries (never destructive actions).
     if (!intent && brain.status === 'ready') {
       const kind = await classifyIntent((messages) => brainRun(messages), text);
-      if (kind) intent = { kind };
+      // quick_plan carries a stated time budget (constraint-aware planning); every
+      // other safe fallback kind is parameter-less, same as before.
+      if (kind) intent = kind === 'quick_plan' ? { kind, minutes: parseTimeBudget(text) } : { kind };
     }
 
     // Remember recognized commands so Boardy can learn repeated patterns into skills;
@@ -1079,10 +1081,11 @@ export function App() {
     }
 
     if (intent?.kind === 'quick_plan') {
-      const wins = pickQuickWins(tasks, 2);
+      const wins = pickQuickWins(tasks, quickPlanLimit(intent.minutes));
       if (!wins.length) return 'Nothing quick to grab right now. Maybe just breathe for a sec.';
       const lines = wins.map((task, index) => `${index + 1}. ${task.title}`).join('\n');
-      return `Short on time? Hit these, in order:\n${lines}\nIgnore everything else for now.`;
+      const budget = intent.minutes ? ` (~${intent.minutes} min)` : '';
+      return `Short on time${budget}? Hit these, in order:\n${lines}\nIgnore everything else for now.`;
     }
 
     if (intent?.kind === 'triage') {

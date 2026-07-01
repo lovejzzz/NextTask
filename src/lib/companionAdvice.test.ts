@@ -12,6 +12,7 @@ import {
   pickQuickWin,
   pickQuickWins,
   pickUnblocker,
+  quickPlanLimit,
   unblockCount,
 } from './companionAdvice';
 
@@ -67,6 +68,23 @@ describe('pickQuickWins', () => {
     const ids = pickQuickWins(tasks, 2).map((task) => task.id);
     expect(ids).toEqual(['review', 'prog']);
     expect(ids).not.toContain('blocked');
+  });
+});
+
+describe('quickPlanLimit — constraint-aware sizing (RUBRIC Reasoning → 5)', () => {
+  it('keeps the existing default of 2 when no budget was stated', () => {
+    expect(quickPlanLimit(null)).toBe(2);
+    expect(quickPlanLimit(0)).toBe(2);
+    expect(quickPlanLimit(-5)).toBe(2);
+  });
+
+  it('scales up for a longer stated budget, at ~20 minutes per quick win', () => {
+    expect(quickPlanLimit(15)).toBe(1);
+    expect(quickPlanLimit(60)).toBe(3); // "an hour" gets more than the vague default
+  });
+
+  it('caps a very large budget at 5 — still a quick-win list, not the whole backlog', () => {
+    expect(quickPlanLimit(600)).toBe(5);
   });
 });
 

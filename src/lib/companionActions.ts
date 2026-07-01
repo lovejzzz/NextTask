@@ -36,7 +36,7 @@ export type CompanionIntent =
   | { kind: 'self_improve' }
   | { kind: 'self_existential' }
   | { kind: 'plan' }
-  | { kind: 'quick_plan' }
+  | { kind: 'quick_plan'; minutes: number | null }
   | { kind: 'triage' }
   | { kind: 'quick_win' }
   | { kind: 'risk' }
@@ -109,6 +109,25 @@ function cleanQuery(text: string): string {
     .replace(/[\s,;:.!?]+$/, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+/**
+ * Extract a stated time budget in minutes from a "quick plan" ask ("if I only
+ * have an hour", "give me 20 minutes"), constraint-aware reasoning (RUBRIC's
+ * Reasoning → 5). Vague phrasings ("a few minutes", "some time") return null —
+ * they keep the caller's existing default sizing rather than guessing a number
+ * that was never actually given. "Half an hour" is checked before the plain
+ * "an hour" pattern so it isn't swallowed by the substring match.
+ */
+export function parseTimeBudget(text: string): number | null {
+  const lower = text.toLowerCase();
+  if (/\bhalf an? hour\b/.test(lower)) return 30;
+  if (/\ban? hour\b/.test(lower)) return 60;
+  const hourMatch = lower.match(/\b(\d+)\s*(?:hours?|hrs?)\b/);
+  if (hourMatch) return parseInt(hourMatch[1], 10) * 60;
+  const minMatch = lower.match(/\b(\d+)\s*(?:minutes?|mins?)\b/);
+  if (minMatch) return parseInt(minMatch[1], 10);
+  return null;
 }
 
 export function parseIntent(text: string, now: Date = new Date()): CompanionIntent | null {
@@ -199,7 +218,7 @@ export function parseIntent(text: string, now: Date = new Date()): CompanionInte
       lower,
     )
   ) {
-    return { kind: 'quick_plan' };
+    return { kind: 'quick_plan', minutes: parseTimeBudget(raw) };
   }
   if (/\b(plan (?:my )?day|what'?s the plan|game ?plan|plan for (?:today|the day))\b/.test(lower)) {
     return { kind: 'plan' };

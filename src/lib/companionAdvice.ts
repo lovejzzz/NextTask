@@ -87,6 +87,22 @@ function byWorthwhileQuickness(now: Date) {
   return (a: Task, b: Task): number => quickWinScore(b, now) - quickWinScore(a, now) || a.position - b.position;
 }
 
+const QUICK_PLAN_DEFAULT_LIMIT = 2;
+const QUICK_PLAN_MINUTES_PER_TASK = 20; // a rough, honest estimate — these are the FAST tasks
+const QUICK_PLAN_MAX_LIMIT = 5; // a big stated budget still gets a short, quick-win list, not the whole backlog
+
+/**
+ * Size a quick-plan shortlist to a stated time budget (RUBRIC's Reasoning → 5:
+ * constraint-aware planning, e.g. "if I only have an hour"). No stated budget
+ * (a vague ask, or none given) keeps today's default of 2 — this only changes
+ * behavior when the user actually named a duration. Pure and cheap to reason
+ * about: ~20 minutes per quick win, rounded, clamped to [1, 5].
+ */
+export function quickPlanLimit(minutes: number | null): number {
+  if (minutes === null || minutes <= 0) return QUICK_PLAN_DEFAULT_LIMIT;
+  return Math.min(QUICK_PLAN_MAX_LIMIT, Math.max(1, Math.round(minutes / QUICK_PLAN_MINUTES_PER_TASK)));
+}
+
 /** The N best quick wins — fast *and* worth doing — skipping anything blocked. */
 export function pickQuickWins(tasks: Task[], limit = 2, now: Date = new Date()): Task[] {
   const blocked = new Set(detectBlocked(tasks).map((task) => task.id));
