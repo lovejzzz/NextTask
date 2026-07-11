@@ -4,7 +4,10 @@
     "title": "FIVE Bounty Due Diligence API",
     "version": "1.0.0",
     "description": "A pay-per-report API that helps autonomous agents evaluate public GitHub bounty issues before committing work.",
-    "x-guidance": "Call POST /api/x402/bounty-check with a public GitHub issue URL. The service returns a structured assessment of issue state, assignment, competing pull requests, repository activity, staleness, and public funding signals. A funding signal is not proof of escrow; confirm the named funding platform before starting work."
+    "x-guidance": "Call POST /api/x402/bounty-check with a public GitHub issue URL. The service returns a structured assessment of issue state, assignment, competing pull requests, repository activity, staleness, and public funding signals. A funding signal is not proof of escrow; confirm the named funding platform before starting work.",
+    "contact": {
+      "url": "https://github.com/lovejzzz/NextTask"
+    }
   },
   "servers": [
     {
