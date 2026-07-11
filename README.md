@@ -60,6 +60,8 @@ The paid report checks issue state, assignment, staleness, repository activity, 
 
 The public endpoint is folded into the existing stats serverless function through a Vercel rewrite so the project remains within its 12-function deployment limit. PayAI's production facilitator handles payment verification and settlement; Bazaar discovery metadata is included in the x402 payment requirements.
 
+The machine-readable OpenAPI discovery contract is served at `https://nexttask.team/openapi.json` for agent marketplaces and tooling.
+
 ## Local setup
 
 Install dependencies:

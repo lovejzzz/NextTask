@@ -1,0 +1,174 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FIVE Bounty Due Diligence API",
+    "version": "1.0.0",
+    "description": "A pay-per-report API that helps autonomous agents evaluate public GitHub bounty issues before committing work.",
+    "x-guidance": "Call POST /api/x402/bounty-check with a public GitHub issue URL. The service returns a structured assessment of issue state, assignment, competing pull requests, repository activity, staleness, and public funding signals. A funding signal is not proof of escrow; confirm the named funding platform before starting work."
+  },
+  "servers": [
+    {
+      "url": "https://nexttask.team"
+    }
+  ],
+  "paths": {
+    "/api/x402/bounty-check": {
+      "get": {
+        "operationId": "getBountyCheckManifest",
+        "summary": "Get the free service manifest",
+        "description": "Returns price, network, protocol, input example, and service description without payment.",
+        "tags": ["Bounties", "Discovery"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "checkGitHubBounty",
+        "summary": "Assess a public GitHub bounty issue",
+        "description": "Produces a machine-readable due-diligence report after a successful $1 USDC x402 payment.",
+        "tags": ["Bounties", "GitHub", "Due Diligence"],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "1.000000"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BountyCheckRequest"
+              },
+              "example": {
+                "issueUrl": "https://github.com/x402-foundation/x402/issues/1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Completed bounty due-diligence report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BountyCheckResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid GitHub issue URL"
+          },
+          "402": {
+            "description": "Payment Required"
+          },
+          "404": {
+            "description": "GitHub issue or repository not found"
+          },
+          "503": {
+            "description": "GitHub or payment facilitator temporarily unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BountyCheckRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "issueUrl": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://github\\.com/[^/]+/[^/]+/issues/[0-9]+/?$",
+            "description": "A public GitHub issue URL. Pull request URLs are not accepted."
+          }
+        },
+        "required": ["issueUrl"]
+      },
+      "BountyCheckResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "checkedAt": { "type": "string", "format": "date-time" },
+              "source": { "type": "string", "const": "github-public-api" },
+              "issue": { "type": "object", "additionalProperties": true },
+              "repository": { "type": "object", "additionalProperties": true },
+              "competition": {
+                "type": "object",
+                "properties": {
+                  "count": { "type": "integer", "minimum": 0 },
+                  "referencedPullRequests": {
+                    "type": "array",
+                    "items": { "type": "object", "additionalProperties": true }
+                  }
+                },
+                "required": ["count", "referencedPullRequests"]
+              },
+              "funding": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["unverified", "signal-found"] },
+                  "signals": { "type": "array", "items": { "type": "string" } },
+                  "warning": { "type": "string" }
+                },
+                "required": ["status", "signals", "warning"]
+              },
+              "assessment": {
+                "type": "object",
+                "properties": {
+                  "decision": { "type": "string", "enum": ["candidate", "manual-review", "avoid"] },
+                  "riskScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+                  "reasons": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["decision", "riskScore", "reasons"]
+              },
+              "disclaimer": { "type": "string" }
+            },
+            "required": ["checkedAt", "source", "issue", "repository", "competition", "funding", "assessment", "disclaimer"]
+          }
+        },
+        "required": ["data"]
+      },
+      "ManifestResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "service": { "type": "string" },
+              "endpoint": { "type": "string", "format": "uri" },
+              "method": { "type": "string", "const": "POST" },
+              "protocol": { "type": "string", "const": "x402" },
+              "network": { "type": "string", "const": "eip155:8453" },
+              "asset": { "type": "string", "const": "USDC" },
+              "price": { "type": "string", "const": "$1.00" }
+            },
+            "required": ["service", "endpoint", "method", "protocol", "network", "asset", "price"]
+          }
+        },
+        "required": ["data"]
+      }
+    }
+  }
+}
