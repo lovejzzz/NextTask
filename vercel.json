@@ -7,6 +7,10 @@
     {
       "source": "/api/bootstrap/reset",
       "destination": "/api/bootstrap/demo?mode=reset"
+    },
+    {
+      "source": "/api/x402/bounty-check",
+      "destination": "/api/stats?mode=bounty-check"
     }
   ]
 }
