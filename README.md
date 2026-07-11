@@ -37,6 +37,28 @@ Current app version: `0.0.3` (derived from `package.json`; v0.0.3.1 public-readi
 - Framer Motion for transitions
 - Tailwind CSS and custom CSS variables
 - Zod for API validation
+- x402 for per-request USDC payments
+
+## FIVE paid agent API
+
+Next Task hosts a public, machine-readable bounty due-diligence service for AI agents:
+
+```http
+GET  https://nexttask.team/api/x402/bounty-check
+POST https://nexttask.team/api/x402/bounty-check
+```
+
+`GET` is free and returns the service manifest. `POST` accepts JSON containing a public GitHub issue URL and costs `$1.00` in USDC on Base mainnet through the x402 protocol:
+
+```json
+{
+  "issueUrl": "https://github.com/owner/repository/issues/123"
+}
+```
+
+The paid report checks issue state, assignment, staleness, repository activity, referenced pull requests, and public funding signals. A funding signal is explicitly not treated as proof of escrow. Invalid inputs and upstream GitHub failures do not settle payment.
+
+The public endpoint is folded into the existing stats serverless function through a Vercel rewrite so the project remains within its 12-function deployment limit. PayAI's production facilitator handles payment verification and settlement; Bazaar discovery metadata is included in the x402 payment requirements.
 
 ## Local setup
 
@@ -159,8 +181,10 @@ Additional product endpoints:
 - `GET /api/stats`
 - `POST /api/bootstrap/demo`
 - `POST /api/bootstrap/reset`
+- `GET /api/x402/bounty-check` (public service manifest)
+- `POST /api/x402/bounty-check` (public, x402 payment required)
 
-Every API request must include:
+Authenticated board API requests must include:
 
 ```http
 Authorization: Bearer <supabase_access_token>

@@ -86,6 +86,7 @@ function routeFor(pathname) {
     [['GET', 'POST'], /^\/api\/labels$/, 'api/labels/index.ts', []],
     [['PATCH', 'DELETE'], /^\/api\/labels\/([^/]+)$/, 'api/labels/[id].ts', ['id']],
     [['GET'], /^\/api\/stats$/, 'api/stats.ts', []],
+    [['GET', 'POST'], /^\/api\/x402\/bounty-check$/, 'api/stats.ts', []],
     [['POST'], /^\/api\/bootstrap\/demo$/, 'api/bootstrap/demo.ts', []],
     [['POST'], /^\/api\/bootstrap\/reset$/, 'api/bootstrap/demo.ts', []],
   ];
