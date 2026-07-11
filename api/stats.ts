@@ -104,14 +104,6 @@ async function handleBountyCheck(req: VercelRequest, res: VercelResponse) {
   }
   if (req.method !== 'POST') return methodNotAllowed(res, req.method);
 
-  let request;
-  try {
-    request = parseBountyCheckRequest(parseJsonBody(req));
-  } catch (error) {
-    const message = error instanceof ZodError ? error.issues[0]?.message : error instanceof Error ? error.message : 'Invalid request body';
-    return sendError(res, 'bad_request', message ?? 'Invalid request body', 400);
-  }
-
   const context = createPaymentContext(req);
   try {
     await ensureX402Initialized();
@@ -122,6 +114,7 @@ async function handleBountyCheck(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+      const request = parseBountyCheckRequest(parseJsonBody(req));
       const report = await inspectGitHubBounty(request, {
         githubToken: process.env.GITHUB_TOKEN,
       });
@@ -143,8 +136,11 @@ async function handleBountyCheck(req: VercelRequest, res: VercelResponse) {
       await payment.cancellationDispatcher.cancel({
         reason: 'handler_failed',
         error,
-        responseStatus: error instanceof BountyCheckError ? error.status : 500,
+        responseStatus: error instanceof BountyCheckError ? error.status : error instanceof ZodError ? 400 : 500,
       });
+      if (error instanceof ZodError) {
+        return sendError(res, 'bad_request', error.issues[0]?.message ?? 'Invalid request body', 400);
+      }
       if (error instanceof BountyCheckError) {
         const code = error.status === 404 ? 'not_found' : error.status === 400 ? 'bad_request' : 'server_error';
         return sendError(res, code, error.message, error.status);
