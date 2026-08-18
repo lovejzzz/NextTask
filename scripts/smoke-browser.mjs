@@ -119,7 +119,10 @@ async function runSmoke() {
       response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/tasks' && response.ok(),
     { timeout: 45_000 },
   );
-  const documentResponse = await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 45_000 });
+  // Presence keeps a healthy Realtime connection open for the life of the page,
+  // so networkidle is not a valid readiness signal. The API, board, and Presence
+  // assertions below provide explicit application-level readiness checks.
+  const documentResponse = await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 });
   if (!documentResponse) throw new Error('Navigation did not return an HTTP response.');
   assertIncludes(
     documentResponse.headers()['content-security-policy'] ?? '',
