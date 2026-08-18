@@ -1,15 +1,14 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireUser } from '../../_shared/auth.js';
 import { getTaskOrThrow } from '../../_shared/data.js';
-import { getParam, handleApiError, methodNotAllowed, sendData } from '../../_shared/http.js';
+import { getUuidParam, handleApiError, methodNotAllowed, sendData } from '../../_shared/http.js';
+import type { VercelRequest, VercelResponse } from '../../_shared/vercel.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'GET') return methodNotAllowed(res, req.method);
 
     const { supabase, user } = await requireUser(req);
-    const id = getParam(req, 'id');
-    if (!id) return res.status(400).json({ error: { code: 'bad_request', message: 'Task id is required' } });
+    const id = getUuidParam(req, 'id', 'Task id');
 
     await getTaskOrThrow(supabase, user.id, id);
 

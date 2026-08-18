@@ -13,7 +13,7 @@ concurrency:
 jobs:
   # Always-on, secret-free gate. Runs on every PR (including forks) and push.
   verify-ci:
-    name: verify:ci (typecheck · lint · test · build)
+    name: verify:ci (typecheck · lint · test · audit · config · build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -223,6 +223,7 @@ export function TaskDrawer({
                         notify('success', 'Comment added');
                       } catch (error) {
                         notify('error', readableError(error));
+                        throw error;
                       }
                     }}
                     onDelete={async (commentId) => {
@@ -322,7 +323,7 @@ function MultiPicker({
   );
 }
 
-function CommentPanel({
+export function CommentPanel({
   comments,
   loading,
   onCreate,
@@ -335,6 +336,24 @@ function CommentPanel({
   onDelete: (id: string) => Promise<void>;
 }) {
   const [body, setBody] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submitComment(event: React.FormEvent) {
+    event.preventDefault();
+    const value = body.trim();
+    if (!value || submitting) return;
+
+    setSubmitting(true);
+    try {
+      await onCreate(value);
+      setBody('');
+    } catch {
+      // The parent reports the API error. Keep the draft so the user can retry.
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <section className="detail-section">
       <div className="section-title">
@@ -355,19 +374,17 @@ function CommentPanel({
           </motion.div>
         ))}
       </div>
-      <div className="comment-composer">
+      <form className="comment-composer" onSubmit={(event) => void submitComment(event)}>
         <input value={body} onChange={(event) => setBody(event.target.value)} placeholder="Write a comment..." />
         <button
           className="icon-button"
-          onClick={() => {
-            if (!body.trim()) return;
-            void onCreate(body).then(() => setBody(''));
-          }}
-          type="button"
+          type="submit"
+          aria-label="Add comment"
+          disabled={submitting || !body.trim()}
         >
-          <Plus size={15} />
+          {submitting ? <Loader2 className="spin" size={15} /> : <Plus size={15} />}
         </button>
-      </div>
+      </form>
     </section>
   );
 }

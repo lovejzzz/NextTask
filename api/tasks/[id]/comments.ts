@@ -1,14 +1,13 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireUser } from '../../_shared/auth.js';
-import { getTaskOrThrow, recordActivity } from '../../_shared/data.js';
-import { getParam, handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../../_shared/http.js';
+import { getTaskOrThrow, recordActivityBestEffort } from '../../_shared/data.js';
+import { getUuidParam, handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../../_shared/http.js';
 import { commentSchema } from '../../_shared/validation.js';
+import type { VercelRequest, VercelResponse } from '../../_shared/vercel.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { supabase, user } = await requireUser(req);
-    const id = getParam(req, 'id');
-    if (!id) return res.status(400).json({ error: { code: 'bad_request', message: 'Task id is required' } });
+    const id = getUuidParam(req, 'id', 'Task id');
 
     await getTaskOrThrow(supabase, user.id, id);
 
@@ -31,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('*')
         .single();
       if (error || !data) throw error;
-      await recordActivity(supabase, user.id, id, 'comment_added', 'Commented', { comment_id: data.id });
+      await recordActivityBestEffort(supabase, user.id, id, 'comment_added', 'Commented', { comment_id: data.id });
       return sendData(res, data, 201);
     }
 

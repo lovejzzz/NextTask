@@ -15,6 +15,7 @@ const result = {
   deploymentUrl,
   protectionBypassConfigured: Boolean(protectionBypassSecret),
   page: null,
+  securityHeaders: null,
   bundle: null,
   auth: null,
   api: null,
@@ -25,6 +26,9 @@ const page = await protectedFetch(deploymentUrl);
 const html = await page.text();
 result.page = { ok: page.ok, status: page.status, hasRoot: html.includes('<div id="root">') };
 if (!page.ok || !result.page.hasRoot) printAndExit(1);
+
+result.securityHeaders = inspectSecurityHeaders(page.headers);
+if (!result.securityHeaders.ok) printAndExit(1);
 
 const bundleChecks = await inspectBundles(deploymentUrl, html);
 result.bundle = bundleChecks;
@@ -48,8 +52,13 @@ result.auth = { ok: true, userId: auth.data.user.id };
 const token = auth.data.session.access_token;
 
 const stats = await apiFetch('/api/stats', token);
-result.api = { ok: stats.response.ok, status: stats.response.status, hasData: Boolean(stats.json.data) };
-if (!stats.response.ok || !stats.json.data) printAndExit(1);
+result.api = {
+  ok: stats.response.ok,
+  status: stats.response.status,
+  hasData: Boolean(stats.json.data),
+  cacheControl: stats.response.headers.get('cache-control'),
+};
+if (!stats.response.ok || !stats.json.data || !result.api.cacheControl?.includes('no-store')) printAndExit(1);
 
 const title = `Deployment verification ${new Date().toISOString()}`;
 const create = await apiFetch('/api/tasks', token, {
@@ -128,6 +137,25 @@ async function inspectBundles(baseUrl, html) {
   }
 
   return { ok: foundMarkers.length === 0, assetsChecked: assetPaths.length, foundMarkers };
+}
+
+function inspectSecurityHeaders(headers) {
+  const expected = {
+    'content-security-policy': ["default-src 'self'", "object-src 'none'", "frame-ancestors 'none'"],
+    'referrer-policy': ['strict-origin-when-cross-origin'],
+    'strict-transport-security': ['max-age=31536000'],
+    'x-content-type-options': ['nosniff'],
+    'x-frame-options': ['DENY'],
+    'permissions-policy': ['camera=()', 'microphone=()', 'geolocation=()'],
+  };
+  const missing = [];
+  for (const [name, parts] of Object.entries(expected)) {
+    const value = headers.get(name) ?? '';
+    for (const part of parts) {
+      if (!value.includes(part)) missing.push(`${name}: ${part}`);
+    }
+  }
+  return { ok: missing.length === 0, missing };
 }
 
 function protectedFetch(url, init = {}) {

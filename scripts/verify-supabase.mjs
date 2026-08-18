@@ -19,6 +19,7 @@ const result = {
   auth: null,
   tables: {},
   mutationCycle: null,
+  dataConstraints: null,
   isolation: null,
   reorderRpc: null,
 };
@@ -94,6 +95,11 @@ async function main() {
   // --- Atomic reorder RPC invariants (skipped if migration 002 not applied) ---
   result.reorderRpc = await checkReorderRpc(a1);
 
+  // --- Database boundary constraints and append-only history (migration 003) ---
+  // Keep this last so a missing newest migration does not hide evidence for
+  // the already-deployed RLS and reorder invariants above.
+  result.dataConstraints = await checkDataConstraints(a1);
+
   result.ok = true;
 }
 
@@ -151,6 +157,119 @@ async function checkReorderRpc(a1) {
   return checks;
 }
 
+async function checkDataConstraints(taskId) {
+  const taskBase = {
+    user_id: userA,
+    title: `${stamp} invalid constraint probe`,
+    status: 'todo',
+    priority: 'normal',
+  };
+  const checks = {
+    longTaskDescriptionRejected: await constraintRejected(
+      clientA.from('tasks').insert({ ...taskBase, description: 'x'.repeat(4001), position: 999010 }),
+      'tasks description length',
+    ),
+    negativeTaskPositionRejected: await constraintRejected(
+      clientA.from('tasks').insert({ ...taskBase, description: stamp, position: -1 }),
+      'tasks nonnegative position',
+    ),
+    longAvatarUrlRejected: await constraintRejected(
+      clientA.from('team_members').insert({
+        user_id: userA,
+        name: `${stamp} invalid avatar probe`,
+        avatar_url: `https://example.com/${'x'.repeat(2050)}`,
+      }),
+      'team member avatar URL length',
+    ),
+    blankActivityMessageRejected: await constraintRejected(
+      clientA.from('activity_events').insert({
+        user_id: userA,
+        task_id: taskId,
+        type: 'task_updated',
+        message: '   ',
+        metadata: {},
+      }),
+      'activity message length',
+    ),
+    nonObjectActivityMetadataRejected: await constraintRejected(
+      clientA.from('activity_events').insert({
+        user_id: userA,
+        task_id: taskId,
+        type: 'task_updated',
+        message: `${stamp} invalid metadata probe`,
+        metadata: [],
+      }),
+      'activity metadata object shape',
+    ),
+  };
+
+  const activity = await clientA
+    .from('activity_events')
+    .insert({
+      user_id: userA,
+      task_id: taskId,
+      type: 'task_updated',
+      message: `${stamp} immutable activity probe`,
+      metadata: {},
+    })
+    .select('id')
+    .single();
+  if (activity.error || !activity.data) {
+    throw new Error(`activity immutability setup: ${activity.error?.message ?? 'no row'}`);
+  }
+
+  checks.activityUpdatesRejected = await mutationRejected(
+    clientA.from('activity_events').update({ message: `${stamp} tampered` }).eq('id', activity.data.id).select('id'),
+  );
+  checks.activityDeletesRejected = await mutationRejected(
+    clientA.from('activity_events').delete().eq('id', activity.data.id).select('id'),
+  );
+
+  const reset = await clientB.rpc('reset_board');
+  if (reset.error && !isMissingRpcError(reset.error)) {
+    throw new Error(`reset_board RPC: ${reset.error.message}`);
+  }
+  if (reset.error) {
+    checks.atomicResetApplied = false;
+  } else {
+    const [bAfterReset, aAfterReset] = await Promise.all([
+      clientB.from('tasks').select('id'),
+      clientA.from('tasks').select('id').eq('id', taskId).maybeSingle(),
+    ]);
+    if (bAfterReset.error || aAfterReset.error) {
+      throw new Error(`reset_board verification: ${bAfterReset.error?.message ?? aAfterReset.error?.message}`);
+    }
+    checks.atomicResetApplied = (bAfterReset.data?.length ?? -1) === 0 && aAfterReset.data?.id === taskId;
+  }
+
+  checks.ok = Object.values(checks).every(Boolean);
+  if (!checks.ok) {
+    throw new Error(
+      `data constraints failed. Apply supabase/migrations/003_data_constraints.sql before release: ${JSON.stringify(checks)}`,
+    );
+  }
+  return checks;
+}
+
+function isMissingRpcError(error) {
+  return error.code === 'PGRST202' || /could not find the function|does not exist/i.test(error.message ?? '');
+}
+
+async function mutationRejected(query) {
+  const response = await query;
+  if (response.error) return response.error.code === '42501';
+  return (response.data?.length ?? 0) === 0;
+}
+
+async function constraintRejected(query, label) {
+  const response = await query;
+  if (!response.error) return false;
+  if (response.error.code !== '23514') {
+    throw new Error(`${label} probe returned ${response.error.code}: ${response.error.message}`);
+  }
+  return true;
+}
+
 async function insertTask(client, userId, title, status, position) {
   const { data, error } = await client
     .from('tasks')
@@ -168,7 +287,8 @@ async function cleanup() {
     [clientB, userB],
   ]) {
     if (!userId) continue;
-    await client.from('tasks').delete().eq('user_id', userId).eq('description', stamp);
+    await client.from('tasks').delete().eq('user_id', userId).like('title', `${stamp}%`);
+    await client.from('team_members').delete().eq('user_id', userId).like('name', `${stamp}%`);
   }
 }
 

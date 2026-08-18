@@ -1,9 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '../_shared/auth.js';
 import { getTaskOrThrow, hydrateBoard, recordActivity, taskMoveMessage } from '../_shared/data.js';
+import { isMissingRpcFunction } from '../_shared/database.js';
 import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http.js';
 import { reorderSchema } from '../_shared/validation.js';
+import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
 
 type ReorderUpdate = { id: string; status: 'todo' | 'in_progress' | 'in_review' | 'done'; position: number };
 
@@ -19,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { error: rpcError } = await supabase.rpc('reorder_tasks', { updates: input.updates });
 
     if (rpcError) {
-      if (isMissingFunction(rpcError)) {
+      if (isMissingRpcFunction(rpcError)) {
         if (process.env.ALLOW_REORDER_RPC_FALLBACK === 'true') {
           // Local-only escape hatch for development databases that have not applied migration 002.
           // Public deployments must use the transactional RPC.
@@ -38,10 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     return handleApiError(res, error);
   }
-}
-
-function isMissingFunction(error: { code?: string; message?: string }) {
-  return error.code === 'PGRST202' || /could not find the function|does not exist/i.test(error.message ?? '');
 }
 
 /** Pre-RPC fallback: sequential updates. Not atomic — only used when the RPC is absent. */

@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
 const requestSchema = z.object({
-  issueUrl: z.string().url(),
-});
+  issueUrl: z.string().max(2048, 'issueUrl is too long').url(),
+}).strict();
+
+const githubTimestampSchema = z.string().datetime({ offset: true });
 
 const githubIssueSchema = z.object({
   number: z.number().int().positive(),
@@ -10,9 +12,9 @@ const githubIssueSchema = z.object({
   title: z.string(),
   state: z.enum(['open', 'closed']),
   locked: z.boolean(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  closed_at: z.string().nullable(),
+  created_at: githubTimestampSchema,
+  updated_at: githubTimestampSchema,
+  closed_at: githubTimestampSchema.nullable(),
   assignee: z.object({ login: z.string() }).nullable(),
   assignees: z.array(z.object({ login: z.string() })),
   labels: z.array(
@@ -32,8 +34,8 @@ const githubRepoSchema = z.object({
   archived: z.boolean(),
   disabled: z.boolean(),
   fork: z.boolean(),
-  pushed_at: z.string().nullable(),
-  updated_at: z.string(),
+  pushed_at: githubTimestampSchema.nullable(),
+  updated_at: githubTimestampSchema,
   stargazers_count: z.number().int().nonnegative(),
   open_issues_count: z.number().int().nonnegative(),
   default_branch: z.string(),
@@ -217,14 +219,26 @@ export class BountyCheckError extends Error {
 
 function parseGitHubIssueUrl(value: string) {
   const url = new URL(value);
-  if (url.hostname.toLowerCase() !== 'github.com') {
-    throw new BountyCheckError('issueUrl must be a public github.com issue URL.', 400);
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname.toLowerCase() !== 'github.com' ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new BountyCheckError('issueUrl must be a canonical public https://github.com issue URL.', 400);
   }
   const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/issues\/(\d+)\/?$/);
   if (!match) {
     throw new BountyCheckError('issueUrl must match https://github.com/owner/repo/issues/123.', 400);
   }
-  return { owner: match[1], repo: match[2], issueNumber: Number(match[3]) };
+  const issueNumber = Number(match[3]);
+  if (match[1].length > 100 || match[2].length > 100 || !Number.isSafeInteger(issueNumber) || issueNumber < 1) {
+    throw new BountyCheckError('issueUrl contains an invalid owner, repository, or issue number.', 400);
+  }
+  return { owner: match[1], repo: match[2], issueNumber };
 }
 
 async function getGitHubJson(fetcher: typeof fetch, url: string, headers: Record<string, string>) {

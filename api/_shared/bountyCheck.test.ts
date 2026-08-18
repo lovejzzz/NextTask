@@ -43,6 +43,18 @@ describe('parseBountyCheckRequest', () => {
   it('rejects non-GitHub and pull request URLs', () => {
     expect(() => parseBountyCheckRequest({ issueUrl: 'https://example.com/issues/42' })).toThrow(BountyCheckError);
     expect(() => parseBountyCheckRequest({ issueUrl: 'https://github.com/example/project/pull/42' })).toThrow(BountyCheckError);
+    expect(() => parseBountyCheckRequest({ issueUrl: 'http://github.com/example/project/issues/42' })).toThrow(
+      BountyCheckError,
+    );
+    expect(() => parseBountyCheckRequest({ issueUrl: `${issue.html_url}?tab=activity` })).toThrow(BountyCheckError);
+    expect(() => parseBountyCheckRequest({ issueUrl: `https://github.com/${'a'.repeat(101)}/project/issues/42` })).toThrow(
+      BountyCheckError,
+    );
+    expect(() => parseBountyCheckRequest({ issueUrl: `https://github.com/example/project/issues/${'9'.repeat(30)}` })).toThrow(
+      BountyCheckError,
+    );
+    expect(() => parseBountyCheckRequest({ issueUrl: `https://github.com/example/project/issues/1${'x'.repeat(2048)}` })).toThrow();
+    expect(() => parseBountyCheckRequest({ issueUrl: issue.html_url, unexpected: true })).toThrow();
   });
 });
 

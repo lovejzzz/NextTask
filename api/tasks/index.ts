@@ -1,18 +1,18 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireUser } from '../_shared/auth.js';
+import { getRequestToday } from '../_shared/dateOnly.js';
 import {
+  assertOwnedRelationIds,
   getNextPosition,
   hydrateBoard,
   hydrateTask,
-  recordActivity,
+  recordActivityBestEffort,
   replaceAssignees,
   replaceLabels,
   type BoardFilters,
-  type TaskPriority,
-  type TaskStatus,
 } from '../_shared/data.js';
 import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http.js';
-import { taskCreateSchema } from '../_shared/validation.js';
+import { boardFilterSchema, taskCreateSchema } from '../_shared/validation.js';
+import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -20,12 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'GET') {
       const filters: BoardFilters = {
-        search: queryString(req.query.search),
-        status: queryString(req.query.status) as TaskStatus | undefined,
-        priority: queryString(req.query.priority) as TaskPriority | undefined,
-        label_id: queryString(req.query.label_id),
-        assignee_id: queryString(req.query.assignee_id),
-        due: queryString(req.query.due) as BoardFilters['due'],
+        ...boardFilterSchema.parse({
+          search: queryString(req.query.search),
+          status: queryString(req.query.status),
+          priority: queryString(req.query.priority),
+          label_id: queryString(req.query.label_id),
+          assignee_id: queryString(req.query.assignee_id),
+          due: queryString(req.query.due),
+        }),
+        today: getRequestToday(req),
       };
       const payload = await hydrateBoard(supabase, user.id, filters);
       return sendData(res, payload);
@@ -33,6 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'POST') {
       const input = taskCreateSchema.parse(parseJsonBody(req));
+      await assertOwnedRelationIds(supabase, user.id, input.assignee_ids, input.label_ids);
       const position = await getNextPosition(supabase, user.id, input.status);
 
       const { data, error } = await supabase
@@ -51,11 +55,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error || !data) throw error;
 
-      await replaceAssignees(supabase, user.id, data.id, input.assignee_ids);
-      await replaceLabels(supabase, user.id, data.id, input.label_ids);
-      await recordActivity(supabase, user.id, data.id, 'task_created', 'Created task', { title: input.title });
-
-      const task = await hydrateTask(supabase, user.id, data.id);
+      let task: Awaited<ReturnType<typeof hydrateTask>>;
+      try {
+        await replaceAssignees(supabase, user.id, data.id, input.assignee_ids, []);
+        await replaceLabels(supabase, user.id, data.id, input.label_ids, []);
+        await recordActivityBestEffort(supabase, user.id, data.id, 'task_created', 'Created task', {
+          title: input.title,
+        });
+        task = await hydrateTask(supabase, user.id, data.id);
+      } catch (error) {
+        const rollback = await supabase.from('tasks').delete().eq('user_id', user.id).eq('id', data.id);
+        if (rollback.error) console.error(`Failed to roll back incomplete task ${data.id}`, rollback.error);
+        throw error;
+      }
       return sendData(res, task, 201);
     }
 

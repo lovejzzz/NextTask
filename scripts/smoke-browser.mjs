@@ -1,17 +1,20 @@
 /* global document, getComputedStyle, window */
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
 
 const port = Number(process.env.SMOKE_PORT ?? 5175);
 const baseUrl = process.env.SMOKE_BASE_URL ?? `http://127.0.0.1:${port}`;
 const shouldStartServer = !process.env.SMOKE_BASE_URL;
+const timezoneId = process.env.SMOKE_TIMEZONE ?? 'America/New_York';
 const now = Date.now();
 const dragTitle = `Smoke drag ${now}`;
 const dragTitleTwo = `Smoke long press ${now}`;
 const handleTitle = `Smoke handle ${now}`;
 const editedTitle = `${dragTitle} edited`;
+const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
 let server;
 
@@ -25,6 +28,8 @@ try {
         HOST: '127.0.0.1',
         API_WRITE_LIMIT_PER_MINUTE: process.env.API_WRITE_LIMIT_PER_MINUTE ?? '0',
         API_IP_WRITE_LIMIT_PER_MINUTE: process.env.API_IP_WRITE_LIMIT_PER_MINUTE ?? '0',
+        ALLOW_RESET_RPC_FALLBACK: process.env.ALLOW_RESET_RPC_FALLBACK ?? 'true',
+        DISABLE_HMR: 'true',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -36,6 +41,7 @@ try {
   }
 
   await waitForServer(baseUrl);
+  await verifyX402Boundary();
   await runSmoke();
 } finally {
   if (server && !server.killed) {
@@ -44,13 +50,39 @@ try {
   }
 }
 
+async function verifyX402Boundary() {
+  const endpoint = new URL('/api/x402/bounty-check', baseUrl);
+  const manifest = await fetch(endpoint);
+  const manifestBody = await manifest.json();
+  assertEqual(manifest.status, 200, 'x402 manifest should be public');
+  assertIncludes(manifest.headers.get('cache-control') ?? '', 'no-store', 'x402 manifest should not be cached');
+  assertEqual(manifestBody.data?.protocol, 'x402', 'x402 manifest should declare the protocol');
+  assertEqual(
+    manifestBody.data?.endpoint,
+    'https://nexttask.team/api/x402/bounty-check',
+    'x402 manifest should advertise the canonical production endpoint',
+  );
+
+  const unpaid = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ issueUrl: 'https://github.com/openai/openai/issues/1' }),
+  });
+  const unpaidBody = await unpaid.json();
+  assertEqual(unpaid.status, 402, 'unpaid x402 requests should require payment');
+  assertIncludes(unpaid.headers.get('payment-required') ?? '', 'ey', 'x402 response should include payment requirements');
+  assertEqual(unpaidBody.error, 'Payment required', 'x402 unpaid response should explain the requirement');
+  assertEqual(unpaidBody.network, 'eip155:8453', 'x402 unpaid response should target Base mainnet');
+}
+
 async function runSmoke() {
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId });
   const page = await context.newPage();
   const consoleMessages = [];
   const httpFailures = [];
   const failedRequests = [];
+  let boardTodayHeader = null;
   let cleanupStarted = false;
 
   page.on('console', (message) => {
@@ -74,8 +106,39 @@ async function runSmoke() {
     if (cleanupStarted && errorText === 'net::ERR_ABORTED') return;
     failedRequests.push(`${request.method()} ${request.url()} ${errorText}`);
   });
+  page.on('request', (request) => {
+    if (request.method() === 'GET' && new URL(request.url()).pathname === '/api/tasks') {
+      boardTodayHeader = request.headers()['x-nexttask-today'] ?? null;
+    }
+  });
 
-  await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 45_000 });
+  const boardResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/tasks' && response.ok(),
+    { timeout: 45_000 },
+  );
+  const documentResponse = await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 45_000 });
+  if (!documentResponse) throw new Error('Navigation did not return an HTTP response.');
+  assertIncludes(
+    documentResponse.headers()['content-security-policy'] ?? '',
+    "frame-ancestors 'none'",
+    'document should send the deployment Content-Security-Policy',
+  );
+  assertEqual(documentResponse.headers()['x-content-type-options'], 'nosniff', 'document should disable MIME sniffing');
+  const boardResponse = await boardResponsePromise;
+  assertIncludes(
+    boardResponse.headers()['cache-control'] ?? '',
+    'no-store',
+    'authenticated API responses should not be cached',
+  );
+  const browserToday = await page.evaluate(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  assertEqual(boardTodayHeader, browserToday, 'board API should receive the browser-local calendar date');
   await page.waitForSelector('.board-column', { timeout: 45_000 });
 
   if ((await page.locator('.task-card').count()) === 0 && (await page.getByRole('button', { name: 'Load sample board' }).isVisible().catch(() => false))) {
@@ -147,8 +210,8 @@ async function runSmoke() {
   assertEqual(await page.evaluate(() => document.activeElement?.getAttribute('placeholder')), 'Add member', 'manager dialog should focus add member input');
   await page.getByRole('button', { name: 'Close team and labels' }).click();
 
-  await page.getByRole('button', { name: `v0.0.3` }).click();
-  await page.waitForSelector('[role="dialog"] >> text=v0.0.3', { timeout: 10_000 });
+  await page.getByRole('button', { name: `v${appVersion}` }).click();
+  await page.waitForSelector(`[role="dialog"] >> text=v${appVersion}`, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Close changelog' }).click();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -184,8 +247,9 @@ async function runSmoke() {
       {
         ok: true,
         baseUrl,
+        timezoneId,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
+        checked: ['security headers and API no-store', 'x402 manifest and unpaid boundary', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,
@@ -458,6 +522,10 @@ function assertEqual(actual, expected, message) {
   if (actual !== expected) {
     throw new Error(`${message}. Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
   }
+}
+
+function assertIncludes(actual, expected, message) {
+  if (!actual.includes(expected)) throw new Error(`${message}. Expected ${JSON.stringify(actual)} to include ${expected}.`);
 }
 
 function dropPoint(box) {
