@@ -7,15 +7,21 @@ export function WorkspaceBar({
   activeWorkspace,
   activeBoardId,
   realtimeStatus,
+  acceptingInvitation,
+  invitationError,
   onSelectBoard,
   onManage,
+  onRetryInvitation,
 }: {
   workspaces: Workspace[];
   activeWorkspace: Workspace | null;
   activeBoardId: string | null;
   realtimeStatus: 'idle' | 'connecting' | 'live' | 'error';
+  acceptingInvitation: boolean;
+  invitationError: string | null;
   onSelectBoard: (boardId: string) => void;
   onManage: () => void;
+  onRetryInvitation: () => void;
 }) {
   return (
     <nav className="workspace-bar" aria-label="Workspace and board">
@@ -49,6 +55,13 @@ export function WorkspaceBar({
         </label>
       </div>
       <div className="workspace-meta">
+        {acceptingInvitation ? <span className="invite-status">Joining workspace…</span> : null}
+        {invitationError ? (
+          <span className="invite-status invite-status-error" role="alert">
+            {invitationError}
+            <button type="button" onClick={onRetryInvitation}>Retry</button>
+          </span>
+        ) : null}
         <span className="role-chip">
           <Users size={13} />
           {activeWorkspace?.role ?? 'viewer'}

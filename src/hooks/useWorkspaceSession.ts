@@ -9,6 +9,9 @@ export const workspacesQueryKey = (userId: string | null) => ['workspaces', user
 export function useWorkspaceSession(userId: string | null, enabled: boolean) {
   const queryClient = useQueryClient();
   const [activeBoardId, setActiveBoardIdState] = useState<string | null>(null);
+  const [invitationError, setInvitationError] = useState<string | null>(null);
+  const [acceptingInvitation, setAcceptingInvitation] = useState(false);
+  const [invitationAttempt, setInvitationAttempt] = useState(0);
   const acceptedInviteRef = useRef<string | null>(null);
   const query = useQuery({
     queryKey: workspacesQueryKey(userId),
@@ -37,6 +40,10 @@ export function useWorkspaceSession(userId: string | null, enabled: boolean) {
     const token = url.searchParams.get('invite');
     if (!token || acceptedInviteRef.current === token) return;
     acceptedInviteRef.current = token;
+    queueMicrotask(() => {
+      setInvitationError(null);
+      setAcceptingInvitation(true);
+    });
 
     void workspaceApi
       .acceptInvitation(token)
@@ -49,13 +56,16 @@ export function useWorkspaceSession(userId: string | null, enabled: boolean) {
           saveBoardId(userId, nextBoardId);
         }
         clearInviteFromUrl(url);
+        setAcceptingInvitation(false);
       })
-      .catch(() => {
-        // Leave the token in the URL so the workspace surface can show a retry
-        // path instead of consuming a failed invitation silently.
+      .catch((error: unknown) => {
+        // Leave the token in the URL so the user can authenticate with a
+        // matching email or retry a transient failure.
         acceptedInviteRef.current = null;
+        setAcceptingInvitation(false);
+        setInvitationError(error instanceof Error ? error.message : 'The invitation could not be accepted.');
       });
-  }, [enabled, query.data, queryClient, userId]);
+  }, [enabled, invitationAttempt, query.data, queryClient, userId]);
 
   const activeWorkspace = findWorkspaceForBoard(query.data, activeBoardId);
   const activeBoard = activeWorkspace?.boards.find((board) => board.id === activeBoardId) ?? null;
@@ -74,6 +84,12 @@ export function useWorkspaceSession(userId: string | null, enabled: boolean) {
     activeBoard,
     activeWorkspace,
     canEdit: activeWorkspace ? activeWorkspace.role !== 'viewer' : false,
+    acceptingInvitation,
+    invitationError,
+    retryInvitation: () => {
+      acceptedInviteRef.current = null;
+      setInvitationAttempt((attempt) => attempt + 1);
+    },
     setActiveBoardId,
   };
 }

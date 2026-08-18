@@ -323,8 +323,11 @@ export function App() {
         activeWorkspace={workspaceSession.activeWorkspace}
         activeBoardId={activeBoardId}
         realtimeStatus={realtimeStatus}
+        acceptingInvitation={workspaceSession.acceptingInvitation}
+        invitationError={workspaceSession.invitationError}
         onSelectBoard={workspaceSession.setActiveBoardId}
         onManage={() => setWorkspaceManagerOpen(true)}
+        onRetryInvitation={workspaceSession.retryInvitation}
       />
 
       <main className="app-main">
