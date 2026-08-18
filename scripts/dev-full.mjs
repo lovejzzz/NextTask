@@ -4,13 +4,14 @@ import { createServer as createViteServer } from 'vite';
 
 const port = Number(process.env.PORT ?? 5174);
 const host = process.env.HOST ?? '127.0.0.1';
+const vercelConfig = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
 
 loadDotEnv();
 
 const vite = await createViteServer({
   server: {
     middlewareMode: true,
-    hmr: true,
+    hmr: process.env.DISABLE_HMR === 'true' ? false : true,
   },
   appType: 'spa',
 });
@@ -18,6 +19,7 @@ const vite = await createViteServer({
 const server = createHttpServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? `${host}:${port}`}`);
+    applyConfiguredHeaders(url.pathname, res);
     if (url.pathname.startsWith('/api/')) {
       await handleApi(req, res, url);
       return;
@@ -129,6 +131,27 @@ function send(res, status, value) {
   res.statusCode = status;
   res.setHeader('content-type', 'application/json');
   res.end(JSON.stringify(value));
+}
+
+function applyConfiguredHeaders(pathname, res) {
+  for (const rule of vercelConfig.headers ?? []) {
+    if (!matchesHeaderSource(pathname, rule.source)) continue;
+    for (const header of rule.headers ?? []) res.setHeader(header.key, localHeaderValue(header));
+  }
+}
+
+function localHeaderValue(header) {
+  if (header.key.toLowerCase() !== 'content-security-policy') return header.value;
+  // Vite's middleware HMR transport runs on a separate local WebSocket. This
+  // allowance exists only in dev:full; vercel.json remains the production policy.
+  return header.value.replace("connect-src 'self'", `connect-src 'self' ws://${host}:24678`);
+}
+
+function matchesHeaderSource(pathname, source) {
+  if (source === '/(.*)') return true;
+  if (source === '/api/(.*)') return pathname.startsWith('/api/');
+  if (source === '/assets/(.*)') return pathname.startsWith('/assets/');
+  return pathname === source;
 }
 
 async function readBody(req) {

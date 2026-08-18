@@ -1,14 +1,18 @@
 {
   "name": "next-task",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "dev:full": "node scripts/dev-full.mjs",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "audit": "npm audit --audit-level=high",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
@@ -16,7 +20,8 @@
     "verify:supabase": "node scripts/verify-supabase.mjs",
     "verify:production-env": "node scripts/verify-production-env.mjs",
     "verify:deployment": "node scripts/verify-deployment.mjs",
-    "verify:ci": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "verify:config": "node scripts/verify-vercel-config.mjs",
+    "verify:ci": "npm run typecheck && npm run lint && npm run test && npm run audit && npm run verify:config && npm run build",
     "verify:release": "npm run verify:ci && npm run verify:production-env && npm run verify:supabase && npm run smoke:browser"
   },
   "dependencies": {
@@ -26,7 +31,6 @@
     "@payai/facilitator": "^2.4.3",
     "@supabase/supabase-js": "^2.87.1",
     "@tanstack/react-query": "^5.90.12",
-    "@vercel/node": "^5.5.11",
     "@x402/core": "^2.18.0",
     "@x402/evm": "^2.18.0",
     "@x402/extensions": "^2.18.0",

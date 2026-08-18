@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { classifyDueDate, getRequestToday } from './dateOnly.js';
 import { ApiHttpError } from './http.js';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
@@ -100,6 +101,7 @@ export type BoardFilters = {
   label_id?: string;
   assignee_id?: string;
   due?: 'overdue' | 'soon' | 'none';
+  today?: string;
 };
 
 const selectTaskFields = 'id,user_id,title,description,status,priority,due_date,position,created_at,updated_at';
@@ -118,10 +120,6 @@ export async function hydrateBoard(
 
   if (filters.status) taskQuery = taskQuery.eq('status', filters.status);
   if (filters.priority) taskQuery = taskQuery.eq('priority', filters.priority);
-  if (filters.search) {
-    const term = `%${filters.search.replaceAll('%', '').replaceAll('_', '')}%`;
-    taskQuery = taskQuery.or(`title.ilike.${term},description.ilike.${term}`);
-  }
 
   const [
     { data: tasks, error: tasksError },
@@ -137,8 +135,12 @@ export async function hydrateBoard(
     supabase.from('labels').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
     supabase.from('task_assignees').select('*').eq('user_id', userId),
     supabase.from('task_labels').select('*').eq('user_id', userId),
-    supabase.from('comments').select('id,task_id,user_id,body,created_at,updated_at').eq('user_id', userId),
-    supabase.from('activity_events').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('comments').select('task_id').eq('user_id', userId),
+    supabase
+      .from('activity_events')
+      .select('task_id,created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
   ]);
 
   const firstError =
@@ -147,10 +149,10 @@ export async function hydrateBoard(
 
   const memberMap = new Map((teamMembers as TeamMemberRow[] | null)?.map((member) => [member.id, member]) ?? []);
   const labelMap = new Map((labels as LabelRow[] | null)?.map((label) => [label.id, label]) ?? []);
-  const commentsByTask = countBy((comments as CommentRow[] | null) ?? [], 'task_id');
+  const commentsByTask = countBy((comments as Pick<CommentRow, 'task_id'>[] | null) ?? [], 'task_id');
   const latestActivityByTask = new Map<string, string>();
 
-  for (const event of ((activities as ActivityRow[] | null) ?? [])) {
+  for (const event of ((activities as Pick<ActivityRow, 'task_id' | 'created_at'>[] | null) ?? [])) {
     if (!latestActivityByTask.has(event.task_id)) {
       latestActivityByTask.set(event.task_id, event.created_at);
     }
@@ -186,7 +188,7 @@ export async function getTaskOrThrow(supabase: SupabaseClient, userId: string, t
     .eq('id', taskId)
     .single();
 
-  if (error || !data) throw new ApiHttpError('not_found', 'Task not found', 404);
+  assertTaskLookupSucceeded(data, error);
   return data as TaskRow;
 }
 
@@ -203,31 +205,118 @@ export async function getNextPosition(supabase: SupabaseClient, userId: string, 
   return ((data?.[0]?.position as number | undefined) ?? 0) + 1000;
 }
 
-export async function replaceAssignees(supabase: SupabaseClient, userId: string, taskId: string, memberIds: string[]) {
-  const { error: deleteError } = await supabase
-    .from('task_assignees')
-    .delete()
-    .eq('user_id', userId)
-    .eq('task_id', taskId);
-
-  if (deleteError) throw new ApiHttpError('server_error', deleteError.message, 500);
-
-  if (!memberIds.length) return;
-
-  const rows = memberIds.map((member_id) => ({ task_id: taskId, member_id, user_id: userId }));
-  const { error } = await supabase.from('task_assignees').insert(rows);
-  if (error) throw new ApiHttpError('bad_request', error.message, 400);
+export async function assertOwnedRelationIds(
+  supabase: SupabaseClient,
+  userId: string,
+  memberIds: string[] | undefined,
+  labelIds: string[] | undefined,
+) {
+  await Promise.all([
+    validateOwnedIds(supabase, userId, 'team_members', memberIds, 'assignees'),
+    validateOwnedIds(supabase, userId, 'labels', labelIds, 'labels'),
+  ]);
 }
 
-export async function replaceLabels(supabase: SupabaseClient, userId: string, taskId: string, labelIds: string[]) {
-  const { error: deleteError } = await supabase.from('task_labels').delete().eq('user_id', userId).eq('task_id', taskId);
-  if (deleteError) throw new ApiHttpError('server_error', deleteError.message, 500);
+async function validateOwnedIds(
+  supabase: SupabaseClient,
+  userId: string,
+  table: 'team_members' | 'labels',
+  ids: string[] | undefined,
+  label: string,
+) {
+  if (!ids?.length) return;
+  const { data, error } = await supabase.from(table).select('id').eq('user_id', userId).in('id', ids);
+  if (error) throw new ApiHttpError('server_error', error.message, 500);
+  if ((data?.length ?? 0) !== ids.length) {
+    throw new ApiHttpError('bad_request', `One or more selected ${label} no longer exist`, 400);
+  }
+}
 
-  if (!labelIds.length) return;
+export async function replaceAssignees(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+  memberIds: string[],
+  previousIds?: string[],
+) {
+  const currentIds = previousIds ?? (await getAssigneeIds(supabase, userId, taskId));
+  const { added, removed } = relationChanges(currentIds, memberIds);
 
-  const rows = labelIds.map((label_id) => ({ task_id: taskId, label_id, user_id: userId }));
-  const { error } = await supabase.from('task_labels').insert(rows);
-  if (error) throw new ApiHttpError('bad_request', error.message, 400);
+  if (added.length) {
+    const rows = added.map((member_id) => ({ task_id: taskId, member_id, user_id: userId }));
+    const { error } = await supabase.from('task_assignees').insert(rows);
+    if (error) throw new ApiHttpError('bad_request', error.message, 400);
+  }
+
+  if (removed.length) {
+    const { error } = await supabase
+      .from('task_assignees')
+      .delete()
+      .eq('user_id', userId)
+      .eq('task_id', taskId)
+      .in('member_id', removed);
+    if (error) {
+      await rollbackAddedRelations(supabase, 'task_assignees', 'member_id', userId, taskId, added);
+      throw new ApiHttpError('server_error', error.message, 500);
+    }
+  }
+}
+
+export async function replaceLabels(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+  labelIds: string[],
+  previousIds?: string[],
+) {
+  const currentIds = previousIds ?? (await getLabelIds(supabase, userId, taskId));
+  const { added, removed } = relationChanges(currentIds, labelIds);
+
+  if (added.length) {
+    const rows = added.map((label_id) => ({ task_id: taskId, label_id, user_id: userId }));
+    const { error } = await supabase.from('task_labels').insert(rows);
+    if (error) throw new ApiHttpError('bad_request', error.message, 400);
+  }
+
+  if (removed.length) {
+    const { error } = await supabase
+      .from('task_labels')
+      .delete()
+      .eq('user_id', userId)
+      .eq('task_id', taskId)
+      .in('label_id', removed);
+    if (error) {
+      await rollbackAddedRelations(supabase, 'task_labels', 'label_id', userId, taskId, added);
+      throw new ApiHttpError('server_error', error.message, 500);
+    }
+  }
+}
+
+export function relationChanges(previousIds: string[], nextIds: string[]) {
+  const previous = new Set(previousIds);
+  const next = new Set(nextIds);
+  return {
+    added: nextIds.filter((id) => !previous.has(id)),
+    removed: previousIds.filter((id) => !next.has(id)),
+  };
+}
+
+async function rollbackAddedRelations(
+  supabase: SupabaseClient,
+  table: 'task_assignees' | 'task_labels',
+  relationColumn: 'member_id' | 'label_id',
+  userId: string,
+  taskId: string,
+  addedIds: string[],
+) {
+  if (!addedIds.length) return;
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq('user_id', userId)
+    .eq('task_id', taskId)
+    .in(relationColumn, addedIds);
+  if (error) console.error(`Failed to roll back ${table} additions for task ${taskId}`, error);
 }
 
 export async function getAssigneeIds(supabase: SupabaseClient, userId: string, taskId: string): Promise<string[]> {
@@ -325,6 +414,21 @@ export async function recordActivity(
   if (error) throw new ApiHttpError('server_error', error.message, 500);
 }
 
+export async function recordActivityBestEffort(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+  type: ActivityType,
+  message: string,
+  metadata: Record<string, unknown> = {},
+) {
+  try {
+    await recordActivity(supabase, userId, taskId, type, message, metadata);
+  } catch (error) {
+    console.error(`Failed to record ${type} activity for task ${taskId}`, error);
+  }
+}
+
 /**
  * Hydrate a single task with only its own joins — assignees, labels, comment
  * count, and latest activity. Used by create/update so a single-task mutation
@@ -343,7 +447,7 @@ export async function hydrateTask(
     .eq('id', taskId)
     .single();
 
-  if (taskError || !task) throw new ApiHttpError('not_found', 'Task not found', 404);
+  assertTaskLookupSucceeded(task, taskError);
 
   const [
     { data: assigneeLinks, error: assigneesError },
@@ -405,21 +509,21 @@ export function statusLabel(status: TaskStatus) {
 }
 
 function applyInMemoryFilters(tasks: HydratedTask[], filters: BoardFilters) {
-  const today = startOfToday();
-  const soon = addDays(today, 3);
+  const today = filters.today ?? getRequestToday({ headers: {} });
 
   return tasks.filter((task) => {
+    const search = filters.search?.toLocaleLowerCase();
+    if (search && !task.title.toLocaleLowerCase().includes(search) && !task.description.toLocaleLowerCase().includes(search)) {
+      return false;
+    }
     if (filters.label_id && !task.labels.some((label) => label.id === filters.label_id)) return false;
     if (filters.assignee_id && !task.assignees.some((member) => member.id === filters.assignee_id)) return false;
     if (filters.due === 'none' && task.due_date) return false;
     if (filters.due === 'overdue') {
-      if (!task.due_date || task.status === 'done') return false;
-      return new Date(`${task.due_date}T00:00:00`) < today;
+      return classifyDueDate(task.due_date, task.status, today) === 'overdue';
     }
     if (filters.due === 'soon') {
-      if (!task.due_date || task.status === 'done') return false;
-      const date = new Date(`${task.due_date}T00:00:00`);
-      return date >= today && date <= soon;
+      return classifyDueDate(task.due_date, task.status, today) === 'soon';
     }
     return true;
   });
@@ -445,13 +549,9 @@ function countBy<T extends Record<string, unknown>>(rows: T[], key: keyof T) {
   return map;
 }
 
-function startOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function addDays(date: Date, days: number) {
-  const copy = new Date(date);
-  copy.setDate(copy.getDate() + days);
-  return copy;
+function assertTaskLookupSucceeded(data: unknown, error: { code?: string; message?: string } | null) {
+  if (error && error.code !== 'PGRST116') {
+    throw new ApiHttpError('server_error', error.message ?? 'Task lookup failed', 500);
+  }
+  if (!data) throw new ApiHttpError('not_found', 'Task not found', 404);
 }

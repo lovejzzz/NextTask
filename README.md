@@ -2,7 +2,7 @@
 
 Next Task is a polished full-stack Kanban board built for the NP SDE assessment. It uses React, TypeScript, Vite, Vercel Serverless Functions, Supabase anonymous auth with email recovery, and Supabase Row Level Security.
 
-Current app version: `0.0.3` (derived from `package.json`; v0.0.3.1 public-readiness fixes included).
+Current app version: `0.0.4` (derived from `package.json`).
 
 ## Features
 
@@ -58,7 +58,7 @@ POST https://nexttask.team/api/x402/bounty-check
 
 The paid report checks issue state, assignment, staleness, repository activity, referenced pull requests, and public funding signals. A funding signal is explicitly not treated as proof of escrow. Invalid inputs and upstream GitHub failures do not settle payment.
 
-The public endpoint is folded into the existing stats serverless function through a Vercel rewrite so the project remains within its 12-function deployment limit. PayAI's production facilitator handles payment verification and settlement; Bazaar discovery metadata is included in the x402 payment requirements.
+The public endpoint is folded into the existing stats serverless function through a Vercel rewrite so the project remains within its 12-function deployment limit. Its payment stack is lazy-loaded only for bounty-check requests, keeping normal board stats independent of x402 initialization. PayAI's production facilitator handles payment verification and settlement; Bazaar discovery metadata is included in the x402 payment requirements.
 
 The machine-readable OpenAPI discovery contract is served at `https://nexttask.team/openapi.json` for agent marketplaces and tooling.
 
@@ -115,7 +115,9 @@ For automated browser verification against the local API-backed app:
 npm run smoke:browser
 ```
 
-The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BASE_URL` is provided. It covers sample data, task create/edit (via the card edit icon), comments, filters, card-body drag, 2.5 second long-press drag, immediate handle drag, Clear board persistence after reload, manager dialog focus, changelog access, axe accessibility, and 390px mobile status/stat rendering. Screenshots are written to ignored `verification-smoke-*.png` files.
+The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BASE_URL` is provided. It covers deployment security headers/API no-store behavior, sample data, task create/edit (via the card edit icon), comments, filters, card-body drag, 2.5 second long-press drag, immediate handle drag, Clear board persistence after reload, manager dialog focus, changelog access, axe accessibility, and 390px mobile status/stat rendering. Screenshots are written to ignored `verification-smoke-*.png` files.
+
+Set `SMOKE_TIMEZONE` to repeat the browser suite in a specific IANA time zone, for example `SMOKE_TIMEZONE=Pacific/Honolulu npm run smoke:browser`. The app sends the browser's local calendar date to date-sensitive API reads so due-date filters and stats remain consistent with task cards near midnight and across time zones.
 
 ## Supabase setup
 
@@ -132,7 +134,8 @@ The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BAS
 7. Open the SQL Editor.
 8. Run `supabase/migrations/001_init.sql`.
 9. Run `supabase/migrations/002_reorder_rpc.sql`.
-10. Confirm RLS is enabled on:
+10. Run `supabase/migrations/003_data_constraints.sql`.
+11. Confirm RLS is enabled on:
    - `tasks`
    - `team_members`
    - `task_assignees`
@@ -141,20 +144,21 @@ The smoke script starts `npm run dev:full` on `127.0.0.1:5175` unless `SMOKE_BAS
    - `comments`
    - `activity_events`
 
-`002_reorder_rpc.sql` is required for public deployment. It installs the transactional `reorder_tasks(updates jsonb)` RPC used by task drag/drop. `npm run verify:supabase` must report `reorderRpc.ok: true` without `skipped`; a missing RPC fails release verification.
+`002_reorder_rpc.sql` is required for public deployment. It installs the transactional `reorder_tasks(updates jsonb)` RPC used by task drag/drop. `003_data_constraints.sql` adds defense-in-depth payload and position constraints, makes existing activity history append-only, and installs the transactional `reset_board()` RPC. `npm run verify:supabase` must report both `dataConstraints.ok: true` (including `atomicResetApplied`) and `reorderRpc.ok: true` without `skipped`; a missing migration fails release verification.
 
 Do not use or expose the Supabase service role key. This project only needs the public anon/publishable key.
 
-For public deployments, keep anonymous sign-ins protected with Supabase CAPTCHA/rate-limit settings where available. The API also enforces a configurable per-user write limit through `API_WRITE_LIMIT_PER_MINUTE`.
+For public deployments, keep anonymous sign-ins protected with Supabase CAPTCHA/rate-limit settings where available. Before authentication, the API enforces a configurable per-IP write limit through `API_IP_WRITE_LIMIT_PER_MINUTE`; authenticated writes also use `API_WRITE_LIMIT_PER_MINUTE` per user.
 
 Local-only escape hatches exist for unfinished development databases:
 
 ```bash
 ALLOW_MISSING_REORDER_RPC=true npm run verify:supabase
 ALLOW_REORDER_RPC_FALLBACK=true npm run dev:full
+ALLOW_RESET_RPC_FALLBACK=true npm run dev:full
 ```
 
-Do not use either flag for public release or production deployment.
+Do not use these flags for public release or production deployment.
 
 ## API routes
 
@@ -202,7 +206,7 @@ Use:
 
 - Build command: `npm run verify:production-env && npm run build`
 - Output directory: `dist`
-- Install command: `npm install`
+- Install command: `npm ci`
 
 Environment variables:
 
@@ -216,6 +220,8 @@ API_WRITE_LIMIT_PER_MINUTE=45
 API_IP_WRITE_LIMIT_PER_MINUTE=120
 ```
 
+The browser and server Supabase URLs must resolve to the same project. Both configured keys must be public anon/publishable keys; `npm run verify:production-env` rejects secret and legacy service-role credentials before they can enter a browser bundle or bypass RLS on the server.
+
 Do not deploy with `VITE_ENABLE_LOCAL_DEMO=true`; that bypasses the API-backed data path in the browser bundle.
 Write APIs enforce both per-user and per-IP minute buckets to reduce anonymous-session abuse.
 
@@ -225,6 +231,7 @@ Run:
 
 ```bash
 npm run verify:ci
+npm run verify:config
 npm run verify:production-env
 npm run verify:supabase
 npm run smoke:browser
@@ -241,6 +248,8 @@ After deployment, run:
 ```bash
 npm run verify:deployment -- https://your-deployment.vercel.app
 ```
+
+`vercel.json` applies CSP, anti-framing, MIME-sniffing, referrer, permissions, and HSTS headers to the deployment. Authenticated API responses are explicitly `no-store`, hashed assets are immutable, and `npm run verify:config` keeps those rules, rewrites, Node 22, and `npm ci` enforced in CI. The deployment verifier checks the response headers again on the live URL.
 
 Manual checks:
 
@@ -265,15 +274,16 @@ Manual checks:
 - The bottom grey version number opens the changelog
 - Two browser profiles cannot see each other's data after the migrations are applied
 
-## v0.0.3.1 public release checklist
+## v0.0.4 public release checklist
 
 - Supabase migration `supabase/migrations/001_init.sql` has been applied.
 - Supabase migration `supabase/migrations/002_reorder_rpc.sql` has been applied.
+- Supabase migration `supabase/migrations/003_data_constraints.sql` has been applied.
 - Anonymous auth, email auth, and required OAuth redirect URLs are configured.
 - Vercel env vars match the deployment section and `VITE_ENABLE_LOCAL_DEMO=false`.
 - `npm run verify:ci` passes locally and in CI.
 - `npm run verify:production-env` passes before build.
-- `npm run verify:supabase` passes against the target Supabase project with no skipped `reorderRpc`.
+- `npm run verify:supabase` passes against the target Supabase project with `dataConstraints.ok: true` and no skipped `reorderRpc`.
 - `npm run smoke:browser` passes locally against the full API-backed dev server.
 - `npm run verify:release` passes before the public push.
 - After deploy, run `npm run verify:deployment -- https://your-deployment.vercel.app`.

@@ -1,6 +1,6 @@
 # Next Task Submission Notes
 
-Next Task is a full-stack Kanban board built with React, TypeScript, Vite, Vercel Serverless Functions, Supabase Auth, Supabase Postgres, and Supabase Row Level Security. The current app package version is `0.0.3`; public-readiness fixes from the `v0.0.3.1` roadmap are included.
+Next Task is a full-stack Kanban board built with React, TypeScript, Vite, Vercel Serverless Functions, Supabase Auth, Supabase Postgres, and Supabase Row Level Security. The current app package version is `0.0.4`.
 
 ## Database Schema
 
@@ -8,8 +8,9 @@ The canonical schema lives in:
 
 - `supabase/migrations/001_init.sql`
 - `supabase/migrations/002_reorder_rpc.sql`
+- `supabase/migrations/003_data_constraints.sql`
 
-Those two files are the full SQL source of truth. A clear schema description follows.
+Those three files are the full SQL source of truth. A clear schema description follows.
 
 ### Extensions
 
@@ -52,11 +53,11 @@ Those two files are the full SQL source of truth. A clear schema description fol
 | `id` | `uuid` | Primary key, defaults to `gen_random_uuid()` |
 | `user_id` | `uuid` | Defaults to `auth.uid()`, references `auth.users(id)` with cascade delete |
 | `title` | `text` | Required, trimmed length 1-160 |
-| `description` | `text` | Required, defaults to empty string |
+| `description` | `text` | Required, defaults to empty string, max 4000 characters |
 | `status` | `task_status` | Required, defaults to `todo` |
 | `priority` | `task_priority` | Required, defaults to `normal` |
 | `due_date` | `date` | Optional |
-| `position` | `integer` | Required, defaults to `1000`; used for ordering within a status lane |
+| `position` | `integer` | Required and nonnegative, defaults to `1000`; used for ordering within a status lane |
 | `created_at` | `timestamptz` | Required, defaults to `now()` |
 | `updated_at` | `timestamptz` | Required, defaults to `now()` |
 
@@ -72,7 +73,7 @@ Constraints:
 | `id` | `uuid` | Primary key, defaults to `gen_random_uuid()` |
 | `user_id` | `uuid` | Defaults to `auth.uid()`, references `auth.users(id)` with cascade delete |
 | `name` | `text` | Required, trimmed length 1-80 |
-| `avatar_url` | `text` | Optional |
+| `avatar_url` | `text` | Optional, max 2048 characters |
 | `color` | `text` | Required hex color, defaults to `#7A5AF8` |
 | `created_at` | `timestamptz` | Required, defaults to `now()` |
 | `updated_at` | `timestamptz` | Required, defaults to `now()` |
@@ -147,8 +148,8 @@ Constraints:
 | `task_id` | `uuid` | References `tasks(id, user_id)` with cascade delete |
 | `user_id` | `uuid` | Defaults to `auth.uid()`, references `auth.users(id)` with cascade delete |
 | `type` | `activity_type` | Required |
-| `message` | `text` | Required |
-| `metadata` | `jsonb` | Required, defaults to `{}` |
+| `message` | `text` | Required, trimmed length 1-500 |
+| `metadata` | `jsonb` | Required JSON object, defaults to `{}` |
 | `created_at` | `timestamptz` | Required, defaults to `now()` |
 
 ### Indexes
@@ -252,6 +253,7 @@ To prepare a new Supabase project:
    - your production/custom domain
 5. Run `supabase/migrations/001_init.sql` in the Supabase SQL Editor.
 6. Run `supabase/migrations/002_reorder_rpc.sql` in the Supabase SQL Editor.
+7. Run `supabase/migrations/003_data_constraints.sql` in the Supabase SQL Editor.
 
 Useful verification commands:
 
@@ -274,16 +276,18 @@ npm run smoke:browser
 - Row Level Security: every table is scoped by `user_id = auth.uid()`. The server never needs a Supabase service-role key.
 - Full API layer: Vercel Serverless Functions handle tasks, comments, activity, labels, team members, stats, demo-board bootstrap, and board reset.
 - Atomic reorder RPC: drag/drop uses `reorder_tasks(jsonb)` so multi-card position changes commit or fail as one transaction.
+- Atomic board reset: clear-board uses the RLS-bound `reset_board()` RPC so tasks, members, and labels commit or roll back together.
 - Rich drag-and-drop: dnd-kit supports card-body drag after pointer movement, 2.5 second long-press activation, immediate dedicated drag handle activation, and keyboard-compatible sortable behavior.
 - Multi-assignee and label system: tasks can have multiple team members and labels through ownership-aware join tables.
-- Activity timeline: task creation, edits, moves, assignee changes, label changes, comments, and deletes are logged into `activity_events`.
+- Activity timeline: task creation, edits, moves, assignee changes, label changes, and comment changes are logged into `activity_events`; deleting a task cascades its task-scoped history.
 - Comments: task comments are persisted, counted on cards, and displayed in the drawer.
 - Filters and stats: search, status, priority, due-state, label, and assignee filters work with summary stats.
 - Responsive board: desktop shows all lanes; mobile uses status tabs with one active lane to avoid horizontal overflow.
 - Theme system: light/dark mode with themed lanes, cards, toasts, and persistent preference.
 - Demo board and clear-board flow: users can load sample data, reset the board, and verify persistence after reload.
-- Public-readiness checks: TypeScript, ESLint, Vitest, production build, Supabase verification, production deployment verification, and browser smoke with screenshots.
-- Abuse controls: write APIs enforce configurable per-user and per-IP rate limits for anonymous-session traffic.
+- Public-readiness checks: TypeScript, ESLint, Vitest, production build, security-header/config verification, Supabase verification, production deployment verification, and browser smoke with screenshots.
+- Abuse controls: write APIs enforce a pre-authentication per-IP limit and an authenticated per-user limit for anonymous-session traffic, with a hard ceiling on process-local limiter state.
+- Deployment validation requires matching browser/server Supabase project URLs and rejects secret or service-role credentials; API handlers remain bound to the caller's public JWT and RLS policies.
 
 ## Tradeoffs and Future Improvements
 
@@ -293,7 +297,7 @@ npm run smoke:browser
 - Filtering is split between SQL filters and in-memory hydrated filters for relationships such as labels and assignees. For larger datasets, I would move those relationship filters into SQL joins/RPCs and add pagination.
 - Activity logging is useful but not exhaustive diff history. With more time I would store structured before/after fields for edits and expose audit-friendly filtering.
 - The demo-board bootstrap is product-friendly, but it is still app-specific seed logic. In a larger app I would separate demo seeding from production API code more cleanly.
-- Anonymous auth is convenient for onboarding, but public deployments should keep Supabase CAPTCHA/rate limits enabled and monitor abuse. The current API rate limits are in-memory per serverless instance, which is simple but not globally consistent.
+- Anonymous auth is convenient for onboarding, but public deployments should keep Supabase CAPTCHA/rate limits enabled and monitor abuse. The current API rate limits are in-memory per serverless instance, which is simple but not globally consistent. Activity history is append-only after migration 003, although authenticated clients can still create owner-scoped events because API handlers execute under the user's RLS-bound JWT.
 - Offline support is not implemented. I would add optimistic offline queues and conflict handling if the app needed serious mobile or unreliable-network use.
 - The UI is polished and responsive, but dense boards still need virtualization and better bulk actions once task counts grow.
 - Test coverage includes unit, integration-style API contract tests, and browser smoke coverage. With more time I would add dedicated end-to-end tests for OAuth recovery, email magic links, and cross-browser drag/touch behavior.

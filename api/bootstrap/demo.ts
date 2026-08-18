@@ -1,7 +1,9 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireUser } from '../_shared/auth.js';
-import { hydrateBoard, recordActivity } from '../_shared/data.js';
+import { addDateOnlyDays, getRequestToday } from '../_shared/dateOnly.js';
+import { hydrateBoard, recordActivityBestEffort } from '../_shared/data.js';
+import { isMissingRpcFunction } from '../_shared/database.js';
 import { handleApiError, methodNotAllowed, sendData } from '../_shared/http.js';
+import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
 
 const memberSeed = [
   { name: 'Avery Stone', color: '#7A5AF8' },
@@ -22,16 +24,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { supabase, user } = await requireUser(req);
     if (isResetRequest(req)) {
-      // Deleting tasks cascades to assignees, label links, comments, and activity.
-      // Removing team members and labels returns the board to the initial empty state.
-      const tasksDelete = await supabase.from('tasks').delete().eq('user_id', user.id);
-      if (tasksDelete.error) throw tasksDelete.error;
-
-      const membersDelete = await supabase.from('team_members').delete().eq('user_id', user.id);
-      if (membersDelete.error) throw membersDelete.error;
-
-      const labelsDelete = await supabase.from('labels').delete().eq('user_id', user.id);
-      if (labelsDelete.error) throw labelsDelete.error;
+      const { error } = await supabase.rpc('reset_board');
+      if (error) {
+        if (isMissingRpcFunction(error) && process.env.ALLOW_RESET_RPC_FALLBACK === 'true') {
+          console.warn('reset_board RPC unavailable; using sequential fallback. Apply migration 003_data_constraints.sql.');
+          await resetSequentially(supabase, user.id);
+        } else {
+          throw error;
+        }
+      }
 
       const payload = await hydrateBoard(supabase, user.id);
       return sendData(res, payload);
@@ -40,22 +41,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const existing = await hydrateBoard(supabase, user.id);
     if (existing.tasks.length) return sendData(res, existing);
 
-    const { data: members, error: membersError } = await supabase
-      .from('team_members')
-      .insert(memberSeed.map((member) => ({ ...member, user_id: user.id })))
-      .select('*');
-    if (membersError || !members) throw membersError;
+    const existingMemberNames = new Set(existing.teamMembers.map((member) => member.name.toLowerCase()));
+    const missingMembers = memberSeed.filter((member) => !existingMemberNames.has(member.name.toLowerCase()));
+    const memberInsert = missingMembers.length
+      ? await supabase
+          .from('team_members')
+          .insert(missingMembers.map((member) => ({ ...member, user_id: user.id })))
+          .select('*')
+      : { data: [], error: null };
+    if (memberInsert.error || !memberInsert.data) throw memberInsert.error;
+    const members = [...existing.teamMembers, ...memberInsert.data];
 
-    const { data: labels, error: labelsError } = await supabase
-      .from('labels')
-      .insert(labelSeed.map((label) => ({ ...label, user_id: user.id })))
-      .select('*');
-    if (labelsError || !labels) throw labelsError;
+    const existingLabelNames = new Set(existing.labels.map((label) => label.name.toLowerCase()));
+    const missingLabels = labelSeed.filter((label) => !existingLabelNames.has(label.name.toLowerCase()));
+    const labelInsert = missingLabels.length
+      ? await supabase
+          .from('labels')
+          .insert(missingLabels.map((label) => ({ ...label, user_id: user.id })))
+          .select('*')
+      : { data: [], error: null };
+    if (labelInsert.error || !labelInsert.data) throw labelInsert.error;
+    const labels = [...existing.labels, ...labelInsert.data];
 
-    const tomorrow = formatDate(addDays(new Date(), 1));
-    const inThree = formatDate(addDays(new Date(), 3));
-    const overdue = formatDate(addDays(new Date(), -2));
-    const nextWeek = formatDate(addDays(new Date(), 7));
+    const today = getRequestToday(req);
+    const tomorrow = addDateOnlyDays(today, 1);
+    const inThree = addDateOnlyDays(today, 3);
+    const overdue = addDateOnlyDays(today, -2);
+    const nextWeek = addDateOnlyDays(today, 7);
 
     const taskSeed = [
       {
@@ -130,10 +142,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select('*');
     if (tasksError || !tasks) throw tasksError;
 
-    const feature = labels.find((label) => label.name === 'Feature');
-    const bug = labels.find((label) => label.name === 'Bug');
-    const design = labels.find((label) => label.name === 'Design');
-    const launch = labels.find((label) => label.name === 'Launch');
+    const membersByName = new Map(members.map((member) => [member.name.toLowerCase(), member]));
+    const labelsByName = new Map(labels.map((label) => [label.name.toLowerCase(), label]));
+    const sampleMembers = memberSeed.map((member) => membersByName.get(member.name.toLowerCase())!);
+    const feature = labelsByName.get('feature');
+    const bug = labelsByName.get('bug');
+    const design = labelsByName.get('design');
+    const launch = labelsByName.get('launch');
 
     const taskLabels = tasks.flatMap((task, index) => {
       const assigned = [index % 2 === 0 ? feature : design, index === 4 ? bug : null, index > 5 ? launch : null].filter(
@@ -143,50 +158,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const taskAssignees = tasks.flatMap((task, index) => [
-      { task_id: task.id, member_id: members[index % members.length].id, user_id: user.id },
+      { task_id: task.id, member_id: sampleMembers[index % sampleMembers.length].id, user_id: user.id },
     ]);
 
-    const { error: labelsLinkError } = await supabase.from('task_labels').insert(taskLabels);
-    if (labelsLinkError) throw labelsLinkError;
+    try {
+      const { error: labelsLinkError } = await supabase.from('task_labels').insert(taskLabels);
+      if (labelsLinkError) throw labelsLinkError;
 
-    const { error: assigneeError } = await supabase.from('task_assignees').insert(taskAssignees);
-    if (assigneeError) throw assigneeError;
+      const { error: assigneeError } = await supabase.from('task_assignees').insert(taskAssignees);
+      if (assigneeError) throw assigneeError;
 
-    const commentRows = tasks.slice(0, 4).map((task, index) => ({
-      task_id: task.id,
-      user_id: user.id,
-      body: [
-        'This is the polish pass that will make the board feel finished.',
-        'Keep this scoped and visible in the final README.',
-        'The drawer interaction should feel fast and calm.',
-        'Verify this on a phone-width viewport before deploy.',
-      ][index],
-    }));
+      const commentRows = tasks.slice(0, 4).map((task, index) => ({
+        task_id: task.id,
+        user_id: user.id,
+        body: [
+          'This is the polish pass that will make the board feel finished.',
+          'Keep this scoped and visible in the final README.',
+          'The drawer interaction should feel fast and calm.',
+          'Verify this on a phone-width viewport before deploy.',
+        ][index],
+      }));
 
-    const { error: commentsError } = await supabase.from('comments').insert(commentRows);
-    if (commentsError) throw commentsError;
+      const { error: commentsError } = await supabase.from('comments').insert(commentRows);
+      if (commentsError) throw commentsError;
 
-    for (const task of tasks) {
-      await recordActivity(supabase, user.id, task.id, 'task_created', 'Created task', { title: task.title });
+      for (const task of tasks) {
+        await recordActivityBestEffort(supabase, user.id, task.id, 'task_created', 'Created task', {
+          title: task.title,
+        });
+      }
+
+      const payload = await hydrateBoard(supabase, user.id);
+      return sendData(res, payload, 201);
+    } catch (error) {
+      const rollback = await supabase
+        .from('tasks')
+        .delete()
+        .eq('user_id', user.id)
+        .in(
+          'id',
+          tasks.map((task) => task.id),
+        );
+      if (rollback.error) console.error('Failed to roll back incomplete demo tasks', rollback.error);
+      throw error;
     }
-
-    const payload = await hydrateBoard(supabase, user.id);
-    return sendData(res, payload, 201);
   } catch (error) {
     return handleApiError(res, error);
   }
 }
 
-function addDays(date: Date, days: number) {
-  const copy = new Date(date);
-  copy.setDate(copy.getDate() + days);
-  return copy;
-}
-
-function formatDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+async function resetSequentially(supabase: Awaited<ReturnType<typeof requireUser>>['supabase'], userId: string) {
+  // Local-only compatibility path. Production uses reset_board so these three
+  // destructive writes commit or roll back as one transaction.
+  for (const table of ['tasks', 'team_members', 'labels'] as const) {
+    const { error } = await supabase.from(table).delete().eq('user_id', userId);
+    if (error) throw error;
+  }
 }
 
 function isResetRequest(req: VercelRequest) {
-  return req.query.mode === 'reset' || req.url?.startsWith('/api/bootstrap/reset');
+  const pathname = req.url?.split(/[?#]/, 1)[0];
+  return req.query.mode === 'reset' || pathname === '/api/bootstrap/reset';
 }

@@ -1,6 +1,8 @@
 import { buildQuery } from './apiQuery';
 import { LOCAL_DEMO_ENABLED } from './constants';
+import { formatDateInput } from './dates';
 import { mockApi } from './mockApi';
+import { supabase } from './supabaseClient';
 import type {
   ActivityEvent,
   BoardFilters,
@@ -113,7 +115,6 @@ export const api = {
 };
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const { supabase } = await import('./supabaseClient');
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
 
@@ -123,18 +124,42 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   const response = await fetch(path, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...init.headers,
-    },
+    headers: buildApiHeaders(token, init.headers),
   });
 
+  return readApiResponse<T>(response);
+}
+
+export function buildApiHeaders(token: string, initialHeaders?: HeadersInit, now = new Date()) {
+  const headers = new Headers(initialHeaders);
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  headers.set('Authorization', `Bearer ${token}`);
+  headers.set('X-NextTask-Today', formatDateInput(now));
+  return headers;
+}
+
+export async function readApiResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) return undefined as T;
 
-  const json = (await response.json()) as ApiEnvelope<T> & ApiErrorEnvelope;
+  const body = await response.text();
+  let json: (ApiEnvelope<T> & ApiErrorEnvelope) | null = null;
+  if (body) {
+    try {
+      json = JSON.parse(body) as ApiEnvelope<T> & ApiErrorEnvelope;
+    } catch {
+      throw new Error(
+        response.ok
+          ? 'The server returned an invalid response. Please try again.'
+          : `Request failed (${response.status}). Please try again.`,
+      );
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(json.error?.message ?? 'Request failed');
+    throw new Error(json?.error?.message ?? `Request failed (${response.status}). Please try again.`);
+  }
+  if (!json || !('data' in json)) {
+    throw new Error('The server returned an invalid response. Please try again.');
   }
   return json.data;
 }

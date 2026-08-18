@@ -1,7 +1,7 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireUser } from '../_shared/auth.js';
 import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http.js';
 import { teamMemberSchema } from '../_shared/validation.js';
+import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

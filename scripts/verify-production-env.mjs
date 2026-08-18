@@ -8,6 +8,11 @@ const result = {
   localDemo: process.env.VITE_ENABLE_LOCAL_DEMO ?? null,
   writeLimit: process.env.API_WRITE_LIMIT_PER_MINUTE ?? null,
   ipWriteLimit: process.env.API_IP_WRITE_LIMIT_PER_MINUTE ?? null,
+  consistency: {
+    urlsMatch: normalizeUrl(process.env.VITE_SUPABASE_URL) === normalizeUrl(process.env.SUPABASE_URL),
+    publicKeysOnly:
+      !isPrivilegedKey(process.env.VITE_SUPABASE_ANON_KEY) && !isPrivilegedKey(process.env.SUPABASE_ANON_KEY),
+  },
 };
 
 let failed = false;
@@ -20,18 +25,54 @@ if (process.env.VITE_ENABLE_LOCAL_DEMO !== 'false') {
   failed = true;
 }
 
+if (!result.consistency.urlsMatch || !result.consistency.publicKeysOnly) {
+  failed = true;
+}
+
+for (const key of ['VITE_SUPABASE_URL', 'SUPABASE_URL']) {
+  if (process.env[key] && !isHttpsUrl(process.env[key])) failed = true;
+}
+
 for (const key of ['API_WRITE_LIMIT_PER_MINUTE', 'API_IP_WRITE_LIMIT_PER_MINUTE']) {
   if (process.env[key]) {
     const limit = Number(process.env[key]);
-    if (!Number.isFinite(limit) || limit <= 0) failed = true;
+    if (!Number.isSafeInteger(limit) || limit <= 0) failed = true;
   }
 }
 
 console.log(JSON.stringify(result, null, 2));
 
 if (failed) {
-  console.error('Production environment is not ready. Require Supabase vars and VITE_ENABLE_LOCAL_DEMO=false.');
+  console.error(
+    'Production environment is not ready. Require matching Supabase vars, positive integer rate limits when set, and VITE_ENABLE_LOCAL_DEMO=false.',
+  );
   process.exit(1);
+}
+
+function normalizeUrl(value) {
+  return value?.replace(/\/+$/, '') ?? null;
+}
+
+function isHttpsUrl(value) {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isPrivilegedKey(value) {
+  if (!value) return false;
+  if (value.startsWith('sb_secret_')) return true;
+
+  const parts = value.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    return payload?.role === 'service_role';
+  } catch {
+    return false;
+  }
 }
 
 function loadDotEnv() {

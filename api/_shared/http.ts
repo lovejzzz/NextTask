@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
+import type { VercelRequest, VercelResponse } from './vercel.js';
 
 export type ApiErrorCode =
   | 'bad_request'
@@ -33,7 +33,16 @@ export function handleApiError(res: VercelResponse, error: unknown) {
   }
 
   if (error instanceof ApiHttpError) {
+    if (error.status >= 500) {
+      console.error(error);
+      return sendError(res, error.code, 'Something went wrong. Please try again.', error.status);
+    }
     return sendError(res, error.code, error.message, error.status);
+  }
+
+  const databaseError = mapDatabaseError(error);
+  if (databaseError) {
+    return sendError(res, databaseError.code, databaseError.message, databaseError.status);
   }
 
   console.error(error);
@@ -56,8 +65,35 @@ export function getParam(req: VercelRequest, key: string) {
   return value;
 }
 
+export function getUuidParam(req: VercelRequest, key: string, label = 'Id') {
+  const value = getParam(req, key);
+  if (!value) throw new ApiHttpError('bad_request', `${label} is required`, 400);
+  if (!z.string().uuid().safeParse(value).success) {
+    throw new ApiHttpError('bad_request', `${label} must be a valid UUID`, 400);
+  }
+  return value;
+}
+
 export function parseJsonBody<T>(req: VercelRequest): T {
   if (!req.body) return {} as T;
-  if (typeof req.body === 'string') return JSON.parse(req.body) as T;
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body) as T;
+    } catch {
+      throw new ApiHttpError('bad_request', 'Request body must be valid JSON', 400);
+    }
+  }
   return req.body as T;
+}
+
+function mapDatabaseError(error: unknown): Pick<ApiHttpError, 'code' | 'message' | 'status'> | null {
+  if (!error || typeof error !== 'object' || !('code' in error)) return null;
+  const code = String(error.code);
+
+  if (code === 'PGRST116') return { code: 'not_found', message: 'The requested record was not found.', status: 404 };
+  if (code === '23505') return { code: 'conflict', message: 'A record with that value already exists.', status: 409 };
+  if (['22007', '22008', '22P02', '23503', '23514'].includes(code)) {
+    return { code: 'bad_request', message: 'The request contains an invalid value.', status: 400 };
+  }
+  return null;
 }
