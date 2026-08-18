@@ -21,6 +21,8 @@ const result = {
   workspace: null,
   api: null,
   mutationCycle: null,
+  audit: null,
+  accountLifecycle: null,
 };
 
 const page = await protectedFetch(deploymentUrl);
@@ -111,6 +113,20 @@ if (!remove.response.ok) {
 }
 
 result.mutationCycle = { ok: true, taskId };
+
+const audit = await apiFetch(`/api/workspaces/${selectedWorkspace.id}/audit`, token);
+const auditActions = audit.json.data?.events?.map((event) => event.action) ?? [];
+result.audit = {
+  ok: audit.response.ok && auditActions.includes('workspace_created') && auditActions.includes('board_created'),
+  status: audit.response.status,
+  eventCount: audit.json.data?.events?.length ?? 0,
+};
+if (!result.audit.ok) printAndExit(1);
+
+const accountDelete = await apiFetch('/api/account', token, { method: 'DELETE' });
+result.accountLifecycle = { ok: accountDelete.response.status === 204, status: accountDelete.response.status };
+if (!result.accountLifecycle.ok) printAndExit(1);
+
 printAndExit(0);
 
 async function apiFetch(path, token, init = {}, boardId = null) {

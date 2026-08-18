@@ -76,6 +76,10 @@
     {
       "source": "/api/invitations/:path*",
       "destination": "/api/stats?mode=collaboration&resource=invitations&path=:path*"
+    },
+    {
+      "source": "/api/account",
+      "destination": "/api/stats?mode=collaboration&resource=account"
     }
   ]
 }

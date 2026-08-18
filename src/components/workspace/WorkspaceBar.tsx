@@ -1,12 +1,13 @@
 import { Radio, Settings2, Users } from 'lucide-react';
 
-import type { Workspace } from '../../lib/types';
+import type { BoardPresenceMember, Workspace } from '../../lib/types';
 
 export function WorkspaceBar({
   workspaces,
   activeWorkspace,
   activeBoardId,
   realtimeStatus,
+  onlineMembers,
   acceptingInvitation,
   invitationError,
   onSelectBoard,
@@ -17,6 +18,7 @@ export function WorkspaceBar({
   activeWorkspace: Workspace | null;
   activeBoardId: string | null;
   realtimeStatus: 'idle' | 'connecting' | 'live' | 'error';
+  onlineMembers: BoardPresenceMember[];
   acceptingInvitation: boolean;
   invitationError: string | null;
   onSelectBoard: (boardId: string) => void;
@@ -70,6 +72,14 @@ export function WorkspaceBar({
           <Radio size={13} />
           {realtimeStatus === 'live' ? 'Live' : realtimeStatus === 'error' ? 'Offline' : 'Connecting'}
         </span>
+        {onlineMembers.length ? (
+          <span className="presence-chip" title={onlineMembers.map((member) => `${member.display_name} (${member.role})`).join(', ')}>
+            <span className="presence-avatars" aria-hidden="true">
+              {onlineMembers.slice(0, 3).map((member) => <span key={member.user_id}>{member.display_name.slice(0, 1).toUpperCase()}</span>)}
+            </span>
+            {onlineMembers.length} online
+          </span>
+        ) : null}
         <button className="icon-button text-button" type="button" onClick={onManage}>
           <Settings2 size={15} />
           Workspace

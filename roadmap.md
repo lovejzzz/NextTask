@@ -1,8 +1,24 @@
 # Next Task Roadmap
 
+## v0.2.0 — Collaboration lifecycle and presence
+
+> **Status (2026-08-18):** Implementation in progress; migration, release verification, and production deployment remain release gates.
+
+v0.2 completes the workspace lifecycle introduced in v0.1. Owners can transfer a shared workspace atomically, collaborators can leave, invitation revocation is retained as evidence, and users can delete their account only after resolving shared ownership. Private board Presence shows active collaborators without exposing Presence to nonmembers, while immutable owner-only audit history can be exported as CSV.
+
+Release acceptance:
+
+- Ownership transfer updates the workspace owner and both affected membership roles in one transaction; personal workspaces cannot be transferred.
+- Nonowners can leave immediately, owners must transfer or delete first, and departed users lose RLS access.
+- Revoked invitations remain stored, cannot be accepted, and appear in immutable audit history.
+- Only workspace owners can read/export audit events; clients cannot insert, update, or delete them.
+- Private Presence accepts board members and rejects nonmembers while existing Postgres-change synchronization remains live.
+- Account deletion is blocked while shared ownership exists, preserves shared content through nullable attribution, and removes unencumbered users and personal data.
+- `npm run verify:ci`, `npm run verify:supabase`, browser smoke, Vercel preview, main release CI, and production deployment verification are green.
+
 ## v0.1.0 — Collaborative workspaces
 
-> **Status (2026-08-18):** Implementation complete locally; production migration and deployment verification are the remaining release gates.
+> **Status (2026-08-18):** Shipped to production and verified at `https://nexttask.team`.
 
 v0.1 turns the single-user board into a collaborative workspace product while preserving every existing personal board. The release adds multiple boards per workspace, owner/editor/viewer membership, secure invitations, board-scoped RLS, realtime synchronization, durable authenticated-write throttling, and correlation IDs for production errors.
 
@@ -15,7 +31,7 @@ Release acceptance:
 - Realtime updates invalidate board, stats, comment, activity, membership, and board-list caches.
 - `npm run verify:ci`, `npm run verify:supabase`, browser smoke, preview CI, and production deployment verification are green.
 
-Next candidates after v0.1: ownership transfer/account deletion lifecycle, invitation revocation UI, presence/cursors, audit exports, and richer production telemetry.
+Delivered next in v0.2: ownership transfer/account deletion lifecycle, preserved invitation revocation, authorized Presence, audit export, and expanded production verification.
 
 ## V0.0.3.1 Roadmap — Public Readiness Fixes (implemented)
 

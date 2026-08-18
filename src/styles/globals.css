@@ -387,7 +387,9 @@ textarea:focus-visible,
 .workspace-selector-group,
 .workspace-meta,
 .role-chip,
-.realtime-chip {
+.realtime-chip,
+.presence-chip,
+.presence-avatars {
   display: flex;
   align-items: center;
 }
@@ -427,7 +429,8 @@ textarea:focus-visible,
 }
 
 .role-chip,
-.realtime-chip {
+.realtime-chip,
+.presence-chip {
   gap: 5px;
   padding: 5px 8px;
   border: 1px solid var(--border);
@@ -436,6 +439,33 @@ textarea:focus-visible,
   font-size: 11px;
   font-weight: 800;
   text-transform: capitalize;
+}
+
+.presence-chip {
+  gap: 7px;
+  text-transform: none;
+}
+
+.presence-avatars {
+  flex-direction: row-reverse;
+}
+
+.presence-avatars span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  margin-left: -5px;
+  place-items: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.presence-avatars span:last-child {
+  margin-left: 0;
 }
 
 .realtime-live {
@@ -1562,7 +1592,8 @@ textarea:focus-visible,
   font-weight: 800;
 }
 
-.workspace-profile-grid input {
+.workspace-profile-grid input,
+.workspace-profile-grid select {
   width: 100%;
   min-height: 38px;
   padding: 8px 10px;
@@ -1570,6 +1601,27 @@ textarea:focus-visible,
   border-radius: 9px;
   background: var(--surface);
   color: var(--text);
+  font: inherit;
+}
+
+.ownership-transfer {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.workspace-leave-button {
+  margin-top: 10px;
+}
+
+.manager-card-copy {
+  margin: -2px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.account-danger-card {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
 }
 
 .invitation-list {

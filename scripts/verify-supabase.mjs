@@ -9,14 +9,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   process.exit(1);
 }
 
-const stamp = `verify-v01-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-const result = { auth: null, tables: {}, collaboration: null, realtime: null, isolation: null, boardBoundaries: null, invitations: null, dataConstraints: null, reorderRpc: null, rateLimit: null };
+const stamp = `verify-v02-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+const result = { auth: null, tables: {}, collaboration: null, realtime: null, isolation: null, boardBoundaries: null, invitations: null, audit: null, lifecycle: null, accountDeletion: null, dataConstraints: null, reorderRpc: null, rateLimit: null };
 const makeClient = () => createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 const clients = [makeClient(), makeClient(), makeClient(), makeClient()];
 const [ownerClient, editorClient, viewerClient, outsiderClient] = clients;
 const users = [];
 let workspaceId = null;
 let boardId = null;
+const deletedUserIndexes = new Set();
 
 async function main() {
   for (const client of clients) {
@@ -29,7 +30,7 @@ async function main() {
   if (new Set(users).size !== users.length) throw new Error('expected four distinct anonymous users');
   result.auth = { ok: true, users: users.length };
 
-  const requiredTables = ['workspaces', 'workspace_members', 'boards', 'workspace_invitations', 'tasks', 'team_members', 'labels', 'task_assignees', 'task_labels', 'comments', 'activity_events'];
+  const requiredTables = ['workspaces', 'workspace_members', 'boards', 'workspace_invitations', 'workspace_audit_events', 'tasks', 'team_members', 'labels', 'task_assignees', 'task_labels', 'comments', 'activity_events'];
   for (const table of requiredTables) {
     const query = await ownerClient.from(table).select('*').limit(1);
     result.tables[table] = query.error ? { ok: false, code: query.error.code, message: query.error.message } : { ok: true, rowsVisible: query.data?.length ?? 0 };
@@ -52,7 +53,7 @@ async function main() {
   const viewerAccept = await viewerClient.rpc('accept_workspace_invitation', { invitation_token: viewerToken });
   if (editorAccept.error || viewerAccept.error) throw new Error(`accept invitations: ${editorAccept.error?.message ?? viewerAccept.error?.message}`);
 
-  result.realtime = await checkRealtime();
+  result.realtime = await checkRealtimeAndPresence();
 
   const taskId = await insertTask(ownerClient, users[0], boardId, `${stamp} shared task`, 'todo', 999000);
   const editorRead = await editorClient.from('tasks').select('id').eq('id', taskId).maybeSingle();
@@ -106,44 +107,175 @@ async function main() {
   result.reorderRpc = await checkReorderRpc(taskId, secondTaskId);
   result.dataConstraints = await checkDataConstraints(taskId);
   result.rateLimit = await checkRateLimit();
+  result.lifecycle = await checkLifecycle();
+  result.audit = await checkAudit();
+  result.accountDeletion = await checkAccountDeletion();
   result.ok = true;
 }
 
-async function checkRealtime() {
-  const title = `${stamp} realtime task`;
-  const session = await editorClient.auth.getSession();
-  if (session.error || !session.data.session?.access_token) throw new Error(`Realtime auth session: ${session.error?.message ?? 'missing access token'}`);
-  await editorClient.realtime.setAuth(session.data.session.access_token);
-  let resolveChange;
-  let resolveSubscription;
-  let rejectSubscription;
-  const changeReceived = new Promise((resolve) => { resolveChange = resolve; });
-  const subscribed = new Promise((resolve, reject) => {
-    resolveSubscription = resolve;
-    rejectSubscription = reject;
+async function checkLifecycle() {
+  const transfer = await ownerClient.rpc('transfer_workspace_ownership', {
+    target_workspace_id: workspaceId,
+    new_owner_id: users[1],
   });
-  const channel = editorClient
-    .channel(`verify-realtime-${stamp}`)
+  const workspaceAfterTransfer = await editorClient.from('workspaces').select('owner_id').eq('id', workspaceId).single();
+  const membershipsAfterTransfer = await editorClient
+    .from('workspace_members')
+    .select('user_id,role')
+    .eq('workspace_id', workspaceId)
+    .in('user_id', [users[0], users[1]]);
+  const roleByUser = new Map((membershipsAfterTransfer.data ?? []).map((membership) => [membership.user_id, membership.role]));
+  const formerOwnerAdminAttempt = await ownerClient.rpc('create_workspace_invitation', {
+    target_workspace_id: workspaceId,
+    invite_role: 'viewer',
+    target_email: null,
+  });
+  const returnTransfer = await editorClient.rpc('transfer_workspace_ownership', {
+    target_workspace_id: workspaceId,
+    new_owner_id: users[0],
+  });
+  const viewerLeave = await viewerClient.rpc('leave_workspace', { target_workspace_id: workspaceId });
+  const viewerReadAfterLeave = await viewerClient.from('workspaces').select('id').eq('id', workspaceId);
+  const ownerLeave = await ownerClient.rpc('leave_workspace', { target_workspace_id: workspaceId });
+  const checks = {
+    ownershipTransferSucceeded: !transfer.error,
+    ownerIdChangedAtomically: workspaceAfterTransfer.data?.owner_id === users[1],
+    previousOwnerBecameEditor: roleByUser.get(users[0]) === 'editor',
+    newOwnerRoleApplied: roleByUser.get(users[1]) === 'owner',
+    formerOwnerLostAdminAccess: formerOwnerAdminAttempt.error?.code === '42501',
+    newOwnerCanTransferBack: !returnTransfer.error,
+    memberCanLeave: !viewerLeave.error,
+    departedMemberLosesAccess: !viewerReadAfterLeave.error && (viewerReadAfterLeave.data?.length ?? 0) === 0,
+    ownerCannotLeaveWithoutTransfer: ownerLeave.error?.code === '42501',
+  };
+  assertAll(checks, 'workspace lifecycle');
+  return checks;
+}
+
+async function checkAudit() {
+  const revocable = await createInvitationRecord('viewer');
+  const revoke = await ownerClient.rpc('revoke_workspace_invitation', {
+    target_workspace_id: workspaceId,
+    target_invitation_id: revocable.id,
+  });
+  const revokedAccept = await outsiderClient.rpc('accept_workspace_invitation', { invitation_token: revocable.token });
+  const revokedRow = await ownerClient
+    .from('workspace_invitations')
+    .select('revoked_at')
+    .eq('id', revocable.id)
+    .single();
+  const ownerAudit = await ownerClient
+    .from('workspace_audit_events')
+    .select('action')
+    .eq('workspace_id', workspaceId);
+  const editorAudit = await editorClient
+    .from('workspace_audit_events')
+    .select('id')
+    .eq('workspace_id', workspaceId);
+  const fabricated = await editorClient.from('workspace_audit_events').insert({
+    workspace_id: workspaceId,
+    actor_user_id: users[1],
+    action: 'fabricated_event',
+    metadata: {},
+  });
+  const actions = new Set((ownerAudit.data ?? []).map((event) => event.action));
+  const expectedActions = [
+    'workspace_created',
+    'board_created',
+    'invitation_created',
+    'invitation_accepted',
+    'invitation_revoked',
+    'member_joined',
+    'member_removed',
+    'ownership_transferred',
+  ];
+  const checks = {
+    revocationPreserved: !revoke.error && Boolean(revokedRow.data?.revoked_at),
+    revokedTokenRejected: Boolean(revokedAccept.error),
+    ownerCanReadAudit: !ownerAudit.error && expectedActions.every((action) => actions.has(action)),
+    nonOwnerCannotReadAudit: !editorAudit.error && (editorAudit.data?.length ?? 0) === 0,
+    clientsCannotFabricateAudit: fabricated.error?.code === '42501',
+  };
+  assertAll(checks, 'workspace audit');
+  return { ...checks, actionsVerified: expectedActions.length };
+}
+
+async function checkAccountDeletion() {
+  const ownerBlocked = await ownerClient.rpc('delete_own_account');
+  const outsiderDeleted = await outsiderClient.rpc('delete_own_account');
+  if (!outsiderDeleted.error) deletedUserIndexes.add(3);
+  const deletedUser = await outsiderClient.auth.getUser();
+  const checks = {
+    sharedOwnerMustResolveOwnership: ownerBlocked.error?.code === '42501',
+    unencumberedAccountDeletes: !outsiderDeleted.error,
+    deletedAccountTokenRejected: Boolean(deletedUser.error) || !deletedUser.data.user,
+  };
+  assertAll(checks, 'account deletion');
+  return checks;
+}
+
+async function checkRealtimeAndPresence() {
+  const title = `${stamp} realtime task`;
+  let resolveChange;
+  let resolvePresence;
+  const changeReceived = new Promise((resolve) => { resolveChange = resolve; });
+  const presenceReceived = new Promise((resolve) => { resolvePresence = resolve; });
+  await Promise.all([
+    setRealtimeAuth(ownerClient),
+    setRealtimeAuth(editorClient),
+    setRealtimeAuth(outsiderClient),
+  ]);
+
+  const editorChannel = editorClient
+    .channel(`board:${boardId}`, { config: { private: true, presence: { key: users[1] } } })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, (payload) => {
       resolveChange(payload);
     })
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') resolveSubscription();
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') rejectSubscription(new Error(`Realtime subscription ${status.toLowerCase()}`));
+    .on('presence', { event: 'sync' }, () => {
+      const presentUserIds = Object.values(editorChannel.presenceState())
+        .flat()
+        .map((presence) => presence.user_id);
+      if (presentUserIds.includes(users[0]) && presentUserIds.includes(users[1])) resolvePresence(presentUserIds);
     });
+  const ownerChannel = ownerClient.channel(`board:${boardId}`, {
+    config: { private: true, presence: { key: users[0] } },
+  });
+  const outsiderChannel = outsiderClient.channel(`board:${boardId}`, {
+    config: { private: true, presence: { key: users[3] } },
+  });
 
   try {
-    await withTimeout(subscribed, 10_000, 'Realtime subscription timed out');
+    await Promise.all([
+      withTimeout(subscribeChannel(ownerChannel), 10_000, 'Owner Presence subscription timed out'),
+      withTimeout(subscribeChannel(editorChannel), 10_000, 'Editor Presence subscription timed out'),
+    ]);
+    await Promise.all([
+      ownerChannel.track({ user_id: users[0], display_name: 'Owner', role: 'owner', online_at: new Date().toISOString() }),
+      editorChannel.track({ user_id: users[1], display_name: 'Editor', role: 'editor', online_at: new Date().toISOString() }),
+    ]);
+    const presentUserIds = await withTimeout(presenceReceived, 10_000, 'Authorized Presence sync timed out');
     const realtimeTaskId = await insertTask(ownerClient, users[0], boardId, title, 'todo', 998900);
     const payload = await withTimeout(changeReceived, 10_000, 'Realtime insert event timed out');
+    const outsiderDenied = await withTimeout(new Promise((resolve) => {
+      outsiderChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') resolve(false);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') resolve(true);
+      });
+    }), 10_000, 'Outsider Presence authorization timed out');
     const checks = {
       insertDeliveredToCollaborator: payload.new?.id === realtimeTaskId,
       boardFilterPreserved: payload.new?.board_id === boardId,
+      authorizedMembersSharePresence: presentUserIds.includes(users[0]) && presentUserIds.includes(users[1]),
+      outsiderPresenceDenied: outsiderDenied,
     };
     assertAll(checks, 'Realtime collaboration');
     return checks;
   } finally {
-    await editorClient.removeChannel(channel);
+    await Promise.all([
+      ownerClient.removeChannel(ownerChannel),
+      editorClient.removeChannel(editorChannel),
+      outsiderClient.removeChannel(outsiderChannel),
+    ]);
   }
 }
 
@@ -186,11 +318,16 @@ async function checkRateLimit() {
 }
 
 async function createInvitation(role) {
+  return (await createInvitationRecord(role)).token;
+}
+
+async function createInvitationRecord(role) {
   const response = await ownerClient.rpc('create_workspace_invitation', { target_workspace_id: workspaceId, invite_role: role, target_email: null });
   if (response.error) throw new Error(`create ${role} invitation: ${response.error.message}`);
   const token = firstRow(response.data)?.invitation_token;
-  if (typeof token !== 'string') throw new Error('invitation RPC did not return a token');
-  return token;
+  const id = firstRow(response.data)?.invitation_id;
+  if (typeof token !== 'string' || typeof id !== 'string') throw new Error('invitation RPC did not return an id and token');
+  return { id, token };
 }
 
 async function insertTask(client, userId, targetBoardId, title, status, position) {
@@ -214,7 +351,40 @@ async function withTimeout(promise, milliseconds, message) {
     clearTimeout(timeout);
   }
 }
-async function cleanup() { if (workspaceId) await ownerClient.from('workspaces').delete().eq('id', workspaceId); }
+async function setRealtimeAuth(client) {
+  const session = await client.auth.getSession();
+  if (session.error || !session.data.session?.access_token) {
+    throw new Error(`Realtime auth session: ${session.error?.message ?? 'missing access token'}`);
+  }
+  await client.realtime.setAuth(session.data.session.access_token);
+}
+function subscribeChannel(channel) {
+  return new Promise((resolve, reject) => {
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') resolve(status);
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        reject(new Error(`Realtime subscription ${status.toLowerCase()}`));
+      }
+    });
+  });
+}
+async function cleanup() {
+  if (workspaceId) {
+    let removed = false;
+    for (const client of [ownerClient, editorClient]) {
+      const response = await client.from('workspaces').delete().eq('id', workspaceId).select('id');
+      if (response.error) throw new Error(`workspace cleanup: ${response.error.message}`);
+      if ((response.data?.length ?? 0) > 0) removed = true;
+    }
+    if (!removed) throw new Error('workspace cleanup: owner could not delete verification workspace');
+  }
+  for (const [index, client] of clients.entries()) {
+    if (deletedUserIndexes.has(index)) continue;
+    const response = await client.rpc('delete_own_account');
+    if (response.error) throw new Error(`account cleanup ${index}: ${response.error.message}`);
+    deletedUserIndexes.add(index);
+  }
+}
 
 let exitCode = 0;
 try { await main(); } catch (error) { result.error = error instanceof Error ? error.message : String(error); exitCode = 1; }

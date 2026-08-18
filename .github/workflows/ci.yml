@@ -24,8 +24,8 @@ jobs:
       VITE_SUPABASE_ANON_KEY: sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
       VITE_ENABLE_LOCAL_DEMO: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -46,8 +46,8 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://volqeerbqugpwbedsbch.supabase.co' }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

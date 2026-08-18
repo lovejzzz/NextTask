@@ -12,6 +12,20 @@ describe('collaboration route folding', () => {
     expect(isCollaborationRequest(request('/api/workspaces'))).toBe(true);
     expect(isCollaborationRequest(request('/api/workspaces/workspace-id/invitations'))).toBe(true);
     expect(isCollaborationRequest(request('/api/invitations/accept'))).toBe(true);
+    expect(isCollaborationRequest(request('/api/account'))).toBe(true);
+  });
+
+  it('routes lifecycle and audit paths through the folded collaboration function', () => {
+    const req = request('/api/stats?mode=collaboration', {
+      mode: 'collaboration',
+      resource: 'workspaces',
+      path: '123e4567-e89b-42d3-a456-426614174000/audit',
+    });
+    expect(collaborationRoute(req)).toEqual({
+      resource: 'workspaces',
+      parts: ['123e4567-e89b-42d3-a456-426614174000', 'audit'],
+    });
+    expect(collaborationRoute(request('/api/account'))).toEqual({ resource: 'account', parts: [] });
   });
 
   it('reconstructs rewritten nested paths without creating more Vercel functions', () => {
