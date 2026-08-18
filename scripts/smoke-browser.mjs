@@ -84,10 +84,12 @@ async function runSmoke() {
   const failedRequests = [];
   let boardTodayHeader = null;
   let boardIdHeader = null;
+  let boardAuthorizationHeader = null;
   let cleanupStarted = false;
 
   page.on('console', (message) => {
     const text = message.text();
+    if (cleanupStarted && message.type() === 'error' && /status of 401 \(Unauthorized\)/.test(text)) return;
     if (
       message.type() === 'error' &&
       /^Failed to load resource: the server responded with a status of (404|429)/.test(text)
@@ -98,6 +100,7 @@ async function runSmoke() {
   });
   page.on('pageerror', (error) => consoleMessages.push(`pageerror: ${error.message}`));
   page.on('response', (response) => {
+    if (cleanupStarted && response.status() === 401) return;
     if (response.status() >= 400 && response.url().includes('/api/')) {
       httpFailures.push(`${response.status()} ${response.request().method()} ${response.url()}`);
     }
@@ -111,6 +114,7 @@ async function runSmoke() {
     if (request.method() === 'GET' && new URL(request.url()).pathname === '/api/tasks') {
       boardTodayHeader = request.headers()['x-nexttask-today'] ?? null;
       boardIdHeader = request.headers()['x-nexttask-board-id'] ?? null;
+      boardAuthorizationHeader = request.headers().authorization ?? null;
     }
   });
 
@@ -254,7 +258,13 @@ async function runSmoke() {
   await clearSearch(page);
   cleanupStarted = true;
   await clearBoard(page);
-  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined);
+  if (!boardAuthorizationHeader) throw new Error('browser smoke could not capture its temporary account authorization');
+  const accountCleanup = await fetch(new URL('/api/account', baseUrl), {
+    method: 'DELETE',
+    headers: { Authorization: boardAuthorizationHeader },
+  });
+  assertEqual(accountCleanup.status, 204, 'browser smoke should delete its temporary account');
+  await page.waitForTimeout(250);
 
   if (consoleMessages.length || httpFailures.length || failedRequests.length) {
     throw new Error(`Browser smoke found console/request issues:\n${[...consoleMessages, ...httpFailures, ...failedRequests].join('\n')}`);
@@ -267,7 +277,7 @@ async function runSmoke() {
         baseUrl,
         timezoneId,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['security headers, request IDs, API no-store, and board context', 'x402 manifest and unpaid boundary', 'authorized Presence and workspace lifecycle surface', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
+        checked: ['security headers, request IDs, API no-store, and board context', 'x402 manifest and unpaid boundary', 'authorized Presence and workspace lifecycle surface', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'temporary account cleanup', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,
@@ -513,8 +523,15 @@ async function clearBoard(page) {
   await page.locator('.confirm-dialog .danger-button').click();
   await page.waitForSelector('.task-card', { state: 'detached', timeout: 30_000 });
   await page.getByRole('button', { name: 'Load sample board' }).waitFor({ state: 'visible', timeout: 30_000 });
-  await page.reload({ waitUntil: 'networkidle' });
+  const reloadedBoardResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/tasks' && response.ok(),
+    { timeout: 45_000 },
+  );
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadedBoardResponse;
   await page.waitForSelector('.board-column', { timeout: 45_000 });
+  await page.getByRole('button', { name: 'Load sample board' }).waitFor({ state: 'visible', timeout: 30_000 });
   assertEqual(await page.locator('.task-card').count(), 0, 'clear board should persist after reload');
   assertEqual(
     await page.getByRole('button', { name: 'Load sample board' }).isVisible().catch(() => false),

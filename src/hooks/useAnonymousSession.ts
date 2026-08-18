@@ -28,6 +28,16 @@ const providerLabels: Record<OAuthProvider, string> = {
 };
 export const pendingOAuthProviderKey = 'next-task:pending-oauth-provider';
 export const pendingOAuthFlowKey = 'next-task:pending-oauth-flow';
+let anonymousSignInPromise: ReturnType<typeof supabase.auth.signInAnonymously> | null = null;
+
+function signInAnonymouslyOnce() {
+  if (!anonymousSignInPromise) {
+    anonymousSignInPromise = supabase.auth.signInAnonymously().finally(() => {
+      anonymousSignInPromise = null;
+    });
+  }
+  return anonymousSignInPromise;
+}
 
 export function useAnonymousSession() {
   const [state, setState] = useState<SessionState>({
@@ -72,7 +82,7 @@ export function useAnonymousSession() {
           return;
         }
 
-        const { data, error } = await supabase.auth.signInAnonymously();
+        const { data, error } = await signInAnonymouslyOnce();
         if (error) throw error;
 
         if (mounted && data.user) setReady(data.user);
