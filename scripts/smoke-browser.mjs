@@ -126,9 +126,9 @@ async function runSmoke() {
     "frame-ancestors 'none'",
     'document should send the deployment Content-Security-Policy',
   );
-  if (!boardResponse.headers()['x-request-id']) throw new Error('authenticated API responses should include X-Request-Id');
   assertEqual(documentResponse.headers()['x-content-type-options'], 'nosniff', 'document should disable MIME sniffing');
   const boardResponse = await boardResponsePromise;
+  if (!boardResponse.headers()['x-request-id']) throw new Error('authenticated API responses should include X-Request-Id');
   assertIncludes(
     boardResponse.headers()['cache-control'] ?? '',
     'no-store',
