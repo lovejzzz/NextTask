@@ -701,9 +701,9 @@ begin
     raise exception 'Not authenticated' using errcode = '28000';
   end if;
 
-  select id into target_workspace_id
-  from public.workspaces
-  where owner_id = uid and is_personal
+  select workspaces.id into target_workspace_id
+  from public.workspaces as workspaces
+  where workspaces.owner_id = uid and workspaces.is_personal
   limit 1;
 
   if target_workspace_id is null then
@@ -719,12 +719,12 @@ begin
     'owner',
     coalesce(nullif(split_part(coalesce(auth.jwt() ->> 'email', ''), '@', 1), ''), 'Owner')
   )
-  on conflict (workspace_id, user_id) do update set role = 'owner';
+  on conflict on constraint workspace_members_pkey do update set role = 'owner';
 
-  select id into target_board_id
-  from public.boards
-  where workspace_id = target_workspace_id
-  order by created_at, id
+  select boards.id into target_board_id
+  from public.boards as boards
+  where boards.workspace_id = target_workspace_id
+  order by boards.created_at, boards.id
   limit 1;
 
   if target_board_id is null then

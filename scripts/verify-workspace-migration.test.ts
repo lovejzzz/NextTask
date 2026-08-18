@@ -30,4 +30,10 @@ describe('workspace collaboration migration', () => {
     expect(sql).toContain('create or replace function public.consume_api_rate_limit');
     expect(sql).toContain('revoke all on public.api_rate_limits from anon, authenticated');
   });
+
+  it('keeps personal workspace bootstrap identifiers unambiguous', () => {
+    expect(sql).toContain('select workspaces.id into target_workspace_id');
+    expect(sql).toContain('where boards.workspace_id = target_workspace_id');
+    expect(sql).toContain('on conflict on constraint workspace_members_pkey do update');
+  });
 });

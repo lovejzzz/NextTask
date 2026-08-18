@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 const stamp = `verify-v01-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-const result = { auth: null, tables: {}, collaboration: null, isolation: null, boardBoundaries: null, invitations: null, dataConstraints: null, reorderRpc: null, rateLimit: null };
+const result = { auth: null, tables: {}, collaboration: null, realtime: null, isolation: null, boardBoundaries: null, invitations: null, dataConstraints: null, reorderRpc: null, rateLimit: null };
 const makeClient = () => createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 const clients = [makeClient(), makeClient(), makeClient(), makeClient()];
 const [ownerClient, editorClient, viewerClient, outsiderClient] = clients;
@@ -51,6 +51,8 @@ async function main() {
   const editorAccept = await editorClient.rpc('accept_workspace_invitation', { invitation_token: editorToken });
   const viewerAccept = await viewerClient.rpc('accept_workspace_invitation', { invitation_token: viewerToken });
   if (editorAccept.error || viewerAccept.error) throw new Error(`accept invitations: ${editorAccept.error?.message ?? viewerAccept.error?.message}`);
+
+  result.realtime = await checkRealtime();
 
   const taskId = await insertTask(ownerClient, users[0], boardId, `${stamp} shared task`, 'todo', 999000);
   const editorRead = await editorClient.from('tasks').select('id').eq('id', taskId).maybeSingle();
@@ -105,6 +107,44 @@ async function main() {
   result.dataConstraints = await checkDataConstraints(taskId);
   result.rateLimit = await checkRateLimit();
   result.ok = true;
+}
+
+async function checkRealtime() {
+  const title = `${stamp} realtime task`;
+  const session = await editorClient.auth.getSession();
+  if (session.error || !session.data.session?.access_token) throw new Error(`Realtime auth session: ${session.error?.message ?? 'missing access token'}`);
+  await editorClient.realtime.setAuth(session.data.session.access_token);
+  let resolveChange;
+  let resolveSubscription;
+  let rejectSubscription;
+  const changeReceived = new Promise((resolve) => { resolveChange = resolve; });
+  const subscribed = new Promise((resolve, reject) => {
+    resolveSubscription = resolve;
+    rejectSubscription = reject;
+  });
+  const channel = editorClient
+    .channel(`verify-realtime-${stamp}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, (payload) => {
+      resolveChange(payload);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') resolveSubscription();
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') rejectSubscription(new Error(`Realtime subscription ${status.toLowerCase()}`));
+    });
+
+  try {
+    await withTimeout(subscribed, 10_000, 'Realtime subscription timed out');
+    const realtimeTaskId = await insertTask(ownerClient, users[0], boardId, title, 'todo', 998900);
+    const payload = await withTimeout(changeReceived, 10_000, 'Realtime insert event timed out');
+    const checks = {
+      insertDeliveredToCollaborator: payload.new?.id === realtimeTaskId,
+      boardFilterPreserved: payload.new?.board_id === boardId,
+    };
+    assertAll(checks, 'Realtime collaboration');
+    return checks;
+  } finally {
+    await editorClient.removeChannel(channel);
+  }
 }
 
 async function checkReorderRpc(taskId, crossBoardTaskId) {
@@ -163,6 +203,17 @@ function firstRow(data) { return Array.isArray(data) ? data[0] : data; }
 function assertAll(checks, label) { if (!Object.values(checks).every(Boolean)) throw new Error(`${label} failed: ${JSON.stringify(checks)}`); checks.ok = true; }
 async function mutationRejected(query) { const response = await query; if (response.error) return response.error.code === '42501'; return (response.data?.length ?? 0) === 0; }
 async function constraintRejected(query, label) { const response = await query; if (!response.error) return false; if (response.error.code !== '23514') throw new Error(`${label} probe returned ${response.error.code}: ${response.error.message}`); return true; }
+async function withTimeout(promise, milliseconds, message) {
+  let timeout;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error(message)), milliseconds); }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 async function cleanup() { if (workspaceId) await ownerClient.from('workspaces').delete().eq('id', workspaceId); }
 
 let exitCode = 0;
