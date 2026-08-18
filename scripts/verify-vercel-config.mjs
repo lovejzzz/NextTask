@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const errors = [];
+const serverlessFunctions = discoverServerlessFunctions(new URL('../api/', import.meta.url));
 
 check(config.installCommand === 'npm ci', 'Vercel must install from the lockfile with npm ci.');
 check(
@@ -12,6 +13,14 @@ check(
 check(config.outputDirectory === 'dist', 'Vercel must publish the Vite dist directory.');
 check(config.framework === 'vite', 'Vercel must use the Vite framework preset.');
 check(pkg.engines?.node === '22.x', 'package.json must pin the Vercel/CI Node.js major to 22.x.');
+check(
+  serverlessFunctions.length <= 12,
+  `Vercel Hobby supports at most 12 serverless functions; found ${serverlessFunctions.length}.`,
+);
+check(
+  serverlessFunctions.every((file) => !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)),
+  'Tests must live outside deployable API route directories.',
+);
 
 const globalHeaders = headerMap('/(.*)');
 const requiredHeaders = {
@@ -57,6 +66,7 @@ const result = {
   outputDirectory: config.outputDirectory ?? null,
   framework: config.framework ?? null,
   installCommand: config.installCommand ?? null,
+  serverlessFunctions,
   securityHeaders: [...globalHeaders.keys()],
   errors,
 };
@@ -70,4 +80,13 @@ function headerMap(source) {
 
 function check(condition, message) {
   if (!condition) errors.push(message);
+}
+
+function discoverServerlessFunctions(apiUrl, prefix = '') {
+  return readdirSync(apiUrl, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name.startsWith('_')) return [];
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) return discoverServerlessFunctions(new URL(`${entry.name}/`, apiUrl), relativePath);
+    return /\.[cm]?[jt]sx?$/.test(entry.name) ? [relativePath] : [];
+  });
 }

@@ -15,6 +15,14 @@ jobs:
   verify-ci:
     name: verify:ci (typecheck · lint · test · audit · config · build)
     runs-on: ubuntu-latest
+    # Vite evaluates its public client configuration during tests/builds. These
+    # are browser-publishable project values (not secrets), so the always-on
+    # fork-safe gate can exercise the real client boundary without privileged
+    # server credentials.
+    env:
+      VITE_SUPABASE_URL: https://volqeerbqugpwbedsbch.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_woGdY7Ogw4hDwlZvnV4-ew_8_pcDXEd
+      VITE_ENABLE_LOCAL_DEMO: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

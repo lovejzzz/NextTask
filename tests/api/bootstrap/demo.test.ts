@@ -1,20 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
+import type { VercelRequest, VercelResponse } from '../../../api/_shared/vercel.js';
 
 const mocks = vi.hoisted(() => ({
   requireUser: vi.fn(),
   hydrateBoard: vi.fn(),
   recordActivityBestEffort: vi.fn(),
 }));
-vi.mock('../_shared/auth.js', () => ({ requireUser: mocks.requireUser }));
-vi.mock('../_shared/data.js', () => ({
+vi.mock('../../../api/_shared/auth.js', () => ({ requireUser: mocks.requireUser }));
+vi.mock('../../../api/_shared/data.js', () => ({
   hydrateBoard: mocks.hydrateBoard,
   recordActivityBestEffort: mocks.recordActivityBestEffort,
 }));
 
-import handler from './demo.js';
+import handler from '../../../api/bootstrap/demo.js';
 
 const emptyBoard = { tasks: [], teamMembers: [], labels: [] };
 const previousFallback = process.env.ALLOW_RESET_RPC_FALLBACK;

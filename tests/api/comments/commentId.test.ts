@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { VercelRequest, VercelResponse } from '../../../_shared/vercel.js';
+import type { VercelRequest, VercelResponse } from '../../../api/_shared/vercel.js';
 
 const mocks = vi.hoisted(() => ({
   requireUser: vi.fn(),
@@ -8,13 +8,13 @@ const mocks = vi.hoisted(() => ({
   recordActivityBestEffort: vi.fn(),
 }));
 
-vi.mock('../../../_shared/auth.js', () => ({ requireUser: mocks.requireUser }));
-vi.mock('../../../_shared/data.js', () => ({
+vi.mock('../../../api/_shared/auth.js', () => ({ requireUser: mocks.requireUser }));
+vi.mock('../../../api/_shared/data.js', () => ({
   getTaskOrThrow: mocks.getTaskOrThrow,
   recordActivityBestEffort: mocks.recordActivityBestEffort,
 }));
 
-import handler from './[commentId].js';
+import handler from '../../../api/tasks/[id]/comments/[commentId].js';
 
 const taskId = '123e4567-e89b-42d3-a456-426614174000';
 const commentId = '987fcdeb-51a2-43d7-8f9e-123456789abc';

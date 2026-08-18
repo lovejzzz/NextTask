@@ -1,14 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { VercelRequest, VercelResponse } from './_shared/vercel.js';
+import type { VercelRequest, VercelResponse } from '../../api/_shared/vercel.js';
 
 const auth = vi.hoisted(() => ({ requireUser: vi.fn() }));
-vi.mock('./_shared/auth.js', () => ({ requireUser: auth.requireUser }));
+vi.mock('../../api/_shared/auth.js', () => ({ requireUser: auth.requireUser }));
 
-import labelHandler from './labels/[id].js';
-import taskHandler from './tasks/[id].js';
-import teamMemberHandler from './team-members/[id].js';
+import labelHandler from '../../api/labels/[id].js';
+import taskHandler from '../../api/tasks/[id].js';
+import teamMemberHandler from '../../api/team-members/[id].js';
 
 const resourceId = 'a40a3c72-2f47-45c4-8ab9-f56c1e5a1ea2';
 const handlers = [
