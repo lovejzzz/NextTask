@@ -237,17 +237,17 @@ async function checkRealtimeAndPresence() {
         .map((presence) => presence.user_id);
       if (presentUserIds.includes(users[0]) && presentUserIds.includes(users[1])) resolvePresence(presentUserIds);
     });
-  const ownerChannel = ownerClient.channel(`board:${boardId}`, {
-    config: { private: true, presence: { key: users[0] } },
-  });
+  const ownerChannel = ownerClient
+    .channel(`board:${boardId}`, { config: { private: true, presence: { key: users[0] } } })
+    .on('presence', { event: 'sync' }, () => {});
   const outsiderChannel = outsiderClient.channel(`board:${boardId}`, {
     config: { private: true, presence: { key: users[3] } },
   });
 
   try {
     await Promise.all([
-      withTimeout(subscribeChannel(ownerChannel), 10_000, 'Owner Presence subscription timed out'),
-      withTimeout(subscribeChannel(editorChannel), 10_000, 'Editor Presence subscription timed out'),
+      withTimeout(subscribeChannel(ownerChannel, 'owner'), 10_000, 'Owner Presence subscription timed out'),
+      withTimeout(subscribeChannel(editorChannel, 'editor'), 10_000, 'Editor Presence subscription timed out'),
     ]);
     await Promise.all([
       ownerChannel.track({ user_id: users[0], display_name: 'Owner', role: 'owner', online_at: new Date().toISOString() }),
@@ -358,12 +358,13 @@ async function setRealtimeAuth(client) {
   }
   await client.realtime.setAuth(session.data.session.access_token);
 }
-function subscribeChannel(channel) {
+function subscribeChannel(channel, label) {
   return new Promise((resolve, reject) => {
-    channel.subscribe((status) => {
+    channel.subscribe((status, error) => {
       if (status === 'SUBSCRIBED') resolve(status);
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        reject(new Error(`Realtime subscription ${status.toLowerCase()}`));
+        const detail = error?.message ?? error?.error ?? error?.reason;
+        reject(new Error(`${label} Realtime subscription ${status.toLowerCase()}${detail ? `: ${detail}` : ''}`));
       }
     });
   });
