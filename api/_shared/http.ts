@@ -119,8 +119,11 @@ function mapDatabaseError(error: unknown): Pick<ApiHttpError, 'code' | 'message'
   const code = String(error.code);
 
   if (code === 'PGRST116') return { code: 'not_found', message: 'The requested record was not found.', status: 404 };
+  if (code === 'P0002') return { code: 'not_found', message: 'The requested record was not found.', status: 404 };
+  if (code === '28000') return { code: 'unauthorized', message: 'Authentication is required.', status: 401 };
+  if (code === '42501') return { code: 'forbidden', message: 'You do not have permission to perform this action.', status: 403 };
   if (code === '23505') return { code: 'conflict', message: 'A record with that value already exists.', status: 409 };
-  if (['22007', '22008', '22P02', '23503', '23514'].includes(code)) {
+  if (['22007', '22008', '22023', '22P02', '23503', '23514'].includes(code)) {
     return { code: 'bad_request', message: 'The request contains an invalid value.', status: 400 };
   }
   return null;

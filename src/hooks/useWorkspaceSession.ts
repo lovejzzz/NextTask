@@ -17,6 +17,8 @@ export function useWorkspaceSession(userId: string | null, enabled: boolean) {
     queryKey: workspacesQueryKey(userId),
     queryFn: () => workspaceApi.getWorkspaces(),
     enabled: enabled && Boolean(userId),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: 'always',
   });
 
   useEffect(() => {

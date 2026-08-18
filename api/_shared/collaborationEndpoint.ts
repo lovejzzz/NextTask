@@ -222,6 +222,9 @@ export async function handleCollaboration(req: VercelRequest, res: VercelRespons
       const { data: workspaceId, error } = await supabase.rpc('accept_workspace_invitation', {
         invitation_token: input.token.toLowerCase(),
       });
+      if (error?.code === '42501' && /different email address/i.test(error.message)) {
+        throw new ApiHttpError('forbidden', 'Sign in with the email address this invitation was sent to.', 403);
+      }
       if (error) throw error;
       return sendData(res, { ...(await listWorkspaces(supabase, user.id)), selectedWorkspaceId: workspaceId });
     }
