@@ -1,7 +1,9 @@
-import { Copy, Link2, Loader2, Plus, Trash2, UserMinus, X } from 'lucide-react';
+import { Copy, Crown, Download, Link2, Loader2, LogOut, Plus, Trash2, UserMinus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { workspaceApi } from '../../lib/api';
+import { auditExportFilename, serializeWorkspaceAuditCsv } from '../../lib/auditExport';
+import { supabase } from '../../lib/supabaseClient';
 import type { Workspace, WorkspaceRole } from '../../lib/types';
 import type { ConfirmOptions, Toast } from '../../lib/uiTypes';
 import { readableError } from '../../lib/utils';
@@ -32,16 +34,19 @@ export function WorkspaceManager({
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<Exclude<WorkspaceRole, 'owner'>>('editor');
   const [inviteUrl, setInviteUrl] = useState('');
+  const [transferTargetId, setTransferTargetId] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
     if (!workspace) return;
     let active = true;
     const nextProfileName = workspace.members.find((member) => member.user_id === currentUserId)?.display_name ?? '';
+    const nextTransferTarget = workspace.members.find((member) => member.role !== 'owner')?.user_id ?? '';
     queueMicrotask(() => {
       if (!active) return;
       setRenameWorkspace(workspace.name);
       setProfileName(nextProfileName);
+      setTransferTargetId(nextTransferTarget);
     });
     return () => {
       active = false;
@@ -122,6 +127,76 @@ export function WorkspaceManager({
     );
   }
 
+  async function transferOwnership() {
+    if (!workspace || !transferTargetId) return;
+    const target = workspace.members.find((member) => member.user_id === transferTargetId);
+    if (!target || !(await confirm({
+      title: 'Transfer workspace ownership?',
+      message: `${target.display_name} will become the owner. You will remain as an editor and only the new owner can transfer it back.`,
+      confirmLabel: 'Transfer ownership',
+    }))) return;
+    await run(
+      'transfer',
+      async () => {
+        await workspaceApi.transferOwnership(workspace.id, transferTargetId);
+        await onChanged();
+      },
+      `Ownership transferred to ${target.display_name}`,
+    );
+  }
+
+  async function leaveWorkspace() {
+    if (!workspace || !(await confirm({
+      title: 'Leave workspace?',
+      message: `You will immediately lose access to “${workspace.name}”. An owner must invite you again to restore access.`,
+      confirmLabel: 'Leave workspace',
+    }))) return;
+    await run(
+      'leave',
+      async () => {
+        await workspaceApi.leaveWorkspace(workspace.id);
+        await onChanged();
+        onClose();
+      },
+      'You left the workspace',
+    );
+  }
+
+  async function exportAudit() {
+    if (!workspace) return;
+    await run(
+      'audit',
+      async () => {
+        const payload = await workspaceApi.getAudit(workspace.id);
+        const csv = serializeWorkspaceAuditCsv(payload.events, workspace.members);
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = auditExportFilename(workspace.name);
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      'Audit history exported',
+    );
+  }
+
+  async function deleteAccount() {
+    if (!(await confirm({
+      title: 'Delete your account?',
+      message: 'Your personal workspace and guest identity will be permanently deleted. Transfer or delete every shared workspace you own first.',
+      confirmLabel: 'Delete account',
+    }))) return;
+    await run(
+      'delete-account',
+      async () => {
+        await workspaceApi.deleteOwnAccount();
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        window.location.reload();
+      },
+      'Account deleted',
+    );
+  }
+
   async function deleteBoard(targetBoardId: string, name: string) {
     if (!workspace || !(await confirm({ title: 'Delete board?', message: `“${name}” and all of its tasks will be permanently removed.`, confirmLabel: 'Delete board' }))) return;
     await run(`delete-board-${targetBoardId}`, async () => { await workspaceApi.deleteBoard(targetBoardId); await onChanged(); }, 'Board deleted');
@@ -163,11 +238,33 @@ export function WorkspaceManager({
                   <button className="ghost-button" type="button" disabled={!profileName.trim() || Boolean(busy)} onClick={() => void run('profile', async () => { await workspaceApi.updateWorkspaceProfile(workspace.id, profileName.trim()); await onChanged(); }, 'Profile updated')}>Save profile</button>
                 </div>
                 {isOwner ? (
-                  <div className="workspace-profile-grid">
-                    <label><span>Workspace name</span><input value={renameWorkspace} onChange={(event) => setRenameWorkspace(event.target.value)} maxLength={80} /></label>
-                    <button className="ghost-button" type="button" disabled={!renameWorkspace.trim() || Boolean(busy)} onClick={() => void run('rename-workspace', async () => { await workspaceApi.renameWorkspace(workspace.id, renameWorkspace.trim()); await onChanged(); }, 'Workspace renamed')}>Rename</button>
-                    {!workspace.is_personal ? <button className="danger-button" type="button" onClick={() => void deleteWorkspace()} disabled={Boolean(busy)}>Delete workspace</button> : null}
-                  </div>
+                  <>
+                    <div className="workspace-profile-grid">
+                      <label><span>Workspace name</span><input value={renameWorkspace} onChange={(event) => setRenameWorkspace(event.target.value)} maxLength={80} /></label>
+                      <button className="ghost-button" type="button" disabled={!renameWorkspace.trim() || Boolean(busy)} onClick={() => void run('rename-workspace', async () => { await workspaceApi.renameWorkspace(workspace.id, renameWorkspace.trim()); await onChanged(); }, 'Workspace renamed')}>Rename</button>
+                      {!workspace.is_personal ? <button className="danger-button" type="button" onClick={() => void deleteWorkspace()} disabled={Boolean(busy)}>Delete workspace</button> : null}
+                    </div>
+                    {!workspace.is_personal && workspace.members.some((member) => member.role !== 'owner') ? (
+                      <div className="workspace-profile-grid ownership-transfer">
+                        <label>
+                          <span>Transfer ownership</span>
+                          <select value={transferTargetId} onChange={(event) => setTransferTargetId(event.target.value)}>
+                            {workspace.members.filter((member) => member.role !== 'owner').map((member) => (
+                              <option value={member.user_id} key={member.user_id}>{member.display_name} · {member.role}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button className="ghost-button" type="button" disabled={!transferTargetId || Boolean(busy)} onClick={() => void transferOwnership()}>
+                          <Crown size={14} /> Transfer
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                {!isOwner && !workspace.is_personal ? (
+                  <button className="ghost-button workspace-leave-button" type="button" onClick={() => void leaveWorkspace()} disabled={Boolean(busy)}>
+                    <LogOut size={14} /> Leave workspace
+                  </button>
                 ) : null}
               </section>
 
@@ -246,14 +343,21 @@ export function WorkspaceManager({
                             className="mini-button"
                             type="button"
                             aria-label={`Revoke invitation for ${invitation.invitee_email ?? invitation.role}`}
-                            onClick={() => void run(
-                              `invite-${invitation.id}`,
-                              async () => {
-                                await workspaceApi.revokeInvitation(workspace.id, invitation.id);
-                                await onChanged();
-                              },
-                              'Invitation revoked',
-                            )}
+                            onClick={() => void confirm({
+                              title: 'Revoke invitation?',
+                              message: 'This link will stop working immediately and the revocation will remain in the workspace audit history.',
+                              confirmLabel: 'Revoke invitation',
+                            }).then((approved) => {
+                              if (!approved) return;
+                              return run(
+                                `invite-${invitation.id}`,
+                                async () => {
+                                  await workspaceApi.revokeInvitation(workspace.id, invitation.id);
+                                  await onChanged();
+                                },
+                                'Invitation revoked',
+                              );
+                            })}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -263,6 +367,24 @@ export function WorkspaceManager({
                   ) : null}
                 </section>
               ) : null}
+
+              {isOwner ? (
+                <section className="manager-card">
+                  <h3><Download size={16} /> Audit history</h3>
+                  <p className="manager-card-copy">Export up to 1,000 recent workspace, board, invitation, membership, and ownership events as CSV.</p>
+                  <button className="ghost-button" type="button" onClick={() => void exportAudit()} disabled={Boolean(busy)}>
+                    {busy === 'audit' ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Export audit CSV
+                  </button>
+                </section>
+              ) : null}
+
+              <section className="manager-card account-danger-card">
+                <h3>Account lifecycle</h3>
+                <p className="manager-card-copy">Delete your personal workspace and identity after transferring or deleting every shared workspace you own.</p>
+                <button className="danger-button" type="button" onClick={() => void deleteAccount()} disabled={Boolean(busy)}>
+                  <Trash2 size={14} /> Delete account
+                </button>
+              </section>
             </>
           ) : null}
         </div>

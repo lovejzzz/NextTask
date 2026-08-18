@@ -73,7 +73,7 @@ async function handleApi(req, res, url) {
 }
 
 function routeFor(pathname) {
-  const collaboration = pathname.match(/^\/api\/(workspaces|boards|invitations)(?:\/(.*))?$/);
+  const collaboration = pathname.match(/^\/api\/(workspaces|boards|invitations|account)(?:\/(.*))?$/);
   if (collaboration) {
     return {
       methods: ['GET', 'POST', 'PATCH', 'DELETE'],

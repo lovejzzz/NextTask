@@ -18,6 +18,7 @@ import type {
   TaskUpdateInput,
   TeamMember,
   TeamMemberInput,
+  WorkspaceAuditPayload,
   WorkspaceRole,
   WorkspacesPayload,
 } from './types';
@@ -156,6 +157,29 @@ export const workspaceApi = {
 
   revokeInvitation(workspaceId: string, invitationId: string) {
     return apiFetch<void>(`/api/workspaces/${workspaceId}/invitations/${invitationId}`, { method: 'DELETE' });
+  },
+
+  transferOwnership(workspaceId: string, newOwnerId: string) {
+    if (LOCAL_DEMO_ENABLED) return Promise.resolve(localWorkspacePayload());
+    return apiFetch<WorkspacesPayload>(`/api/workspaces/${workspaceId}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ new_owner_id: newOwnerId }),
+    });
+  },
+
+  leaveWorkspace(workspaceId: string) {
+    if (LOCAL_DEMO_ENABLED) return Promise.resolve(localWorkspacePayload());
+    return apiFetch<WorkspacesPayload>(`/api/workspaces/${workspaceId}/leave`, { method: 'POST' });
+  },
+
+  getAudit(workspaceId: string) {
+    if (LOCAL_DEMO_ENABLED) return Promise.resolve({ events: [] });
+    return apiFetch<WorkspaceAuditPayload>(`/api/workspaces/${workspaceId}/audit`);
+  },
+
+  deleteOwnAccount() {
+    if (LOCAL_DEMO_ENABLED) return Promise.resolve();
+    return apiFetch<void>('/api/account', { method: 'DELETE' });
   },
 
   acceptInvitation(token: string) {

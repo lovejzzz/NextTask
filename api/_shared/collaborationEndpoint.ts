@@ -15,11 +15,12 @@ const invitationSchema = z
 const acceptInvitationSchema = z.object({ token: z.string().regex(/^[0-9a-f]{64}$/i) }).strict();
 const memberRoleSchema = z.object({ role: z.enum(['editor', 'viewer']) }).strict();
 const memberProfileSchema = z.object({ display_name: z.string().trim().min(1).max(80) }).strict();
+const transferOwnershipSchema = z.object({ new_owner_id: z.string().uuid() }).strict();
 const uuidSchema = z.string().uuid();
 
 type WorkspaceRole = 'owner' | 'editor' | 'viewer';
 type WorkspaceRow = { id: string; owner_id: string; name: string; is_personal: boolean; created_at: string; updated_at: string };
-type BoardRow = { id: string; workspace_id: string; name: string; created_by: string; created_at: string; updated_at: string };
+type BoardRow = { id: string; workspace_id: string; name: string; created_by: string | null; created_at: string; updated_at: string };
 type MemberRow = {
   workspace_id: string;
   user_id: string;
@@ -49,7 +50,8 @@ export function isCollaborationRequest(req: VercelRequest) {
     pathname === '/api/boards' ||
     pathname.startsWith('/api/boards/') ||
     pathname === '/api/invitations' ||
-    pathname.startsWith('/api/invitations/')
+    pathname.startsWith('/api/invitations/') ||
+    pathname === '/api/account'
   );
 }
 
@@ -129,16 +131,41 @@ export async function handleCollaboration(req: VercelRequest, res: VercelRespons
 
       if (route.parts[1] === 'invitations' && route.parts.length === 3 && req.method === 'DELETE') {
         const invitationId = parseUuid(route.parts[2], 'Invitation id');
-        const { data, error } = await supabase
-          .from('workspace_invitations')
-          .delete()
-          .eq('workspace_id', workspaceId)
-          .eq('id', invitationId)
-          .select('id')
-          .maybeSingle();
+        const { error } = await supabase.rpc('revoke_workspace_invitation', {
+          target_workspace_id: workspaceId,
+          target_invitation_id: invitationId,
+        });
         if (error) throw error;
-        if (!data) throw new ApiHttpError('not_found', 'Invitation not found', 404);
         return sendNoContent(res);
+      }
+
+      if (route.parts[1] === 'transfer' && route.parts.length === 2 && req.method === 'POST') {
+        const input = transferOwnershipSchema.parse(parseJsonBody(req));
+        const { error } = await supabase.rpc('transfer_workspace_ownership', {
+          target_workspace_id: workspaceId,
+          new_owner_id: input.new_owner_id,
+        });
+        if (error) throw error;
+        return sendData(res, { ...(await listWorkspaces(supabase, user.id)), selectedWorkspaceId: workspaceId });
+      }
+
+      if (route.parts[1] === 'leave' && route.parts.length === 2 && req.method === 'POST') {
+        const { error } = await supabase.rpc('leave_workspace', { target_workspace_id: workspaceId });
+        if (error) throw error;
+        return sendData(res, await listWorkspaces(supabase, user.id));
+      }
+
+      if (route.parts[1] === 'audit' && route.parts.length === 2 && req.method === 'GET') {
+        await requireWorkspaceOwner(supabase, workspaceId, user.id);
+        const { data, error } = await supabase
+          .from('workspace_audit_events')
+          .select('id,workspace_id,actor_user_id,subject_user_id,action,metadata,created_at')
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(1000);
+        if (error) throw error;
+        return sendData(res, { events: data ?? [] });
       }
 
       if (route.parts[1] === 'members' && route.parts.length === 3) {
@@ -229,6 +256,21 @@ export async function handleCollaboration(req: VercelRequest, res: VercelRespons
       return sendData(res, { ...(await listWorkspaces(supabase, user.id)), selectedWorkspaceId: workspaceId });
     }
 
+    if (route.resource === 'account' && route.parts.length === 0 && req.method === 'DELETE') {
+      const { count, error: ownedError } = await supabase
+        .from('workspaces')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', user.id)
+        .eq('is_personal', false);
+      if (ownedError) throw ownedError;
+      if ((count ?? 0) > 0) {
+        throw new ApiHttpError('conflict', 'Transfer or delete owned workspaces before deleting your account.', 409);
+      }
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) throw error;
+      return sendNoContent(res);
+    }
+
     throw new ApiHttpError('method_not_allowed', `${req.method ?? 'This method'} is not allowed for this route`, 405);
   } catch (error) {
     return handleApiError(res, error);
@@ -238,7 +280,7 @@ export async function handleCollaboration(req: VercelRequest, res: VercelRespons
 export function collaborationRoute(req: VercelRequest) {
   const queryResource = queryValue(req.query.resource);
   const queryPath = queryValue(req.query.path);
-  if (queryResource && ['workspaces', 'boards', 'invitations'].includes(queryResource)) {
+  if (queryResource && ['workspaces', 'boards', 'invitations', 'account'].includes(queryResource)) {
     return { resource: queryResource, parts: splitPath(queryPath) };
   }
 
@@ -246,6 +288,13 @@ export function collaborationRoute(req: VercelRequest) {
   const apiIndex = segments.indexOf('api');
   const resource = segments[apiIndex + 1] ?? '';
   return { resource, parts: segments.slice(apiIndex + 2) };
+}
+
+async function requireWorkspaceOwner(supabase: SupabaseClient, workspaceId: string, userId: string) {
+  const { data, error } = await supabase.from('workspaces').select('owner_id').eq('id', workspaceId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new ApiHttpError('not_found', 'Workspace not found', 404);
+  if (data.owner_id !== userId) throw new ApiHttpError('forbidden', 'Only the workspace owner can export audit history.', 403);
 }
 
 async function listWorkspaces(supabase: SupabaseClient, userId: string) {

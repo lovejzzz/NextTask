@@ -87,7 +87,11 @@ export function App() {
   const boardQuery = useBoardData(activeBoardId, filters, boardReady);
   const statsQuery = useBoardStats(activeBoardId, boardReady);
   const mutations = useTaskMutations(activeBoardId);
-  const realtimeStatus = useBoardRealtime(activeBoardId, boardReady);
+  const presenceIdentity = useMemo(() => {
+    const member = workspaceSession.activeWorkspace?.members.find((candidate) => candidate.user_id === session.userId);
+    return member ? { user_id: member.user_id, display_name: member.display_name, role: member.role } : null;
+  }, [session.userId, workspaceSession.activeWorkspace]);
+  const realtime = useBoardRealtime(activeBoardId, presenceIdentity, boardReady);
   useWorkspaceRealtime(workspaceSession.activeWorkspace?.id ?? null, session.userId, boardReady);
   const board = boardQuery.data;
   const stats = statsQuery.data;
@@ -322,7 +326,8 @@ export function App() {
         workspaces={workspaceSession.data?.workspaces ?? []}
         activeWorkspace={workspaceSession.activeWorkspace}
         activeBoardId={activeBoardId}
-        realtimeStatus={realtimeStatus}
+        realtimeStatus={realtime.status}
+        onlineMembers={realtime.members}
         acceptingInvitation={workspaceSession.acceptingInvitation}
         invitationError={workspaceSession.invitationError}
         onSelectBoard={workspaceSession.setActiveBoardId}

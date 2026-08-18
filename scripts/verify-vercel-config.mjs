@@ -74,6 +74,10 @@ check(
   rewrites.get('/api/invitations/:path*') === '/api/stats?mode=collaboration&resource=invitations&path=:path*',
   'Invitation rewrite is missing or changed.',
 );
+check(
+  rewrites.get('/api/account') === '/api/stats?mode=collaboration&resource=account',
+  'Account lifecycle rewrite is missing or changed.',
+);
 
 const result = {
   ok: errors.length === 0,

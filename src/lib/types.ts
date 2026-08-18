@@ -100,7 +100,7 @@ export type WorkspaceBoard = {
   id: string;
   workspace_id: string;
   name: string;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -151,6 +151,27 @@ export type InvitationResult = {
   email: string | null;
   expires_at: string;
   invite_url: string;
+};
+
+export type WorkspaceAuditEvent = {
+  id: string;
+  workspace_id: string;
+  actor_user_id: string | null;
+  subject_user_id: string | null;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type WorkspaceAuditPayload = {
+  events: WorkspaceAuditEvent[];
+};
+
+export type BoardPresenceMember = {
+  user_id: string;
+  display_name: string;
+  role: WorkspaceRole;
+  online_at: string;
 };
 
 export type TaskCreateInput = {

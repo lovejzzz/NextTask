@@ -8,6 +8,18 @@ export const APP_VERSION = __APP_VERSION__;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.2.0',
+    date: '2026-08-18',
+    items: [
+      'Added transactional workspace ownership transfer and self-service collaborator departure.',
+      'Added safe account deletion that requires shared ownership to be transferred or deleted first.',
+      'Added private, membership-authorized board Presence with an online collaborator indicator.',
+      'Preserved invitation revocations and added immutable owner-only workspace audit history with CSV export.',
+      'Preserved shared boards and invitation attribution when a contributing user deletes their account.',
+      'Expanded live Supabase, browser, deployment, and CI verification for the complete collaboration lifecycle.',
+    ],
+  },
+  {
     version: '0.1.0',
     date: '2026-08-18',
     items: [

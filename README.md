@@ -2,7 +2,7 @@
 
 Next Task is a secure collaborative Kanban workspace built with React, TypeScript, Vite, Vercel Serverless Functions, Supabase Auth, Realtime, and Row Level Security.
 
-Current app version: `0.1.0` (derived from `package.json`).
+Current app version: `0.2.0` (derived from `package.json`).
 
 ## Features
 
@@ -15,6 +15,10 @@ Current app version: `0.1.0` (derived from `package.json`).
 - Email recovery links so users can save and reopen a board across devices
 - Multi-board workspaces with owner, editor, and viewer roles
 - Expiring one-time invitation links with optional email binding
+- Transactional ownership transfer, member departure, and self-service account deletion
+- Revocable invitation links with preserved, exportable audit evidence
+- Authorized live collaborator Presence on each board
+- Owner-only CSV audit export for workspace, board, invitation, membership, and ownership events
 - Realtime synchronization for tasks, comments, activity, members, and boards
 - Board-scoped authorization through RLS policies on every shared data table
 - Backend API endpoints for task reads, creation, updates, reorder, comments, activity, team members, labels, and stats
@@ -139,11 +143,13 @@ Set `SMOKE_TIMEZONE` to repeat the browser suite in a specific IANA time zone, f
 9. Run `supabase/migrations/002_reorder_rpc.sql`.
 10. Run `supabase/migrations/003_data_constraints.sql`.
 11. Run `supabase/migrations/004_workspace_collaboration.sql`.
-12. Confirm RLS is enabled on:
+12. Run `supabase/migrations/005_lifecycle_presence_audit.sql`.
+13. Confirm RLS is enabled on:
    - `workspaces`
    - `workspace_members`
    - `boards`
    - `workspace_invitations`
+   - `workspace_audit_events`
    - `tasks`
    - `team_members`
    - `task_assignees`
@@ -152,7 +158,7 @@ Set `SMOKE_TIMEZONE` to repeat the browser suite in a specific IANA time zone, f
    - `comments`
    - `activity_events`
 
-`002_reorder_rpc.sql` installs transactional drag/drop. `003_data_constraints.sql` adds database validation, append-only activity, and transactional reset. `004_workspace_collaboration.sql` safely backfills each existing user into a personal workspace and board, switches authorization to board membership, installs role/invitation RPCs, publishes realtime tables, and adds a durable authenticated-write limiter. `npm run verify:supabase` now exercises owner/editor/viewer behavior, invitation replay and downgrade protection, nonmember isolation, cross-board relations, immutable attribution, reorder rollback, database constraints, and the durable limiter.
+`002_reorder_rpc.sql` installs transactional drag/drop. `003_data_constraints.sql` adds database validation, append-only activity, and transactional reset. `004_workspace_collaboration.sql` safely backfills each existing user into a personal workspace and board, switches authorization to board membership, installs role/invitation RPCs, publishes realtime tables, and adds a durable authenticated-write limiter. `005_lifecycle_presence_audit.sql` adds transactional ownership/account lifecycle operations, immutable owner-only audit history, preserved invitation revocation, and membership-authorized private Presence channels. `npm run verify:supabase` exercises owner/editor/viewer behavior, Presence authorization, invitation replay/revocation, ownership transfer, member departure, account deletion, audit immutability, nonmember isolation, cross-board relations, reorder rollback, database constraints, and the durable limiter.
 
 Do not use or expose the Supabase service role key. This project only needs the public anon/publishable key.
 
@@ -200,11 +206,16 @@ Additional product endpoints:
 - `DELETE /api/workspaces/:id`
 - `POST /api/workspaces/:id/boards`
 - `POST /api/workspaces/:id/invitations`
+- `DELETE /api/workspaces/:id/invitations/:invitationId`
+- `POST /api/workspaces/:id/transfer`
+- `POST /api/workspaces/:id/leave`
+- `GET /api/workspaces/:id/audit`
 - `PATCH /api/workspaces/:id/members/:userId`
 - `DELETE /api/workspaces/:id/members/:userId`
 - `PATCH /api/boards/:id`
 - `DELETE /api/boards/:id`
 - `POST /api/invitations/accept`
+- `DELETE /api/account`
 - `GET /api/x402/bounty-check` (public service manifest)
 - `POST /api/x402/bounty-check` (public, x402 payment required)
 
@@ -295,19 +306,24 @@ Manual checks:
 - An owner can create a workspace, board, editor invite, and viewer invite
 - Editors can create and update tasks; viewers can read but cannot mutate
 - Realtime changes appear in a second signed-in browser without manual refresh
+- Authorized collaborators appear in the board Presence indicator; nonmembers cannot join its private channel
 - Reusing an accepted invitation fails and accepting a lower-role link cannot downgrade an existing member
+- Revoked invitations stop working and remain in the owner audit export
+- Ownership transfer changes both roles atomically; nonowners can leave and owners must transfer first
+- Account deletion refuses unresolved shared ownership and removes an unencumbered identity
 
-## v0.1.0 public release checklist
+## v0.2.0 public release checklist
 
 - Supabase migration `supabase/migrations/001_init.sql` has been applied.
 - Supabase migration `supabase/migrations/002_reorder_rpc.sql` has been applied.
 - Supabase migration `supabase/migrations/003_data_constraints.sql` has been applied.
 - Supabase migration `supabase/migrations/004_workspace_collaboration.sql` has been applied after a pre-migration row-count backup/check.
+- Supabase migration `supabase/migrations/005_lifecycle_presence_audit.sql` has been applied after verifying v0.1 workspace/member/board counts.
 - Anonymous auth, email auth, and required OAuth redirect URLs are configured.
 - Vercel env vars match the deployment section and `VITE_ENABLE_LOCAL_DEMO=false`.
 - `npm run verify:ci` passes locally and in CI.
 - `npm run verify:production-env` passes before build.
-- `npm run verify:supabase` passes against the target project with collaboration, isolation, invitations, board boundaries, constraints, reorder, and rate-limit checks all `ok: true`.
+- `npm run verify:supabase` passes against the target project with collaboration, private Presence, lifecycle, audit, account deletion, isolation, invitations, board boundaries, constraints, reorder, and rate-limit checks all `ok: true`.
 - `npm run smoke:browser` passes locally against the full API-backed dev server.
 - `npm run verify:release` passes before the public push.
 - After deploy, run `npm run verify:deployment -- https://your-deployment.vercel.app`.

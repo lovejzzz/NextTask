@@ -146,6 +146,8 @@ async function runSmoke() {
     throw new Error(`board API should receive a UUID board header, got ${boardIdHeader ?? 'none'}`);
   }
   await page.waitForSelector('.board-column', { timeout: 45_000 });
+  await page.waitForSelector('.presence-chip', { timeout: 15_000 });
+  assertIncludes(await page.locator('.presence-chip').innerText(), 'online', 'authorized Presence should show the current collaborator');
 
   if ((await page.locator('.task-card').count()) === 0 && (await page.getByRole('button', { name: 'Load sample board' }).isVisible().catch(() => false))) {
     await page.getByRole('button', { name: 'Load sample board' }).click();
@@ -219,6 +221,8 @@ async function runSmoke() {
   await page.getByRole('button', { name: 'Workspace', exact: true }).click();
   await page.waitForSelector('[role="dialog"][aria-labelledby="workspace-manager-title"]', { timeout: 10_000 });
   assertEqual(await page.getByText('Collaborators', { exact: true }).count(), 1, 'workspace manager should expose collaborators');
+  assertEqual(await page.getByText('Audit history', { exact: true }).count(), 1, 'workspace owners should see audit export controls');
+  assertEqual(await page.getByText('Account lifecycle', { exact: true }).count(), 1, 'workspace manager should expose account lifecycle controls');
   await page.getByRole('button', { name: 'Close workspace settings' }).click();
 
   await page.getByRole('button', { name: `v${appVersion}` }).click();
@@ -260,7 +264,7 @@ async function runSmoke() {
         baseUrl,
         timezoneId,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['security headers, request IDs, API no-store, and board context', 'x402 manifest and unpaid boundary', 'workspace collaboration surface', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
+        checked: ['security headers, request IDs, API no-store, and board context', 'x402 manifest and unpaid boundary', 'authorized Presence and workspace lifecycle surface', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,
