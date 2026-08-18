@@ -1,6 +1,10 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { ApiHttpError } from './http.js';
-import { enforceIpWriteRateLimit, enforceUserWriteRateLimit } from './rateLimit.js';
+import {
+  enforceDurableUserWriteRateLimit,
+  enforceIpWriteRateLimit,
+  enforceUserWriteRateLimit,
+} from './rateLimit.js';
 import type { VercelRequest } from './vercel.js';
 
 export type AuthedContext = {
@@ -49,6 +53,7 @@ export async function requireUser(req: VercelRequest): Promise<AuthedContext> {
   }
 
   enforceUserWriteRateLimit(req, data.user.id);
+  await enforceDurableUserWriteRateLimit(req, supabase);
 
   return { supabase, user: data.user };
 }

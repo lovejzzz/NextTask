@@ -83,6 +83,7 @@ async function runSmoke() {
   const httpFailures = [];
   const failedRequests = [];
   let boardTodayHeader = null;
+  let boardIdHeader = null;
   let cleanupStarted = false;
 
   page.on('console', (message) => {
@@ -109,6 +110,7 @@ async function runSmoke() {
   page.on('request', (request) => {
     if (request.method() === 'GET' && new URL(request.url()).pathname === '/api/tasks') {
       boardTodayHeader = request.headers()['x-nexttask-today'] ?? null;
+      boardIdHeader = request.headers()['x-nexttask-board-id'] ?? null;
     }
   });
 
@@ -124,6 +126,7 @@ async function runSmoke() {
     "frame-ancestors 'none'",
     'document should send the deployment Content-Security-Policy',
   );
+  if (!boardResponse.headers()['x-request-id']) throw new Error('authenticated API responses should include X-Request-Id');
   assertEqual(documentResponse.headers()['x-content-type-options'], 'nosniff', 'document should disable MIME sniffing');
   const boardResponse = await boardResponsePromise;
   assertIncludes(
@@ -139,6 +142,9 @@ async function runSmoke() {
     return `${year}-${month}-${day}`;
   });
   assertEqual(boardTodayHeader, browserToday, 'board API should receive the browser-local calendar date');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(boardIdHeader ?? '')) {
+    throw new Error(`board API should receive a UUID board header, got ${boardIdHeader ?? 'none'}`);
+  }
   await page.waitForSelector('.board-column', { timeout: 45_000 });
 
   if ((await page.locator('.task-card').count()) === 0 && (await page.getByRole('button', { name: 'Load sample board' }).isVisible().catch(() => false))) {
@@ -210,6 +216,11 @@ async function runSmoke() {
   assertEqual(await page.evaluate(() => document.activeElement?.getAttribute('placeholder')), 'Add member', 'manager dialog should focus add member input');
   await page.getByRole('button', { name: 'Close team and labels' }).click();
 
+  await page.getByRole('button', { name: 'Workspace', exact: true }).click();
+  await page.waitForSelector('[role="dialog"][aria-labelledby="workspace-manager-title"]', { timeout: 10_000 });
+  assertEqual(await page.getByText('Collaborators', { exact: true }).count(), 1, 'workspace manager should expose collaborators');
+  await page.getByRole('button', { name: 'Close workspace settings' }).click();
+
   await page.getByRole('button', { name: `v${appVersion}` }).click();
   await page.waitForSelector(`[role="dialog"] >> text=v${appVersion}`, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Close changelog' }).click();
@@ -249,7 +260,7 @@ async function runSmoke() {
         baseUrl,
         timezoneId,
         screenshots: ['verification-smoke-desktop.png', 'verification-smoke-mobile.png'],
-        checked: ['security headers and API no-store', 'x402 manifest and unpaid boundary', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
+        checked: ['security headers, request IDs, API no-store, and board context', 'x402 manifest and unpaid boundary', 'workspace collaboration surface', 'sample board', 'refresh toast contrast', 'dark drawer surfaces', 'create', 'edit via icon', 'comment', 'filter', 'card-body drag', '2.5s long-press drag', 'immediate handle drag', 'clear board persistence', 'manager dialog focus', 'changelog', 'mobile status/stats', 'axe a11y (serious/critical)'],
       },
       null,
       2,

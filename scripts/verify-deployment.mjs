@@ -18,6 +18,7 @@ const result = {
   securityHeaders: null,
   bundle: null,
   auth: null,
+  workspace: null,
   api: null,
   mutationCycle: null,
 };
@@ -51,14 +52,30 @@ if (auth.error || !auth.data.session || !auth.data.user) {
 result.auth = { ok: true, userId: auth.data.user.id };
 const token = auth.data.session.access_token;
 
-const stats = await apiFetch('/api/stats', token);
+const workspaces = await apiFetch('/api/workspaces', token);
+const selectedWorkspace = workspaces.json.data?.workspaces?.find(
+  (workspace) => workspace.is_personal && workspace.boards?.length > 0,
+) ?? workspaces.json.data?.workspaces?.find((workspace) => workspace.boards?.length > 0);
+const boardId = selectedWorkspace?.boards?.[0]?.id;
+result.workspace = {
+  ok: workspaces.response.ok && Boolean(boardId),
+  status: workspaces.response.status,
+  workspaceCount: workspaces.json.data?.workspaces?.length ?? 0,
+  selectedRole: selectedWorkspace?.role ?? null,
+  boardId: boardId ?? null,
+  requestId: workspaces.response.headers.get('x-request-id'),
+};
+if (!result.workspace.ok || !result.workspace.requestId) printAndExit(1);
+
+const stats = await apiFetch('/api/stats', token, {}, boardId);
 result.api = {
   ok: stats.response.ok,
   status: stats.response.status,
   hasData: Boolean(stats.json.data),
   cacheControl: stats.response.headers.get('cache-control'),
+  requestId: stats.response.headers.get('x-request-id'),
 };
-if (!stats.response.ok || !stats.json.data || !result.api.cacheControl?.includes('no-store')) printAndExit(1);
+if (!stats.response.ok || !stats.json.data || !result.api.cacheControl?.includes('no-store') || !result.api.requestId) printAndExit(1);
 
 const title = `Deployment verification ${new Date().toISOString()}`;
 const create = await apiFetch('/api/tasks', token, {
@@ -69,7 +86,7 @@ const create = await apiFetch('/api/tasks', token, {
     status: 'todo',
     priority: 'normal',
   }),
-});
+}, boardId);
 
 const taskId = create.json.data?.id;
 if (!create.response.ok || !taskId) {
@@ -82,7 +99,7 @@ if (!create.response.ok || !taskId) {
   printAndExit(1);
 }
 
-const remove = await apiFetch(`/api/tasks/${taskId}`, token, { method: 'DELETE' });
+const remove = await apiFetch(`/api/tasks/${taskId}`, token, { method: 'DELETE' }, boardId);
 if (!remove.response.ok) {
   result.mutationCycle = {
     ok: false,
@@ -96,12 +113,13 @@ if (!remove.response.ok) {
 result.mutationCycle = { ok: true, taskId };
 printAndExit(0);
 
-async function apiFetch(path, token, init = {}) {
+async function apiFetch(path, token, init = {}, boardId = null) {
   const response = await protectedFetch(new URL(path, deploymentUrl), {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      ...(boardId ? { 'X-NextTask-Board-Id': boardId } : {}),
       ...init.headers,
     },
   });

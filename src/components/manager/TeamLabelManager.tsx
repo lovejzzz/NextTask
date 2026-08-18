@@ -11,12 +11,14 @@ import { useDialogFocus } from '../shared/useDialogFocus';
 
 export function TeamLabelManager({
   open,
+  boardId,
   board,
   onClose,
   notify,
   confirm,
 }: {
   open: boolean;
+  boardId: string | null;
   board?: BoardPayload;
   onClose: () => void;
   notify: (tone: Toast['tone'], message: string) => void;
@@ -28,7 +30,7 @@ export function TeamLabelManager({
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [memberEdits, setMemberEdits] = useState<Record<string, { name: string; color: string }>>({});
   const [labelEdits, setLabelEdits] = useState<Record<string, { name: string; color: string }>>({});
-  const mutations = useTaskMutations();
+  const mutations = useTaskMutations(boardId);
   const memberInputRef = useRef<HTMLInputElement | null>(null);
 
   useDialogFocus(open, onClose, memberInputRef);

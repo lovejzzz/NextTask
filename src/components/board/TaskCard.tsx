@@ -18,14 +18,17 @@ export function SortableTaskCard({
   task,
   onOpen,
   onMove,
+  disabled = false,
 }: {
   task: Task;
   onOpen: (id: string) => void;
-  onMove: (id: string, status: TaskStatus) => void;
+  onMove?: (id: string, status: TaskStatus) => void;
+  disabled?: boolean;
 }) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     transition: SORTABLE_TRANSITION,
+    disabled,
   });
   return (
     <TaskCard
@@ -34,8 +37,8 @@ export function SortableTaskCard({
       task={task}
       onOpen={onOpen}
       onMove={onMove}
-      attributes={attributes}
-      listeners={listeners}
+      attributes={disabled ? undefined : attributes}
+      listeners={disabled ? undefined : listeners}
       isDragging={isDragging}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     />

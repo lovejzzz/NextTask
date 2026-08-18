@@ -1,9 +1,11 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 export type TaskPriority = 'low' | 'normal' | 'high';
+export type WorkspaceRole = 'owner' | 'editor' | 'viewer';
 
 export type TeamMember = {
   id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   name: string;
   avatar_url: string | null;
   color: string;
@@ -13,7 +15,8 @@ export type TeamMember = {
 
 export type Label = {
   id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   name: string;
   color: string;
   created_at: string;
@@ -22,7 +25,8 @@ export type Label = {
 
 export type Task = {
   id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   title: string;
   description: string;
   status: TaskStatus;
@@ -40,7 +44,8 @@ export type Task = {
 export type Comment = {
   id: string;
   task_id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   body: string;
   created_at: string;
   updated_at: string;
@@ -49,7 +54,8 @@ export type Comment = {
 export type ActivityEvent = {
   id: string;
   task_id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   type:
     | 'task_created'
     | 'task_updated'
@@ -88,6 +94,63 @@ export type BoardStats = {
   dueSoon: number;
   byStatus: Record<TaskStatus, number>;
   byPriority: Record<TaskPriority, number>;
+};
+
+export type WorkspaceBoard = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkspaceMember = {
+  workspace_id: string;
+  user_id: string;
+  role: WorkspaceRole;
+  display_name: string;
+  invited_by: string | null;
+  joined_at: string;
+  updated_at: string;
+};
+
+export type WorkspaceInvitation = {
+  id: string;
+  workspace_id: string;
+  role: Exclude<WorkspaceRole, 'owner'>;
+  invitee_email: string | null;
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+};
+
+export type Workspace = {
+  id: string;
+  owner_id: string;
+  name: string;
+  is_personal: boolean;
+  role: WorkspaceRole;
+  created_at: string;
+  updated_at: string;
+  boards: WorkspaceBoard[];
+  members: WorkspaceMember[];
+  invitations: WorkspaceInvitation[];
+};
+
+export type WorkspacesPayload = {
+  workspaces: Workspace[];
+  selectedBoardId?: string;
+  selectedWorkspaceId?: string;
+};
+
+export type InvitationResult = {
+  id: string;
+  role: Exclude<WorkspaceRole, 'owner'>;
+  email: string | null;
+  expires_at: string;
+  invite_url: string;
 };
 
 export type TaskCreateInput = {

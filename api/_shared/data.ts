@@ -18,7 +18,8 @@ export type ActivityType =
 
 export type TaskRow = {
   id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   title: string;
   description: string;
   status: TaskStatus;
@@ -31,7 +32,8 @@ export type TaskRow = {
 
 export type TeamMemberRow = {
   id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   name: string;
   avatar_url: string | null;
   color: string;
@@ -41,7 +43,8 @@ export type TeamMemberRow = {
 
 export type LabelRow = {
   id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   name: string;
   color: string;
   created_at: string;
@@ -51,21 +54,24 @@ export type LabelRow = {
 export type TaskAssigneeRow = {
   task_id: string;
   member_id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   created_at: string;
 };
 
 export type TaskLabelRow = {
   task_id: string;
   label_id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   created_at: string;
 };
 
 export type CommentRow = {
   id: string;
   task_id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   body: string;
   created_at: string;
   updated_at: string;
@@ -74,7 +80,8 @@ export type CommentRow = {
 export type ActivityRow = {
   id: string;
   task_id: string;
-  user_id: string;
+  board_id: string;
+  user_id: string | null;
   type: ActivityType;
   message: string;
   metadata: Record<string, unknown>;
@@ -104,17 +111,17 @@ export type BoardFilters = {
   today?: string;
 };
 
-const selectTaskFields = 'id,user_id,title,description,status,priority,due_date,position,created_at,updated_at';
+const selectTaskFields = 'id,board_id,user_id,title,description,status,priority,due_date,position,created_at,updated_at';
 
 export async function hydrateBoard(
   supabase: SupabaseClient,
-  userId: string,
+  boardId: string,
   filters: BoardFilters = {},
 ): Promise<BoardPayload> {
   let taskQuery = supabase
     .from('tasks')
     .select(selectTaskFields)
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .order('status', { ascending: true })
     .order('position', { ascending: true });
 
@@ -131,15 +138,15 @@ export async function hydrateBoard(
     { data: activities, error: activitiesError },
   ] = await Promise.all([
     taskQuery,
-    supabase.from('team_members').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
-    supabase.from('labels').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
-    supabase.from('task_assignees').select('*').eq('user_id', userId),
-    supabase.from('task_labels').select('*').eq('user_id', userId),
-    supabase.from('comments').select('task_id').eq('user_id', userId),
+    supabase.from('team_members').select('*').eq('board_id', boardId).order('created_at', { ascending: true }),
+    supabase.from('labels').select('*').eq('board_id', boardId).order('created_at', { ascending: true }),
+    supabase.from('task_assignees').select('*').eq('board_id', boardId),
+    supabase.from('task_labels').select('*').eq('board_id', boardId),
+    supabase.from('comments').select('task_id').eq('board_id', boardId),
     supabase
       .from('activity_events')
       .select('task_id,created_at')
-      .eq('user_id', userId)
+      .eq('board_id', boardId)
       .order('created_at', { ascending: false }),
   ]);
 
@@ -180,11 +187,11 @@ export async function hydrateBoard(
   };
 }
 
-export async function getTaskOrThrow(supabase: SupabaseClient, userId: string, taskId: string) {
+export async function getTaskOrThrow(supabase: SupabaseClient, boardId: string, taskId: string) {
   const { data, error } = await supabase
     .from('tasks')
     .select(selectTaskFields)
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .eq('id', taskId)
     .single();
 
@@ -192,11 +199,11 @@ export async function getTaskOrThrow(supabase: SupabaseClient, userId: string, t
   return data as TaskRow;
 }
 
-export async function getNextPosition(supabase: SupabaseClient, userId: string, status: TaskStatus) {
+export async function getNextPosition(supabase: SupabaseClient, boardId: string, status: TaskStatus) {
   const { data, error } = await supabase
     .from('tasks')
     .select('position')
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .eq('status', status)
     .order('position', { ascending: false })
     .limit(1);
@@ -207,25 +214,25 @@ export async function getNextPosition(supabase: SupabaseClient, userId: string, 
 
 export async function assertOwnedRelationIds(
   supabase: SupabaseClient,
-  userId: string,
+  boardId: string,
   memberIds: string[] | undefined,
   labelIds: string[] | undefined,
 ) {
   await Promise.all([
-    validateOwnedIds(supabase, userId, 'team_members', memberIds, 'assignees'),
-    validateOwnedIds(supabase, userId, 'labels', labelIds, 'labels'),
+    validateOwnedIds(supabase, boardId, 'team_members', memberIds, 'assignees'),
+    validateOwnedIds(supabase, boardId, 'labels', labelIds, 'labels'),
   ]);
 }
 
 async function validateOwnedIds(
   supabase: SupabaseClient,
-  userId: string,
+  boardId: string,
   table: 'team_members' | 'labels',
   ids: string[] | undefined,
   label: string,
 ) {
   if (!ids?.length) return;
-  const { data, error } = await supabase.from(table).select('id').eq('user_id', userId).in('id', ids);
+  const { data, error } = await supabase.from(table).select('id').eq('board_id', boardId).in('id', ids);
   if (error) throw new ApiHttpError('server_error', error.message, 500);
   if ((data?.length ?? 0) !== ids.length) {
     throw new ApiHttpError('bad_request', `One or more selected ${label} no longer exist`, 400);
@@ -234,16 +241,17 @@ async function validateOwnedIds(
 
 export async function replaceAssignees(
   supabase: SupabaseClient,
-  userId: string,
+  actorUserId: string,
+  boardId: string,
   taskId: string,
   memberIds: string[],
   previousIds?: string[],
 ) {
-  const currentIds = previousIds ?? (await getAssigneeIds(supabase, userId, taskId));
+  const currentIds = previousIds ?? (await getAssigneeIds(supabase, boardId, taskId));
   const { added, removed } = relationChanges(currentIds, memberIds);
 
   if (added.length) {
-    const rows = added.map((member_id) => ({ task_id: taskId, member_id, user_id: userId }));
+    const rows = added.map((member_id) => ({ task_id: taskId, member_id, board_id: boardId, user_id: actorUserId }));
     const { error } = await supabase.from('task_assignees').insert(rows);
     if (error) throw new ApiHttpError('bad_request', error.message, 400);
   }
@@ -252,11 +260,11 @@ export async function replaceAssignees(
     const { error } = await supabase
       .from('task_assignees')
       .delete()
-      .eq('user_id', userId)
+      .eq('board_id', boardId)
       .eq('task_id', taskId)
       .in('member_id', removed);
     if (error) {
-      await rollbackAddedRelations(supabase, 'task_assignees', 'member_id', userId, taskId, added);
+      await rollbackAddedRelations(supabase, 'task_assignees', 'member_id', boardId, taskId, added);
       throw new ApiHttpError('server_error', error.message, 500);
     }
   }
@@ -264,16 +272,17 @@ export async function replaceAssignees(
 
 export async function replaceLabels(
   supabase: SupabaseClient,
-  userId: string,
+  actorUserId: string,
+  boardId: string,
   taskId: string,
   labelIds: string[],
   previousIds?: string[],
 ) {
-  const currentIds = previousIds ?? (await getLabelIds(supabase, userId, taskId));
+  const currentIds = previousIds ?? (await getLabelIds(supabase, boardId, taskId));
   const { added, removed } = relationChanges(currentIds, labelIds);
 
   if (added.length) {
-    const rows = added.map((label_id) => ({ task_id: taskId, label_id, user_id: userId }));
+    const rows = added.map((label_id) => ({ task_id: taskId, label_id, board_id: boardId, user_id: actorUserId }));
     const { error } = await supabase.from('task_labels').insert(rows);
     if (error) throw new ApiHttpError('bad_request', error.message, 400);
   }
@@ -282,11 +291,11 @@ export async function replaceLabels(
     const { error } = await supabase
       .from('task_labels')
       .delete()
-      .eq('user_id', userId)
+      .eq('board_id', boardId)
       .eq('task_id', taskId)
       .in('label_id', removed);
     if (error) {
-      await rollbackAddedRelations(supabase, 'task_labels', 'label_id', userId, taskId, added);
+      await rollbackAddedRelations(supabase, 'task_labels', 'label_id', boardId, taskId, added);
       throw new ApiHttpError('server_error', error.message, 500);
     }
   }
@@ -305,7 +314,7 @@ async function rollbackAddedRelations(
   supabase: SupabaseClient,
   table: 'task_assignees' | 'task_labels',
   relationColumn: 'member_id' | 'label_id',
-  userId: string,
+  boardId: string,
   taskId: string,
   addedIds: string[],
 ) {
@@ -313,27 +322,27 @@ async function rollbackAddedRelations(
   const { error } = await supabase
     .from(table)
     .delete()
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .eq('task_id', taskId)
     .in(relationColumn, addedIds);
   if (error) console.error(`Failed to roll back ${table} additions for task ${taskId}`, error);
 }
 
-export async function getAssigneeIds(supabase: SupabaseClient, userId: string, taskId: string): Promise<string[]> {
+export async function getAssigneeIds(supabase: SupabaseClient, boardId: string, taskId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('task_assignees')
     .select('member_id')
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .eq('task_id', taskId);
   if (error) throw new ApiHttpError('server_error', error.message, 500);
   return ((data as { member_id: string }[] | null) ?? []).map((row) => row.member_id);
 }
 
-export async function getLabelIds(supabase: SupabaseClient, userId: string, taskId: string): Promise<string[]> {
+export async function getLabelIds(supabase: SupabaseClient, boardId: string, taskId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('task_labels')
     .select('label_id')
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .eq('task_id', taskId);
   if (error) throw new ApiHttpError('server_error', error.message, 500);
   return ((data as { label_id: string }[] | null) ?? []).map((row) => row.label_id);
@@ -342,7 +351,8 @@ export async function getLabelIds(supabase: SupabaseClient, userId: string, task
 /** Record one assignee_added / assignee_removed event per changed member, named where possible. */
 export async function recordAssigneeChanges(
   supabase: SupabaseClient,
-  userId: string,
+  actorUserId: string,
+  boardId: string,
   taskId: string,
   prevIds: string[],
   nextIds: string[],
@@ -352,16 +362,16 @@ export async function recordAssigneeChanges(
   if (!added.length && !removed.length) return;
 
   const ids = [...new Set([...added, ...removed])];
-  const { data } = await supabase.from('team_members').select('id,name').eq('user_id', userId).in('id', ids);
+  const { data } = await supabase.from('team_members').select('id,name').eq('board_id', boardId).in('id', ids);
   const nameById = new Map(((data as { id: string; name: string }[] | null) ?? []).map((m) => [m.id, m.name]));
 
   for (const id of added) {
-    await recordActivity(supabase, userId, taskId, 'assignee_added', `Added ${nameById.get(id) ?? 'a member'}`, {
+    await recordActivity(supabase, actorUserId, boardId, taskId, 'assignee_added', `Added ${nameById.get(id) ?? 'a member'}`, {
       member_id: id,
     });
   }
   for (const id of removed) {
-    await recordActivity(supabase, userId, taskId, 'assignee_removed', `Removed ${nameById.get(id) ?? 'a member'}`, {
+    await recordActivity(supabase, actorUserId, boardId, taskId, 'assignee_removed', `Removed ${nameById.get(id) ?? 'a member'}`, {
       member_id: id,
     });
   }
@@ -370,7 +380,8 @@ export async function recordAssigneeChanges(
 /** Record one label_added / label_removed event per changed label, named where possible. */
 export async function recordLabelChanges(
   supabase: SupabaseClient,
-  userId: string,
+  actorUserId: string,
+  boardId: string,
   taskId: string,
   prevIds: string[],
   nextIds: string[],
@@ -380,16 +391,16 @@ export async function recordLabelChanges(
   if (!added.length && !removed.length) return;
 
   const ids = [...new Set([...added, ...removed])];
-  const { data } = await supabase.from('labels').select('id,name').eq('user_id', userId).in('id', ids);
+  const { data } = await supabase.from('labels').select('id,name').eq('board_id', boardId).in('id', ids);
   const nameById = new Map(((data as { id: string; name: string }[] | null) ?? []).map((l) => [l.id, l.name]));
 
   for (const id of added) {
-    await recordActivity(supabase, userId, taskId, 'label_added', `Added label ${nameById.get(id) ?? ''}`.trim(), {
+    await recordActivity(supabase, actorUserId, boardId, taskId, 'label_added', `Added label ${nameById.get(id) ?? ''}`.trim(), {
       label_id: id,
     });
   }
   for (const id of removed) {
-    await recordActivity(supabase, userId, taskId, 'label_removed', `Removed label ${nameById.get(id) ?? ''}`.trim(), {
+    await recordActivity(supabase, actorUserId, boardId, taskId, 'label_removed', `Removed label ${nameById.get(id) ?? ''}`.trim(), {
       label_id: id,
     });
   }
@@ -397,7 +408,8 @@ export async function recordLabelChanges(
 
 export async function recordActivity(
   supabase: SupabaseClient,
-  userId: string,
+  actorUserId: string,
+  boardId: string,
   taskId: string,
   type: ActivityType,
   message: string,
@@ -405,7 +417,8 @@ export async function recordActivity(
 ) {
   const { error } = await supabase.from('activity_events').insert({
     task_id: taskId,
-    user_id: userId,
+    board_id: boardId,
+    user_id: actorUserId,
     type,
     message,
     metadata,
@@ -416,14 +429,15 @@ export async function recordActivity(
 
 export async function recordActivityBestEffort(
   supabase: SupabaseClient,
-  userId: string,
+  actorUserId: string,
+  boardId: string,
   taskId: string,
   type: ActivityType,
   message: string,
   metadata: Record<string, unknown> = {},
 ) {
   try {
-    await recordActivity(supabase, userId, taskId, type, message, metadata);
+    await recordActivity(supabase, actorUserId, boardId, taskId, type, message, metadata);
   } catch (error) {
     console.error(`Failed to record ${type} activity for task ${taskId}`, error);
   }
@@ -437,13 +451,13 @@ export async function recordActivityBestEffort(
  */
 export async function hydrateTask(
   supabase: SupabaseClient,
-  userId: string,
+  boardId: string,
   taskId: string,
 ): Promise<HydratedTask> {
   const { data: task, error: taskError } = await supabase
     .from('tasks')
     .select(selectTaskFields)
-    .eq('user_id', userId)
+    .eq('board_id', boardId)
     .eq('id', taskId)
     .single();
 
@@ -455,13 +469,13 @@ export async function hydrateTask(
     { count: commentCount, error: commentsError },
     { data: latestActivity, error: activityError },
   ] = await Promise.all([
-    supabase.from('task_assignees').select('member_id').eq('user_id', userId).eq('task_id', taskId),
-    supabase.from('task_labels').select('label_id').eq('user_id', userId).eq('task_id', taskId),
-    supabase.from('comments').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('task_id', taskId),
+    supabase.from('task_assignees').select('member_id').eq('board_id', boardId).eq('task_id', taskId),
+    supabase.from('task_labels').select('label_id').eq('board_id', boardId).eq('task_id', taskId),
+    supabase.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', boardId).eq('task_id', taskId),
     supabase
       .from('activity_events')
       .select('created_at')
-      .eq('user_id', userId)
+      .eq('board_id', boardId)
       .eq('task_id', taskId)
       .order('created_at', { ascending: false })
       .limit(1),
@@ -475,10 +489,10 @@ export async function hydrateTask(
 
   const [{ data: members, error: membersError }, { data: labels, error: labelRowsError }] = await Promise.all([
     memberIds.length
-      ? supabase.from('team_members').select('*').eq('user_id', userId).in('id', memberIds).order('created_at', { ascending: true })
+      ? supabase.from('team_members').select('*').eq('board_id', boardId).in('id', memberIds).order('created_at', { ascending: true })
       : Promise.resolve({ data: [] as TeamMemberRow[], error: null }),
     labelIds.length
-      ? supabase.from('labels').select('*').eq('user_id', userId).in('id', labelIds).order('created_at', { ascending: true })
+      ? supabase.from('labels').select('*').eq('board_id', boardId).in('id', labelIds).order('created_at', { ascending: true })
       : Promise.resolve({ data: [] as LabelRow[], error: null }),
   ]);
 

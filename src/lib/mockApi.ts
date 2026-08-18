@@ -30,6 +30,7 @@ type MockState = {
 
 const STORAGE_KEY = 'next-task-local-demo-v1';
 const userId = 'local-demo-user';
+const boardId = 'local-demo-board';
 
 export const mockApi = {
   async getBoard(filters: BoardFilters = {}) {
@@ -61,6 +62,7 @@ export const mockApi = {
     const status = input.status ?? 'todo';
     const task: Task = {
       id: id(),
+      board_id: boardId,
       user_id: userId,
       title: input.title.trim(),
       description: input.description?.trim() ?? '',
@@ -150,6 +152,7 @@ export const mockApi = {
     const state = readState();
     const member: TeamMember = {
       id: id(),
+      board_id: boardId,
       user_id: userId,
       name: input.name.trim(),
       avatar_url: input.avatar_url ?? null,
@@ -188,6 +191,7 @@ export const mockApi = {
     const state = readState();
     const label: Label = {
       id: id(),
+      board_id: boardId,
       user_id: userId,
       name: input.name.trim(),
       color: input.color ?? '#2E90FA',
@@ -234,6 +238,7 @@ export const mockApi = {
     const comment: Comment = {
       id: id(),
       task_id: taskId,
+      board_id: boardId,
       user_id: userId,
       body: body.trim(),
       created_at: now(),
@@ -303,6 +308,7 @@ function createSeedState(): MockState {
   const comments: Comment[] = tasks.slice(0, 4).map((item, index) => ({
     id: id(),
     task_id: item.id,
+    board_id: boardId,
     user_id: userId,
     body: [
       'This polish detail will be visible immediately during review.',
@@ -317,6 +323,7 @@ function createSeedState(): MockState {
   const activity: ActivityEvent[] = tasks.map((item) => ({
     id: id(),
     task_id: item.id,
+    board_id: boardId,
     user_id: userId,
     type: 'task_created',
     message: 'Created task',
@@ -418,6 +425,7 @@ function addActivity(
   state.activity.push({
     id: id(),
     task_id: taskId,
+    board_id: boardId,
     user_id: userId,
     type,
     message,
@@ -427,11 +435,11 @@ function addActivity(
 }
 
 function member(name: string, color: string): TeamMember {
-  return { id: id(), user_id: userId, name, avatar_url: null, color, created_at: now(), updated_at: now() };
+  return { id: id(), board_id: boardId, user_id: userId, name, avatar_url: null, color, created_at: now(), updated_at: now() };
 }
 
 function label(name: string, color: string): Label {
-  return { id: id(), user_id: userId, name, color, created_at: now(), updated_at: now() };
+  return { id: id(), board_id: boardId, user_id: userId, name, color, created_at: now(), updated_at: now() };
 }
 
 function task(
@@ -447,6 +455,7 @@ function task(
   const timestamp = now();
   return {
     id: id(),
+    board_id: boardId,
     user_id: userId,
     title,
     description,

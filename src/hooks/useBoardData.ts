@@ -3,38 +3,38 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { BoardFilters } from '../lib/types';
 
-export function boardQueryKey(userId: string | null, filters: BoardFilters) {
-  return ['board', userId ?? 'pending-user', filters] as const;
+export function boardQueryKey(boardId: string | null, filters: BoardFilters) {
+  return ['board', boardId ?? 'pending-board', filters] as const;
 }
 
-export function useBoardData(userId: string | null, filters: BoardFilters, enabled: boolean) {
+export function useBoardData(boardId: string | null, filters: BoardFilters, enabled: boolean) {
   return useQuery({
-    queryKey: boardQueryKey(userId, filters),
-    queryFn: () => api.getBoard(filters),
-    enabled: enabled && Boolean(userId),
+    queryKey: boardQueryKey(boardId, filters),
+    queryFn: () => api.getBoard(filters, boardId),
+    enabled: enabled && Boolean(boardId),
   });
 }
 
-export function useBoardStats(userId: string | null, enabled: boolean) {
+export function useBoardStats(boardId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ['stats', userId ?? 'pending-user'],
-    queryFn: () => api.getStats(),
-    enabled: enabled && Boolean(userId),
+    queryKey: ['stats', boardId ?? 'pending-board'],
+    queryFn: () => api.getStats(boardId),
+    enabled: enabled && Boolean(boardId),
   });
 }
 
-export function useComments(userId: string | null, taskId: string | null) {
+export function useComments(boardId: string | null, taskId: string | null) {
   return useQuery({
-    queryKey: ['comments', userId ?? 'pending-user', taskId],
-    queryFn: () => api.getComments(taskId!),
-    enabled: Boolean(userId && taskId),
+    queryKey: ['comments', boardId ?? 'pending-board', taskId],
+    queryFn: () => api.getComments(taskId!, boardId),
+    enabled: Boolean(boardId && taskId),
   });
 }
 
-export function useActivity(userId: string | null, taskId: string | null) {
+export function useActivity(boardId: string | null, taskId: string | null) {
   return useQuery({
-    queryKey: ['activity', userId ?? 'pending-user', taskId],
-    queryFn: () => api.getActivity(taskId!),
-    enabled: Boolean(userId && taskId),
+    queryKey: ['activity', boardId ?? 'pending-board', taskId],
+    queryFn: () => api.getActivity(taskId!, boardId),
+    enabled: Boolean(boardId && taskId),
   });
 }

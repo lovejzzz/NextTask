@@ -73,6 +73,18 @@ async function handleApi(req, res, url) {
 }
 
 function routeFor(pathname) {
+  const collaboration = pathname.match(/^\/api\/(workspaces|boards|invitations)(?:\/(.*))?$/);
+  if (collaboration) {
+    return {
+      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+      file: 'api/stats.ts',
+      params: {
+        mode: 'collaboration',
+        resource: collaboration[1],
+        path: collaboration[2] ? decodeURIComponent(collaboration[2]) : '',
+      },
+    };
+  }
   const routes = [
     [['GET', 'POST'], /^\/api\/tasks$/, 'api/tasks/index.ts', []],
     [['PATCH'], /^\/api\/tasks\/reorder$/, 'api/tasks/reorder.ts', []],

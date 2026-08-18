@@ -78,6 +78,20 @@ describe('handleApiError', () => {
       statusCode: 400,
       body: { error: { code: 'bad_request', message: 'The request contains an invalid value.' } },
     });
+
+    const forbidden = response();
+    handleApiError(forbidden.res, { code: '42501', message: 'private policy detail' });
+    expect(forbidden.result).toEqual({
+      statusCode: 403,
+      body: { error: { code: 'forbidden', message: 'You do not have permission to perform this action.' } },
+    });
+
+    const invalidArgument = response();
+    handleApiError(invalidArgument.res, { code: '22023', message: 'private function detail' });
+    expect(invalidArgument.result).toEqual({
+      statusCode: 400,
+      body: { error: { code: 'bad_request', message: 'The request contains an invalid value.' } },
+    });
   });
 });
 

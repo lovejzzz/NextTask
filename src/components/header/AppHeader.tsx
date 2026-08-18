@@ -48,6 +48,7 @@ export function AppHeader({
   onRefresh,
   syncing,
   lastSyncedAt,
+  canEdit = true,
 }: {
   session: {
     userId: string | null;
@@ -63,6 +64,7 @@ export function AppHeader({
   onRefresh: () => void;
   syncing: boolean;
   lastSyncedAt: number;
+  canEdit?: boolean;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
@@ -189,6 +191,7 @@ export function AppHeader({
           }}
           type="button"
           title="Team and labels"
+          disabled={!canEdit}
         >
           <Users size={16} />
           Team & labels
@@ -235,6 +238,7 @@ export function AppHeader({
           }}
           type="button"
           title="New task"
+          disabled={!canEdit}
         >
           <Plus size={17} />
           New task

@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VercelRequest, VercelResponse } from '../../../api/_shared/vercel.js';
 
 const mocks = vi.hoisted(() => ({
-  requireUser: vi.fn(),
+  requireBoard: vi.fn(),
   hydrateBoard: vi.fn(),
   recordActivityBestEffort: vi.fn(),
 }));
-vi.mock('../../../api/_shared/auth.js', () => ({ requireUser: mocks.requireUser }));
+vi.mock('../../../api/_shared/workspace.js', () => ({ requireBoard: mocks.requireBoard }));
 vi.mock('../../../api/_shared/data.js', () => ({
   hydrateBoard: mocks.hydrateBoard,
   recordActivityBestEffort: mocks.recordActivityBestEffort,
@@ -20,7 +20,7 @@ const emptyBoard = { tasks: [], teamMembers: [], labels: [] };
 const previousFallback = process.env.ALLOW_RESET_RPC_FALLBACK;
 
 beforeEach(() => {
-  mocks.requireUser.mockReset();
+  mocks.requireBoard.mockReset();
   mocks.hydrateBoard.mockReset().mockResolvedValue(emptyBoard);
   delete process.env.ALLOW_RESET_RPC_FALLBACK;
 });
@@ -34,19 +34,19 @@ afterEach(() => {
 describe('reset board', () => {
   it('uses the transactional RPC without issuing sequential deletes', async () => {
     const supabase = resetClient(null);
-    mocks.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+    mocks.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
     const { req, res, state } = requestAndResponse();
 
     await handler(req, res);
 
-    expect(supabase.rpc).toHaveBeenCalledWith('reset_board');
+    expect(supabase.rpc).toHaveBeenCalledWith('reset_board', { target_board_id: 'board-id' });
     expect(supabase.from).not.toHaveBeenCalled();
     expect(state.status).toBe(200);
   });
 
   it('fails closed when the production RPC is missing', async () => {
     const supabase = resetClient({ code: 'PGRST202', message: 'Function not found' });
-    mocks.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+    mocks.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { req, res, state } = requestAndResponse();
 
@@ -60,7 +60,7 @@ describe('reset board', () => {
   it('keeps the sequential path behind the explicit local-only fallback', async () => {
     process.env.ALLOW_RESET_RPC_FALLBACK = 'true';
     const supabase = resetClient({ code: 'PGRST202', message: 'Function not found' });
-    mocks.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+    mocks.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { req, res, state } = requestAndResponse();
 

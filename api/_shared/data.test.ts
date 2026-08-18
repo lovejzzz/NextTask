@@ -20,7 +20,7 @@ describe('recordActivityBestEffort', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await expect(
-      recordActivityBestEffort(supabase, 'user-id', 'task-id', 'comment_added', 'Commented'),
+      recordActivityBestEffort(supabase, 'user-id', 'board-id', 'task-id', 'comment_added', 'Commented'),
     ).resolves.toBeUndefined();
     expect(insert).toHaveBeenCalledOnce();
     expect(consoleSpy).toHaveBeenCalledOnce();

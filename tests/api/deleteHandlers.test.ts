@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { VercelRequest, VercelResponse } from '../../api/_shared/vercel.js';
 
-const auth = vi.hoisted(() => ({ requireUser: vi.fn() }));
-vi.mock('../../api/_shared/auth.js', () => ({ requireUser: auth.requireUser }));
+const workspace = vi.hoisted(() => ({ requireBoard: vi.fn() }));
+vi.mock('../../api/_shared/workspace.js', () => ({ requireBoard: workspace.requireBoard }));
 
 import labelHandler from '../../api/labels/[id].js';
 import taskHandler from '../../api/tasks/[id].js';
@@ -18,14 +18,14 @@ const handlers = [
 ] as const;
 
 beforeEach(() => {
-  auth.requireUser.mockReset();
+  workspace.requireBoard.mockReset();
 });
 
 describe('destructive resource handlers', () => {
   for (const [resource, handler] of handlers) {
     it(`returns 404 when a ${resource} delete matches no owned row`, async () => {
       const supabase = deleteClient(null);
-      auth.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+      workspace.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
       const { req, res, state } = requestAndResponse();
 
       await handler(req, res);
@@ -36,7 +36,7 @@ describe('destructive resource handlers', () => {
 
     it(`returns 204 only after deleting an owned ${resource}`, async () => {
       const supabase = deleteClient({ id: resourceId });
-      auth.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+      workspace.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
       const { req, res, state } = requestAndResponse();
 
       await handler(req, res);

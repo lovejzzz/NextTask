@@ -1,5 +1,22 @@
 # Next Task Roadmap
 
+## v0.1.0 — Collaborative workspaces
+
+> **Status (2026-08-18):** Implementation complete locally; production migration and deployment verification are the remaining release gates.
+
+v0.1 turns the single-user board into a collaborative workspace product while preserving every existing personal board. The release adds multiple boards per workspace, owner/editor/viewer membership, secure invitations, board-scoped RLS, realtime synchronization, durable authenticated-write throttling, and correlation IDs for production errors.
+
+Release acceptance:
+
+- Legacy rows are backfilled into one personal workspace/default board per user before `board_id` becomes required.
+- Every application query and mutation is explicitly board-scoped; Postgres RLS independently enforces membership and role.
+- Owners manage invitations and roles, editors mutate shared boards, and viewers remain read-only.
+- Invitation tokens are random, hashed at rest, expiring, one-time, optionally email-bound, and cannot downgrade existing access.
+- Realtime updates invalidate board, stats, comment, activity, membership, and board-list caches.
+- `npm run verify:ci`, `npm run verify:supabase`, browser smoke, preview CI, and production deployment verification are green.
+
+Next candidates after v0.1: ownership transfer/account deletion lifecycle, invitation revocation UI, presence/cursors, audit exports, and richer production telemetry.
+
 ## V0.0.3.1 Roadmap — Public Readiness Fixes (implemented)
 
 > **Status (2026-06-18):** Implemented. TaskCard drag semantics were rebuilt so pointer drag, 2.5 second long-press drag, immediate handle drag, keyboard drag, edit, and mobile move controls coexist without nested-interactive accessibility violations. `supabase/migrations/002_reorder_rpc.sql` has been applied to the live Supabase project and `npm run verify:supabase` now fails if the RPC is missing. Clear board is wired through local full-dev routing and covered by smoke. `npm run verify:release` is green against the live API path, including axe, mobile geometry, Clear board persistence, and reorder RPC invariants.

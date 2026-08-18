@@ -1,9 +1,9 @@
-import { requireUser } from '../_shared/auth.js';
 import { addDateOnlyDays, getRequestToday } from '../_shared/dateOnly.js';
 import { hydrateBoard, recordActivityBestEffort } from '../_shared/data.js';
 import { isMissingRpcFunction } from '../_shared/database.js';
 import { handleApiError, methodNotAllowed, sendData } from '../_shared/http.js';
 import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
+import { requireBoard } from '../_shared/workspace.js';
 
 const memberSeed = [
   { name: 'Avery Stone', color: '#7A5AF8' },
@@ -22,23 +22,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'POST') return methodNotAllowed(res, req.method);
 
-    const { supabase, user } = await requireUser(req);
+    const { supabase, user, board } = await requireBoard(req, 'write');
     if (isResetRequest(req)) {
-      const { error } = await supabase.rpc('reset_board');
+      const { error } = await supabase.rpc('reset_board', { target_board_id: board.id });
       if (error) {
         if (isMissingRpcFunction(error) && process.env.ALLOW_RESET_RPC_FALLBACK === 'true') {
           console.warn('reset_board RPC unavailable; using sequential fallback. Apply migration 003_data_constraints.sql.');
-          await resetSequentially(supabase, user.id);
+          await resetSequentially(supabase, board.id);
         } else {
           throw error;
         }
       }
 
-      const payload = await hydrateBoard(supabase, user.id);
+      const payload = await hydrateBoard(supabase, board.id);
       return sendData(res, payload);
     }
 
-    const existing = await hydrateBoard(supabase, user.id);
+    const existing = await hydrateBoard(supabase, board.id);
     if (existing.tasks.length) return sendData(res, existing);
 
     const existingMemberNames = new Set(existing.teamMembers.map((member) => member.name.toLowerCase()));
@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const memberInsert = missingMembers.length
       ? await supabase
           .from('team_members')
-          .insert(missingMembers.map((member) => ({ ...member, user_id: user.id })))
+          .insert(missingMembers.map((member) => ({ ...member, board_id: board.id, user_id: user.id })))
           .select('*')
       : { data: [], error: null };
     if (memberInsert.error || !memberInsert.data) throw memberInsert.error;
@@ -57,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const labelInsert = missingLabels.length
       ? await supabase
           .from('labels')
-          .insert(missingLabels.map((label) => ({ ...label, user_id: user.id })))
+          .insert(missingLabels.map((label) => ({ ...label, board_id: board.id, user_id: user.id })))
           .select('*')
       : { data: [], error: null };
     if (labelInsert.error || !labelInsert.data) throw labelInsert.error;
@@ -138,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
-      .insert(taskSeed.map((task) => ({ ...task, user_id: user.id })))
+      .insert(taskSeed.map((task) => ({ ...task, board_id: board.id, user_id: user.id })))
       .select('*');
     if (tasksError || !tasks) throw tasksError;
 
@@ -154,11 +154,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const assigned = [index % 2 === 0 ? feature : design, index === 4 ? bug : null, index > 5 ? launch : null].filter(
         Boolean,
       );
-      return assigned.map((label) => ({ task_id: task.id, label_id: label!.id, user_id: user.id }));
+      return assigned.map((label) => ({
+        task_id: task.id,
+        label_id: label!.id,
+        board_id: board.id,
+        user_id: user.id,
+      }));
     });
 
     const taskAssignees = tasks.flatMap((task, index) => [
-      { task_id: task.id, member_id: sampleMembers[index % sampleMembers.length].id, user_id: user.id },
+      {
+        task_id: task.id,
+        member_id: sampleMembers[index % sampleMembers.length].id,
+        board_id: board.id,
+        user_id: user.id,
+      },
     ]);
 
     try {
@@ -170,6 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const commentRows = tasks.slice(0, 4).map((task, index) => ({
         task_id: task.id,
+        board_id: board.id,
         user_id: user.id,
         body: [
           'This is the polish pass that will make the board feel finished.',
@@ -183,18 +194,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (commentsError) throw commentsError;
 
       for (const task of tasks) {
-        await recordActivityBestEffort(supabase, user.id, task.id, 'task_created', 'Created task', {
+        await recordActivityBestEffort(supabase, user.id, board.id, task.id, 'task_created', 'Created task', {
           title: task.title,
         });
       }
 
-      const payload = await hydrateBoard(supabase, user.id);
+      const payload = await hydrateBoard(supabase, board.id);
       return sendData(res, payload, 201);
     } catch (error) {
       const rollback = await supabase
         .from('tasks')
         .delete()
-        .eq('user_id', user.id)
+        .eq('board_id', board.id)
         .in(
           'id',
           tasks.map((task) => task.id),
@@ -207,11 +218,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-async function resetSequentially(supabase: Awaited<ReturnType<typeof requireUser>>['supabase'], userId: string) {
+async function resetSequentially(
+  supabase: Awaited<ReturnType<typeof requireBoard>>['supabase'],
+  boardId: string,
+) {
   // Local-only compatibility path. Production uses reset_board so these three
   // destructive writes commit or roll back as one transaction.
   for (const table of ['tasks', 'team_members', 'labels'] as const) {
-    const { error } = await supabase.from(table).delete().eq('user_id', userId);
+    const { error } = await supabase.from(table).delete().eq('board_id', boardId);
     if (error) throw error;
   }
 }

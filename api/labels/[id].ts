@@ -1,11 +1,11 @@
-import { requireUser } from '../_shared/auth.js';
 import { ApiHttpError, getUuidParam, handleApiError, methodNotAllowed, parseJsonBody, sendData, sendNoContent } from '../_shared/http.js';
 import { labelUpdateSchema } from '../_shared/validation.js';
 import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
+import { requireBoard } from '../_shared/workspace.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { supabase, user } = await requireUser(req);
+    const { supabase, board } = await requireBoard(req, 'write');
     const id = getUuidParam(req, 'id', 'Label id');
 
     if (req.method === 'PATCH') {
@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('labels')
         .update(input)
-        .eq('user_id', user.id)
+        .eq('board_id', board.id)
         .eq('id', id)
         .select('*')
         .single();
@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('labels')
         .delete()
-        .eq('user_id', user.id)
+        .eq('board_id', board.id)
         .eq('id', id)
         .select('id')
         .maybeSingle();

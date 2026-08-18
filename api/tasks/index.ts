@@ -1,4 +1,3 @@
-import { requireUser } from '../_shared/auth.js';
 import { getRequestToday } from '../_shared/dateOnly.js';
 import {
   assertOwnedRelationIds,
@@ -13,10 +12,11 @@ import {
 import { handleApiError, methodNotAllowed, parseJsonBody, sendData } from '../_shared/http.js';
 import { boardFilterSchema, taskCreateSchema } from '../_shared/validation.js';
 import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
+import { requireBoard } from '../_shared/workspace.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { supabase, user } = await requireUser(req);
+    const { supabase, user, board } = await requireBoard(req, req.method === 'GET' ? 'read' : 'write');
 
     if (req.method === 'GET') {
       const filters: BoardFilters = {
@@ -30,19 +30,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }),
         today: getRequestToday(req),
       };
-      const payload = await hydrateBoard(supabase, user.id, filters);
+      const payload = await hydrateBoard(supabase, board.id, filters);
       return sendData(res, payload);
     }
 
     if (req.method === 'POST') {
       const input = taskCreateSchema.parse(parseJsonBody(req));
-      await assertOwnedRelationIds(supabase, user.id, input.assignee_ids, input.label_ids);
-      const position = await getNextPosition(supabase, user.id, input.status);
+      await assertOwnedRelationIds(supabase, board.id, input.assignee_ids, input.label_ids);
+      const position = await getNextPosition(supabase, board.id, input.status);
 
       const { data, error } = await supabase
         .from('tasks')
         .insert({
           user_id: user.id,
+          board_id: board.id,
           title: input.title,
           description: input.description,
           status: input.status,
@@ -57,14 +58,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let task: Awaited<ReturnType<typeof hydrateTask>>;
       try {
-        await replaceAssignees(supabase, user.id, data.id, input.assignee_ids, []);
-        await replaceLabels(supabase, user.id, data.id, input.label_ids, []);
-        await recordActivityBestEffort(supabase, user.id, data.id, 'task_created', 'Created task', {
+        await replaceAssignees(supabase, user.id, board.id, data.id, input.assignee_ids, []);
+        await replaceLabels(supabase, user.id, board.id, data.id, input.label_ids, []);
+        await recordActivityBestEffort(supabase, user.id, board.id, data.id, 'task_created', 'Created task', {
           title: input.title,
         });
-        task = await hydrateTask(supabase, user.id, data.id);
+        task = await hydrateTask(supabase, board.id, data.id);
       } catch (error) {
-        const rollback = await supabase.from('tasks').delete().eq('user_id', user.id).eq('id', data.id);
+        const rollback = await supabase.from('tasks').delete().eq('board_id', board.id).eq('id', data.id);
         if (rollback.error) console.error(`Failed to roll back incomplete task ${data.id}`, rollback.error);
         throw error;
       }
