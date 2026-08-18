@@ -60,6 +60,22 @@
     {
       "source": "/api/x402/bounty-check",
       "destination": "/api/stats?mode=bounty-check"
+    },
+    {
+      "source": "/api/workspaces",
+      "destination": "/api/stats?mode=collaboration&resource=workspaces"
+    },
+    {
+      "source": "/api/workspaces/:path*",
+      "destination": "/api/stats?mode=collaboration&resource=workspaces&path=:path*"
+    },
+    {
+      "source": "/api/boards/:path*",
+      "destination": "/api/stats?mode=collaboration&resource=boards&path=:path*"
+    },
+    {
+      "source": "/api/invitations/:path*",
+      "destination": "/api/stats?mode=collaboration&resource=invitations&path=:path*"
     }
   ]
 }

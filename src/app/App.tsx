@@ -27,9 +27,13 @@ import { AppFooter, ChangelogDialog, ConfirmDialog, FatalState, LoadingExperienc
 import { BoardColumn } from '../components/board/BoardColumn';
 import { TaskCard } from '../components/board/TaskCard';
 import { TaskDrawer } from '../components/drawer/TaskDrawer';
+import { WorkspaceBar } from '../components/workspace/WorkspaceBar';
+import { WorkspaceManager } from '../components/workspace/WorkspaceManager';
 import { useAnonymousSession } from '../hooks/useAnonymousSession';
 import { boardQueryKey, useBoardData, useBoardStats } from '../hooks/useBoardData';
+import { useBoardRealtime, useWorkspaceRealtime } from '../hooks/useBoardRealtime';
 import { useTaskMutations } from '../hooks/useTaskMutations';
+import { useWorkspaceSession } from '../hooks/useWorkspaceSession';
 import { groupTasks, reorderForDrop } from '../lib/boardLogic';
 import { STATUSES } from '../lib/constants';
 import { defaultFilters, hasActiveFilters } from '../lib/filterLogic';
@@ -69,6 +73,7 @@ export function App() {
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('edit');
   const [initialStatus, setInitialStatus] = useState<TaskStatus>('todo');
   const [managerOpen, setManagerOpen] = useState(false);
+  const [workspaceManagerOpen, setWorkspaceManagerOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [mobileStatus, setMobileStatus] = useState<TaskStatus>('todo');
   const [changelogOpen, setChangelogOpen] = useState(false);
@@ -76,15 +81,20 @@ export function App() {
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const queryClient = useQueryClient();
   const sessionReady = session.status === 'ready' && Boolean(session.userId);
-
-  const boardQuery = useBoardData(session.userId, filters, sessionReady);
-  const statsQuery = useBoardStats(session.userId, sessionReady);
-  const mutations = useTaskMutations();
+  const workspaceSession = useWorkspaceSession(session.userId, sessionReady);
+  const activeBoardId = workspaceSession.activeBoardId;
+  const boardReady = sessionReady && workspaceSession.isSuccess && Boolean(activeBoardId);
+  const boardQuery = useBoardData(activeBoardId, filters, boardReady);
+  const statsQuery = useBoardStats(activeBoardId, boardReady);
+  const mutations = useTaskMutations(activeBoardId);
+  const realtimeStatus = useBoardRealtime(activeBoardId, boardReady);
+  useWorkspaceRealtime(workspaceSession.activeWorkspace?.id ?? null, session.userId, boardReady);
   const board = boardQuery.data;
   const stats = statsQuery.data;
   const tasks = board?.tasks ?? EMPTY_TASKS;
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const canEdit = workspaceSession.canEdit;
   const syncing = boardQuery.isFetching || statsQuery.isFetching || mutations.reorderTasks.isPending;
   const lastSyncedAt = Math.max(boardQuery.dataUpdatedAt || 0, statsQuery.dataUpdatedAt || 0);
   const canClear = tasks.length > 0 || (board?.teamMembers.length ?? 0) > 0 || (board?.labels.length ?? 0) > 0;
@@ -122,9 +132,10 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [session.userId]);
+  }, [activeBoardId]);
 
   function openCreate(status: TaskStatus = 'todo') {
+    if (!canEdit) return;
     setDrawerMode('create');
     setInitialStatus(status);
     setSelectedTaskId(null);
@@ -157,11 +168,13 @@ export function App() {
   }
 
   function onDragStart(event: DragStartEvent) {
+    if (!canEdit) return;
     setActiveTaskId(String(event.active.id));
   }
 
   async function onDragEnd(event: DragEndEvent) {
     setActiveTaskId(null);
+    if (!canEdit) return;
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : null;
     if (!overId || activeId === overId) return;
@@ -180,6 +193,7 @@ export function App() {
   }
 
   async function moveTask(taskId: string, targetStatus: TaskStatus) {
+    if (!canEdit) return;
     const task = tasks.find((item) => item.id === taskId);
     if (!task || task.status === targetStatus) return;
 
@@ -190,6 +204,7 @@ export function App() {
   }
 
   async function quickCreateTask(status: TaskStatus, title: string) {
+    if (!canEdit) return;
     try {
       await mutations.createTask.mutateAsync({
         title,
@@ -218,6 +233,7 @@ export function App() {
   }
 
   async function clearBoard() {
+    if (!canEdit) return;
     const confirmed = await confirmAction({
       title: 'Clear the board?',
       message:
@@ -239,6 +255,7 @@ export function App() {
   }
 
   async function loadSampleBoard() {
+    if (!canEdit) return;
     try {
       await mutations.bootstrapDemo.mutateAsync();
       notify('success', 'Sample board loaded');
@@ -248,9 +265,10 @@ export function App() {
   }
 
   async function applyReorder(updates: Array<{ id: string; status: TaskStatus; position: number }>) {
+    if (!canEdit) return;
     const previous = board;
     if (previous) {
-      queryClient.setQueryData<BoardPayload>(boardQueryKey(session.userId, filters), {
+      queryClient.setQueryData<BoardPayload>(boardQueryKey(activeBoardId, filters), {
         ...previous,
         tasks: previous.tasks.map((task) => {
           const update = updates.find((item) => item.id === task.id);
@@ -263,7 +281,7 @@ export function App() {
       await mutations.reorderTasks.mutateAsync(updates);
       notify('success', 'Board updated');
     } catch (error) {
-      if (previous) queryClient.setQueryData(boardQueryKey(session.userId, filters), previous);
+      if (previous) queryClient.setQueryData(boardQueryKey(activeBoardId, filters), previous);
       notify('error', readableError(error));
     }
   }
@@ -276,6 +294,14 @@ export function App() {
     return <FatalState title="Guest session failed" message={session.error ?? 'Anonymous auth could not start.'} />;
   }
 
+  if (workspaceSession.isLoading || (workspaceSession.isSuccess && !activeBoardId)) {
+    return <LoadingExperience />;
+  }
+
+  if (workspaceSession.isError) {
+    return <FatalState title="Workspace could not load" message={readableError(workspaceSession.error)} onRetry={() => void workspaceSession.refetch()} />;
+  }
+
   return (
     <div className="app-shell">
       <AppHeader
@@ -285,10 +311,20 @@ export function App() {
         labels={board?.labels ?? []}
         members={board?.teamMembers ?? []}
         onCreate={() => openCreate('todo')}
-        onManage={() => setManagerOpen(true)}
+        onManage={() => canEdit && setManagerOpen(true)}
         onRefresh={() => void refreshBoard()}
         syncing={syncing}
         lastSyncedAt={lastSyncedAt}
+        canEdit={canEdit}
+      />
+
+      <WorkspaceBar
+        workspaces={workspaceSession.data?.workspaces ?? []}
+        activeWorkspace={workspaceSession.activeWorkspace}
+        activeBoardId={activeBoardId}
+        realtimeStatus={realtimeStatus}
+        onSelectBoard={workspaceSession.setActiveBoardId}
+        onManage={() => setWorkspaceManagerOpen(true)}
       />
 
       <main className="app-main">
@@ -321,6 +357,7 @@ export function App() {
                   onOpen={openEdit}
                   onMove={moveTask}
                   mobileActive={mobileStatus === status.id}
+                  canEdit={canEdit}
                 />
               ))}
             </section>
@@ -335,10 +372,10 @@ export function App() {
       <AppFooter
         version={APP_VERSION}
         onOpenChangelog={() => setChangelogOpen(true)}
-        canClear={canClear}
+        canClear={canEdit && canClear}
         clearing={mutations.resetBoard.isPending}
         onClear={() => void clearBoard()}
-        showSampleAction={Boolean(board && tasks.length === 0 && !boardQuery.isLoading && !hasActiveFilters(filters))}
+        showSampleAction={Boolean(canEdit && board && tasks.length === 0 && !boardQuery.isLoading && !hasActiveFilters(filters))}
         loadingSample={mutations.bootstrapDemo.isPending}
         onLoadSample={() => void loadSampleBoard()}
         showClearFilters={Boolean(board && tasks.length === 0 && !boardQuery.isLoading && hasActiveFilters(filters))}
@@ -349,7 +386,8 @@ export function App() {
         open={drawerMode === 'create' || Boolean(selectedTask)}
         mode={drawerMode}
         initialStatus={initialStatus}
-        userId={session.userId}
+        boardId={activeBoardId}
+        canEdit={canEdit}
         task={selectedTask}
         board={board}
         onClose={() => {
@@ -362,8 +400,20 @@ export function App() {
 
       <TeamLabelManager
         open={managerOpen}
+        boardId={activeBoardId}
         board={board}
         onClose={() => setManagerOpen(false)}
+        notify={notify}
+        confirm={confirmAction}
+      />
+
+      <WorkspaceManager
+        open={workspaceManagerOpen}
+        workspace={workspaceSession.activeWorkspace}
+        currentUserId={session.userId}
+        onClose={() => setWorkspaceManagerOpen(false)}
+        onChanged={async () => { await workspaceSession.refetch(); }}
+        onSelectBoard={workspaceSession.setActiveBoardId}
         notify={notify}
         confirm={confirmAction}
       />

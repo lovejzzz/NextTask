@@ -26,7 +26,8 @@ const defaultDraft = {
 export function TaskDrawer({
   open,
   mode,
-  userId,
+  boardId,
+  canEdit = true,
   task,
   board,
   initialStatus,
@@ -36,7 +37,8 @@ export function TaskDrawer({
 }: {
   open: boolean;
   mode: DrawerMode;
-  userId: string | null;
+  boardId: string | null;
+  canEdit?: boolean;
   task: Task | null;
   board?: BoardPayload;
   initialStatus: TaskStatus;
@@ -45,9 +47,9 @@ export function TaskDrawer({
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState(defaultDraft);
-  const commentsQuery = useComments(userId, task?.id ?? null);
-  const activityQuery = useActivity(userId, task?.id ?? null);
-  const mutations = useTaskMutations();
+  const commentsQuery = useComments(boardId, task?.id ?? null);
+  const activityQuery = useActivity(boardId, task?.id ?? null);
+  const mutations = useTaskMutations(boardId);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   useDialogFocus(open, onClose, titleInputRef);
@@ -77,6 +79,7 @@ export function TaskDrawer({
   }, [mode, task, initialStatus]);
 
   async function save() {
+    if (!canEdit) return;
     if (!draft.title.trim()) {
       notify('error', 'Task title is required');
       return;
@@ -106,6 +109,7 @@ export function TaskDrawer({
   }
 
   async function remove() {
+    if (!canEdit) return;
     if (!task) return;
     const confirmed = await confirm({
       title: 'Delete task?',
@@ -217,6 +221,7 @@ export function TaskDrawer({
                     taskId={task.id}
                     comments={commentsQuery.data ?? []}
                     loading={commentsQuery.isLoading}
+                    canEdit={canEdit}
                     onCreate={async (body) => {
                       try {
                         await mutations.createComment.mutateAsync({ taskId: task.id, body });
@@ -248,7 +253,7 @@ export function TaskDrawer({
             </div>
 
             <div className="drawer-footer">
-              {mode === 'edit' ? (
+              {canEdit && mode === 'edit' ? (
                 <button className="danger-button" onClick={remove} type="button">
                   <Trash2 size={16} />
                   Delete
@@ -259,7 +264,7 @@ export function TaskDrawer({
               <button className="ghost-button" onClick={onClose} type="button">
                 Cancel
               </button>
-              <button
+              {canEdit ? <button
                 className="primary-button"
                 onClick={save}
                 type="button"
@@ -271,7 +276,7 @@ export function TaskDrawer({
                   <Check size={16} />
                 )}
                 Save
-              </button>
+              </button> : <span className="role-chip">View only</span>}
             </div>
           </motion.aside>
         </>
@@ -328,12 +333,14 @@ export function CommentPanel({
   loading,
   onCreate,
   onDelete,
+  canEdit = true,
 }: {
   taskId: string;
   comments: Array<{ id: string; body: string; created_at: string }>;
   loading: boolean;
   onCreate: (body: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  canEdit?: boolean;
 }) {
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -368,13 +375,13 @@ export function CommentPanel({
               <p>{comment.body}</p>
               <span>{relativeTime(comment.created_at)}</span>
             </div>
-            <button className="mini-button" onClick={() => void onDelete(comment.id)} type="button" aria-label="Delete comment">
+            {canEdit ? <button className="mini-button" onClick={() => void onDelete(comment.id)} type="button" aria-label="Delete comment">
               <Trash2 size={13} />
-            </button>
+            </button> : null}
           </motion.div>
         ))}
       </div>
-      <form className="comment-composer" onSubmit={(event) => void submitComment(event)}>
+      {canEdit ? <form className="comment-composer" onSubmit={(event) => void submitComment(event)}>
         <input value={body} onChange={(event) => setBody(event.target.value)} placeholder="Write a comment..." />
         <button
           className="icon-button"
@@ -384,7 +391,7 @@ export function CommentPanel({
         >
           {submitting ? <Loader2 className="spin" size={15} /> : <Plus size={15} />}
         </button>
-      </form>
+      </form> : null}
     </section>
   );
 }

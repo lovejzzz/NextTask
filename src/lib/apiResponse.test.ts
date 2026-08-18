@@ -14,6 +14,12 @@ describe('buildApiHeaders', () => {
     expect(headers.get('accept')).toBe('application/json');
     expect(headers.get('authorization')).toBe('Bearer trusted-token');
     expect(headers.get('x-nexttask-today')).toBe('2026-08-17');
+    expect(headers.get('x-nexttask-board-id')).toBeNull();
+  });
+
+  it('adds the selected board as an explicit tenancy boundary', () => {
+    const headers = buildApiHeaders('trusted-token', undefined, new Date('2026-08-17T12:00:00Z'), 'board-id');
+    expect(headers.get('x-nexttask-board-id')).toBe('board-id');
   });
 });
 

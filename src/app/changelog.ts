@@ -8,6 +8,18 @@ export const APP_VERSION = __APP_VERSION__;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.0',
+    date: '2026-08-18',
+    items: [
+      'Added multi-board workspaces with owner, editor, and view-only collaborator roles.',
+      'Added secure, expiring invitation links with optional email binding and one-time acceptance.',
+      'Added realtime board, comment, activity, member, and board-list synchronization.',
+      'Migrated legacy personal boards safely to board-scoped tenancy with RLS on every shared data path.',
+      'Added durable database-backed write limits, request IDs, structured server-error logs, and expanded release verification.',
+      'Added responsive workspace switching and collaboration management without increasing the 12-function Vercel footprint.',
+    ],
+  },
+  {
     version: '0.0.4',
     date: '2026-08-17',
     items: [

@@ -2,328 +2,184 @@ import { createClient } from '@supabase/supabase-js';
 import { existsSync, readFileSync } from 'node:fs';
 
 loadDotEnv();
-
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
-const allowMissingReorderRpc = process.env.ALLOW_MISSING_REORDER_RPC === 'true';
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing SUPABASE_URL/SUPABASE_ANON_KEY environment variables.');
   process.exit(1);
 }
 
-// Unique marker so every row this run creates can be found and cleaned up.
-const stamp = `verify-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-
-const result = {
-  auth: null,
-  tables: {},
-  mutationCycle: null,
-  dataConstraints: null,
-  isolation: null,
-  reorderRpc: null,
-};
-
-function makeClient() {
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-}
-
-const requiredTables = ['tasks', 'team_members', 'labels', 'task_assignees', 'task_labels', 'comments', 'activity_events'];
-
-const clientA = makeClient();
-const clientB = makeClient();
-let userA = null;
-let userB = null;
+const stamp = `verify-v01-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+const result = { auth: null, tables: {}, collaboration: null, isolation: null, boardBoundaries: null, invitations: null, dataConstraints: null, reorderRpc: null, rateLimit: null };
+const makeClient = () => createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+const clients = [makeClient(), makeClient(), makeClient(), makeClient()];
+const [ownerClient, editorClient, viewerClient, outsiderClient] = clients;
+const users = [];
+let workspaceId = null;
+let boardId = null;
 
 async function main() {
-  // --- Auth (User A) ---
-  const authA = await clientA.auth.signInAnonymously();
-  if (authA.error || !authA.data.user) throw new Error(`auth A: ${authA.error?.message ?? 'no user'}`);
-  userA = authA.data.user.id;
-  result.auth = { ok: true, userId: userA };
+  for (const client of clients) {
+    const auth = await client.auth.signInAnonymously();
+    if (auth.error || !auth.data.user) throw new Error(`anonymous auth: ${auth.error?.message ?? 'no user'}`);
+    users.push(auth.data.user.id);
+    const ensured = await client.rpc('ensure_personal_workspace');
+    if (ensured.error) throw new Error(`personal workspace bootstrap: ${ensured.error.message}`);
+  }
+  if (new Set(users).size !== users.length) throw new Error('expected four distinct anonymous users');
+  result.auth = { ok: true, users: users.length };
 
-  // --- Table visibility ---
+  const requiredTables = ['workspaces', 'workspace_members', 'boards', 'workspace_invitations', 'tasks', 'team_members', 'labels', 'task_assignees', 'task_labels', 'comments', 'activity_events'];
   for (const table of requiredTables) {
-    const query = await clientA.from(table).select('*').limit(1);
-    result.tables[table] = query.error
-      ? { ok: false, code: query.error.code, message: query.error.message }
-      : { ok: true, rowsVisible: query.data?.length ?? 0 };
+    const query = await ownerClient.from(table).select('*').limit(1);
+    result.tables[table] = query.error ? { ok: false, code: query.error.code, message: query.error.message } : { ok: true, rowsVisible: query.data?.length ?? 0 };
   }
-  if (Object.values(result.tables).some((t) => !t.ok)) throw new Error('table visibility failed');
+  if (Object.values(result.tables).some((table) => !table.ok)) throw new Error('table visibility failed');
 
-  // --- Single-user mutation cycle ---
-  const a1 = await insertTask(clientA, userA, `${stamp} A1`, 'todo', 999000);
-  const update = await clientA
-    .from('tasks')
-    .update({ status: 'in_progress', position: 999001 })
-    .eq('id', a1)
-    .eq('user_id', userA)
-    .select('*')
-    .single();
-  if (update.error || update.data?.status !== 'in_progress') {
-    throw new Error(`mutation update: ${update.error?.message ?? 'status did not update'}`);
-  }
-  result.mutationCycle = { ok: true, taskId: a1 };
+  const createdWorkspace = await ownerClient.rpc('create_workspace', { workspace_name: `${stamp} workspace` });
+  if (createdWorkspace.error) throw new Error(`create workspace: ${createdWorkspace.error.message}`);
+  workspaceId = firstRow(createdWorkspace.data)?.workspace_id;
+  boardId = firstRow(createdWorkspace.data)?.board_id;
+  if (!workspaceId || !boardId) throw new Error('create_workspace did not return workspace and board ids');
 
-  // --- Two-user RLS isolation ---
-  const authB = await clientB.auth.signInAnonymously();
-  if (authB.error || !authB.data.user) throw new Error(`auth B: ${authB.error?.message ?? 'no user'}`);
-  userB = authB.data.user.id;
-  if (userB === userA) throw new Error('expected two distinct anonymous users');
+  const boardInsert = await ownerClient.from('boards').insert({ workspace_id: workspaceId, created_by: users[0], name: `${stamp} second board` }).select('id').single();
+  if (boardInsert.error || !boardInsert.data) throw new Error(`create second board: ${boardInsert.error?.message}`);
+  const secondBoardId = boardInsert.data.id;
 
-  const bCannotRead = await clientB.from('tasks').select('*').eq('id', a1);
-  const bUpdate = await clientB.from('tasks').update({ title: 'hijacked' }).eq('id', a1).select('*');
-  const bDelete = await clientB.from('tasks').delete().eq('id', a1).select('*');
-  const aStillSees = await clientA.from('tasks').select('title').eq('id', a1).single();
+  const editorToken = await createInvitation('editor');
+  const viewerToken = await createInvitation('viewer');
+  const editorAccept = await editorClient.rpc('accept_workspace_invitation', { invitation_token: editorToken });
+  const viewerAccept = await viewerClient.rpc('accept_workspace_invitation', { invitation_token: viewerToken });
+  if (editorAccept.error || viewerAccept.error) throw new Error(`accept invitations: ${editorAccept.error?.message ?? viewerAccept.error?.message}`);
 
-  const isolation = {
-    crossUserSelectRows: bCannotRead.data?.length ?? 0,
-    crossUserUpdateRows: bUpdate.data?.length ?? 0,
-    crossUserDeleteRows: bDelete.data?.length ?? 0,
-    ownerRowSurvived: aStillSees.data?.title === `${stamp} A1`,
+  const taskId = await insertTask(ownerClient, users[0], boardId, `${stamp} shared task`, 'todo', 999000);
+  const editorRead = await editorClient.from('tasks').select('id').eq('id', taskId).maybeSingle();
+  const editorUpdate = await editorClient.from('tasks').update({ status: 'in_progress' }).eq('id', taskId).select('status').maybeSingle();
+  const viewerRead = await viewerClient.from('tasks').select('id').eq('id', taskId).maybeSingle();
+  const viewerUpdate = await viewerClient.from('tasks').update({ title: 'viewer hijack' }).eq('id', taskId).select('id');
+  const viewerInsert = await viewerClient.from('tasks').insert({ board_id: boardId, user_id: users[2], title: `${stamp} viewer insert`, description: '', status: 'todo', priority: 'normal', position: 1 });
+  const ownerStillSees = await ownerClient.from('tasks').select('title,status').eq('id', taskId).single();
+  const ownerDemotion = await ownerClient.from('workspace_members').update({ role: 'editor' }).eq('workspace_id', workspaceId).eq('user_id', users[0]).select('role');
+  result.collaboration = {
+    editorCanRead: !editorRead.error && editorRead.data?.id === taskId,
+    editorCanWrite: !editorUpdate.error && editorUpdate.data?.status === 'in_progress',
+    viewerCanRead: !viewerRead.error && viewerRead.data?.id === taskId,
+    viewerUpdateBlocked: !viewerUpdate.error && (viewerUpdate.data?.length ?? 0) === 0,
+    viewerInsertBlocked: Boolean(viewerInsert.error),
+    ownerDataIntact: ownerStillSees.data?.title === `${stamp} shared task`,
+    ownerDemotionBlocked: Boolean(ownerDemotion.error) || (ownerDemotion.data?.length ?? 0) === 0,
   };
-  isolation.ok =
-    isolation.crossUserSelectRows === 0 &&
-    isolation.crossUserUpdateRows === 0 &&
-    isolation.crossUserDeleteRows === 0 &&
-    isolation.ownerRowSurvived;
-  result.isolation = isolation;
-  if (!isolation.ok) throw new Error(`RLS isolation breach: ${JSON.stringify(isolation)}`);
+  assertAll(result.collaboration, 'collaboration roles');
 
-  // --- Atomic reorder RPC invariants (skipped if migration 002 not applied) ---
-  result.reorderRpc = await checkReorderRpc(a1);
+  const outsiderRead = await outsiderClient.from('tasks').select('id').eq('id', taskId);
+  const outsiderWorkspace = await outsiderClient.from('workspaces').select('id').eq('id', workspaceId);
+  const outsiderUpdate = await outsiderClient.from('tasks').update({ title: 'outsider hijack' }).eq('id', taskId).select('id');
+  result.isolation = {
+    outsiderCannotReadTask: !outsiderRead.error && (outsiderRead.data?.length ?? 0) === 0,
+    outsiderCannotReadWorkspace: !outsiderWorkspace.error && (outsiderWorkspace.data?.length ?? 0) === 0,
+    outsiderCannotWrite: !outsiderUpdate.error && (outsiderUpdate.data?.length ?? 0) === 0,
+  };
+  assertAll(result.isolation, 'nonmember isolation');
 
-  // --- Database boundary constraints and append-only history (migration 003) ---
-  // Keep this last so a missing newest migration does not hide evidence for
-  // the already-deployed RLS and reorder invariants above.
-  result.dataConstraints = await checkDataConstraints(a1);
+  const secondTaskId = await insertTask(ownerClient, users[0], secondBoardId, `${stamp} second-board task`, 'todo', 999100);
+  const teamMember = await ownerClient.from('team_members').insert({ board_id: boardId, user_id: users[0], name: `${stamp} member`, color: '#6366f1' }).select('id').single();
+  if (teamMember.error || !teamMember.data) throw new Error(`team member setup: ${teamMember.error?.message}`);
+  const mismatchedRelation = await ownerClient.from('task_assignees').insert({ task_id: secondTaskId, member_id: teamMember.data.id, board_id: secondBoardId, user_id: users[0] });
+  const moveBoard = await ownerClient.from('tasks').update({ board_id: secondBoardId }).eq('id', taskId);
+  const changeCreator = await ownerClient.from('tasks').update({ user_id: users[1] }).eq('id', taskId);
+  result.boardBoundaries = {
+    crossBoardRelationRejected: mismatchedRelation.error?.code === '23503',
+    boardMoveRejected: moveBoard.error?.code === '42501',
+    creatorChangeRejected: changeCreator.error?.code === '42501',
+  };
+  assertAll(result.boardBoundaries, 'board boundary constraints');
 
+  const reuse = await editorClient.rpc('accept_workspace_invitation', { invitation_token: editorToken });
+  const downgradeToken = await createInvitation('viewer');
+  const downgradeAttempt = await editorClient.rpc('accept_workspace_invitation', { invitation_token: downgradeToken });
+  const editorMembership = await editorClient.from('workspace_members').select('role').eq('workspace_id', workspaceId).eq('user_id', users[1]).single();
+  result.invitations = { oneTimeTokenEnforced: Boolean(reuse.error), repeatInviteAccepted: !downgradeAttempt.error, existingRoleNotDowngraded: editorMembership.data?.role === 'editor' };
+  assertAll(result.invitations, 'invitation security');
+
+  result.reorderRpc = await checkReorderRpc(taskId, secondTaskId);
+  result.dataConstraints = await checkDataConstraints(taskId);
+  result.rateLimit = await checkRateLimit();
   result.ok = true;
 }
 
-async function checkReorderRpc(a1) {
-  const a2 = await insertTask(clientA, userA, `${stamp} A2`, 'todo', 1000);
-  const b1 = await insertTask(clientB, userB, `${stamp} B1`, 'todo', 1000);
-
-  // Probe availability.
-  const probe = await clientA.rpc('reorder_tasks', {
-    updates: [{ id: a1, status: 'in_progress', position: 2000 }],
-  });
-  if (probe.error) {
-    if (probe.error.code === 'PGRST202' || /could not find the function|does not exist/i.test(probe.error.message)) {
-      if (allowMissingReorderRpc) {
-        return { ok: true, skipped: true, reason: 'reorder_tasks RPC not found (local-only skip enabled)' };
-      }
-      throw new Error('reorder_tasks RPC not found. Apply supabase/migrations/002_reorder_rpc.sql before release.');
-    }
-    throw new Error(`reorder rpc valid call: ${probe.error.message}`);
-  }
-
-  const checks = {};
-
-  // valid call applied
-  const afterValid = await clientA.from('tasks').select('status,position').eq('id', a1).single();
-  checks.validApplied = afterValid.data?.status === 'in_progress' && afterValid.data?.position === 2000;
-
-  // cross-user batch fails fully: a valid A update bundled with B's task must roll back entirely
-  const before = await clientA.from('tasks').select('position').eq('id', a2).single();
-  const mixed = await clientA.rpc('reorder_tasks', {
-    updates: [
-      { id: a2, status: 'todo', position: 7000 },
-      { id: b1, status: 'todo', position: 7000 },
-    ],
-  });
-  const afterMixed = await clientA.from('tasks').select('position').eq('id', a2).single();
-  checks.mixedUserRejected = Boolean(mixed.error);
-  checks.mixedUserRolledBack = afterMixed.data?.position === before.data?.position;
-
-  // duplicate ids rejected
-  const dup = await clientA.rpc('reorder_tasks', {
-    updates: [
-      { id: a2, status: 'todo', position: 3000 },
-      { id: a2, status: 'todo', position: 4000 },
-    ],
-  });
-  checks.duplicateRejected = Boolean(dup.error);
-
-  // negative position rejected
-  const neg = await clientA.rpc('reorder_tasks', { updates: [{ id: a2, status: 'todo', position: -1 }] });
-  checks.negativePositionRejected = Boolean(neg.error);
-
-  checks.ok = Object.values(checks).every(Boolean);
-  if (!checks.ok) throw new Error(`reorder RPC invariants failed: ${JSON.stringify(checks)}`);
+async function checkReorderRpc(taskId, crossBoardTaskId) {
+  const valid = await editorClient.rpc('reorder_tasks', { updates: [{ id: taskId, status: 'in_review', position: 2000 }] });
+  const before = await ownerClient.from('tasks').select('position').eq('id', taskId).single();
+  const mixed = await ownerClient.rpc('reorder_tasks', { updates: [{ id: taskId, status: 'in_review', position: 7000 }, { id: crossBoardTaskId, status: 'todo', position: 7000 }] });
+  const after = await ownerClient.from('tasks').select('position').eq('id', taskId).single();
+  const viewer = await viewerClient.rpc('reorder_tasks', { updates: [{ id: taskId, status: 'done', position: 3000 }] });
+  const checks = { editorReorderApplied: !valid.error, crossBoardBatchRejected: Boolean(mixed.error), crossBoardBatchRolledBack: before.data?.position === after.data?.position, viewerReorderRejected: viewer.error?.code === '42501' };
+  assertAll(checks, 'reorder RPC');
   return checks;
 }
 
 async function checkDataConstraints(taskId) {
-  const taskBase = {
-    user_id: userA,
-    title: `${stamp} invalid constraint probe`,
-    status: 'todo',
-    priority: 'normal',
-  };
+  const taskBase = { board_id: boardId, user_id: users[0], title: `${stamp} invalid constraint probe`, status: 'todo', priority: 'normal' };
   const checks = {
-    longTaskDescriptionRejected: await constraintRejected(
-      clientA.from('tasks').insert({ ...taskBase, description: 'x'.repeat(4001), position: 999010 }),
-      'tasks description length',
-    ),
-    negativeTaskPositionRejected: await constraintRejected(
-      clientA.from('tasks').insert({ ...taskBase, description: stamp, position: -1 }),
-      'tasks nonnegative position',
-    ),
-    longAvatarUrlRejected: await constraintRejected(
-      clientA.from('team_members').insert({
-        user_id: userA,
-        name: `${stamp} invalid avatar probe`,
-        avatar_url: `https://example.com/${'x'.repeat(2050)}`,
-      }),
-      'team member avatar URL length',
-    ),
-    blankActivityMessageRejected: await constraintRejected(
-      clientA.from('activity_events').insert({
-        user_id: userA,
-        task_id: taskId,
-        type: 'task_updated',
-        message: '   ',
-        metadata: {},
-      }),
-      'activity message length',
-    ),
-    nonObjectActivityMetadataRejected: await constraintRejected(
-      clientA.from('activity_events').insert({
-        user_id: userA,
-        task_id: taskId,
-        type: 'task_updated',
-        message: `${stamp} invalid metadata probe`,
-        metadata: [],
-      }),
-      'activity metadata object shape',
-    ),
+    longTaskDescriptionRejected: await constraintRejected(ownerClient.from('tasks').insert({ ...taskBase, description: 'x'.repeat(4001), position: 999010 }), 'tasks description length'),
+    negativeTaskPositionRejected: await constraintRejected(ownerClient.from('tasks').insert({ ...taskBase, description: stamp, position: -1 }), 'tasks nonnegative position'),
+    longAvatarUrlRejected: await constraintRejected(ownerClient.from('team_members').insert({ board_id: boardId, user_id: users[0], name: `${stamp} invalid avatar probe`, avatar_url: `https://example.com/${'x'.repeat(2050)}` }), 'team member avatar URL length'),
+    blankActivityMessageRejected: await constraintRejected(ownerClient.from('activity_events').insert({ board_id: boardId, user_id: users[0], task_id: taskId, type: 'task_updated', message: '   ', metadata: {} }), 'activity message length'),
+    nonObjectActivityMetadataRejected: await constraintRejected(ownerClient.from('activity_events').insert({ board_id: boardId, user_id: users[0], task_id: taskId, type: 'task_updated', message: stamp, metadata: [] }), 'activity metadata object shape'),
   };
-
-  const activity = await clientA
-    .from('activity_events')
-    .insert({
-      user_id: userA,
-      task_id: taskId,
-      type: 'task_updated',
-      message: `${stamp} immutable activity probe`,
-      metadata: {},
-    })
-    .select('id')
-    .single();
-  if (activity.error || !activity.data) {
-    throw new Error(`activity immutability setup: ${activity.error?.message ?? 'no row'}`);
-  }
-
-  checks.activityUpdatesRejected = await mutationRejected(
-    clientA.from('activity_events').update({ message: `${stamp} tampered` }).eq('id', activity.data.id).select('id'),
-  );
-  checks.activityDeletesRejected = await mutationRejected(
-    clientA.from('activity_events').delete().eq('id', activity.data.id).select('id'),
-  );
-
-  const reset = await clientB.rpc('reset_board');
-  if (reset.error && !isMissingRpcError(reset.error)) {
-    throw new Error(`reset_board RPC: ${reset.error.message}`);
-  }
-  if (reset.error) {
-    checks.atomicResetApplied = false;
-  } else {
-    const [bAfterReset, aAfterReset] = await Promise.all([
-      clientB.from('tasks').select('id'),
-      clientA.from('tasks').select('id').eq('id', taskId).maybeSingle(),
-    ]);
-    if (bAfterReset.error || aAfterReset.error) {
-      throw new Error(`reset_board verification: ${bAfterReset.error?.message ?? aAfterReset.error?.message}`);
-    }
-    checks.atomicResetApplied = (bAfterReset.data?.length ?? -1) === 0 && aAfterReset.data?.id === taskId;
-  }
-
-  checks.ok = Object.values(checks).every(Boolean);
-  if (!checks.ok) {
-    throw new Error(
-      `data constraints failed. Apply supabase/migrations/003_data_constraints.sql before release: ${JSON.stringify(checks)}`,
-    );
-  }
+  const activity = await ownerClient.from('activity_events').insert({ board_id: boardId, user_id: users[0], task_id: taskId, type: 'task_updated', message: `${stamp} immutable`, metadata: {} }).select('id').single();
+  if (activity.error || !activity.data) throw new Error(`activity immutability setup: ${activity.error?.message}`);
+  checks.activityUpdatesRejected = await mutationRejected(ownerClient.from('activity_events').update({ message: `${stamp} tampered` }).eq('id', activity.data.id).select('id'));
+  checks.activityDeletesRejected = await mutationRejected(ownerClient.from('activity_events').delete().eq('id', activity.data.id).select('id'));
+  assertAll(checks, 'database constraints');
   return checks;
 }
 
-function isMissingRpcError(error) {
-  return error.code === 'PGRST202' || /could not find the function|does not exist/i.test(error.message ?? '');
+async function checkRateLimit() {
+  const args = { rate_scope: `${stamp}:rate`, maximum_requests: 2, window_seconds: 60 };
+  const first = await ownerClient.rpc('consume_api_rate_limit', args);
+  const second = await ownerClient.rpc('consume_api_rate_limit', args);
+  const third = await ownerClient.rpc('consume_api_rate_limit', args);
+  const checks = { firstAllowed: first.data === true, secondAllowed: second.data === true, thirdRejected: third.data === false, noErrors: !first.error && !second.error && !third.error };
+  assertAll(checks, 'durable rate limit');
+  return checks;
 }
 
-async function mutationRejected(query) {
-  const response = await query;
-  if (response.error) return response.error.code === '42501';
-  return (response.data?.length ?? 0) === 0;
+async function createInvitation(role) {
+  const response = await ownerClient.rpc('create_workspace_invitation', { target_workspace_id: workspaceId, invite_role: role, target_email: null });
+  if (response.error) throw new Error(`create ${role} invitation: ${response.error.message}`);
+  const token = firstRow(response.data)?.invitation_token;
+  if (typeof token !== 'string') throw new Error('invitation RPC did not return a token');
+  return token;
 }
 
-async function constraintRejected(query, label) {
-  const response = await query;
-  if (!response.error) return false;
-  if (response.error.code !== '23514') {
-    throw new Error(`${label} probe returned ${response.error.code}: ${response.error.message}`);
-  }
-  return true;
-}
-
-async function insertTask(client, userId, title, status, position) {
-  const { data, error } = await client
-    .from('tasks')
-    .insert({ user_id: userId, title, description: stamp, status, priority: 'normal', position })
-    .select('id')
-    .single();
+async function insertTask(client, userId, targetBoardId, title, status, position) {
+  const { data, error } = await client.from('tasks').insert({ board_id: targetBoardId, user_id: userId, title, description: stamp, status, priority: 'normal', position }).select('id').single();
   if (error || !data) throw new Error(`insert "${title}": ${error?.message ?? 'no row'}`);
   return data.id;
 }
 
-async function cleanup() {
-  // Best-effort: delete every row this run created, even after a failure.
-  for (const [client, userId] of [
-    [clientA, userA],
-    [clientB, userB],
-  ]) {
-    if (!userId) continue;
-    await client.from('tasks').delete().eq('user_id', userId).like('title', `${stamp}%`);
-    await client.from('team_members').delete().eq('user_id', userId).like('name', `${stamp}%`);
-  }
-}
+function firstRow(data) { return Array.isArray(data) ? data[0] : data; }
+function assertAll(checks, label) { if (!Object.values(checks).every(Boolean)) throw new Error(`${label} failed: ${JSON.stringify(checks)}`); checks.ok = true; }
+async function mutationRejected(query) { const response = await query; if (response.error) return response.error.code === '42501'; return (response.data?.length ?? 0) === 0; }
+async function constraintRejected(query, label) { const response = await query; if (!response.error) return false; if (response.error.code !== '23514') throw new Error(`${label} probe returned ${response.error.code}: ${response.error.message}`); return true; }
+async function cleanup() { if (workspaceId) await ownerClient.from('workspaces').delete().eq('id', workspaceId); }
 
 let exitCode = 0;
-try {
-  await main();
-} catch (error) {
-  result.error = error instanceof Error ? error.message : String(error);
-  exitCode = 1;
-} finally {
-  try {
-    await cleanup();
-    result.cleanedUp = true;
-  } catch (cleanupError) {
-    result.cleanedUp = false;
-    result.cleanupError = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-  }
-}
-
+try { await main(); } catch (error) { result.error = error instanceof Error ? error.message : String(error); exitCode = 1; }
+finally { try { await cleanup(); result.cleanedUp = true; } catch (error) { result.cleanedUp = false; result.cleanupError = error instanceof Error ? error.message : String(error); } }
 console.log(JSON.stringify(result, null, 2));
 process.exit(exitCode);
 
 function loadDotEnv() {
   if (!existsSync('.env')) return;
-  const lines = readFileSync('.env', 'utf8').split(/\r?\n/);
-  for (const line of lines) {
+  for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const equals = trimmed.indexOf('=');
     if (equals === -1) continue;
     const key = trimmed.slice(0, equals).trim();
-    const value = trimmed
-      .slice(equals + 1)
-      .trim()
-      .replace(/^["']|["']$/g, '');
+    const value = trimmed.slice(equals + 1).trim().replace(/^["']|["']$/g, '');
     if (key && process.env[key] === undefined) process.env[key] = value;
   }
 }

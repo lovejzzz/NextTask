@@ -1,3 +1,6 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { isMissingRpcFunction } from './database.js';
 import { ApiHttpError } from './http.js';
 import type { VercelRequest } from './vercel.js';
 
@@ -78,6 +81,41 @@ export function enforceUserWriteRateLimit(req: VercelRequest, userId: string) {
 
   const userLimit = readLimit('API_WRITE_LIMIT_PER_MINUTE', 45);
   limiter.check(`user:${userId}`, userLimit, 'Too many write requests. Please wait a minute and try again.');
+}
+
+let warnedMissingDurableLimiter = false;
+
+/**
+ * Cross-instance authenticated write limiting backed by Postgres. The existing
+ * memory bucket remains a fast first line of defense and the pre-auth IP guard;
+ * this RPC closes the serverless-instance reset gap for authenticated writes.
+ */
+export async function enforceDurableUserWriteRateLimit(req: VercelRequest, supabase: SupabaseClient) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method ?? 'GET')) return;
+
+  const limit = readLimit('API_WRITE_LIMIT_PER_MINUTE', 45);
+  if (!limit) return;
+
+  const { data, error } = await supabase.rpc('consume_api_rate_limit', {
+    rate_scope: 'api-write',
+    maximum_requests: limit,
+    window_seconds: 60,
+  });
+
+  // Compatibility during local development or a staged migration rollout. The
+  // bounded in-memory user/IP limit has already run, so protection is reduced
+  // but never silently disabled.
+  if (error && isMissingRpcFunction(error)) {
+    if (!warnedMissingDurableLimiter) {
+      warnedMissingDurableLimiter = true;
+      console.warn('Durable API rate-limit RPC is unavailable. Apply migration 004_workspace_collaboration.sql.');
+    }
+    return;
+  }
+  if (error) throw new ApiHttpError('server_error', error.message, 500);
+  if (data !== true) {
+    throw new ApiHttpError('too_many_requests', 'Too many write requests. Please wait a minute and try again.', 429);
+  }
 }
 
 export function readLimit(key: string, fallback: number) {

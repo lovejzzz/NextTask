@@ -1,9 +1,11 @@
 import { z, ZodError } from 'zod';
+import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from './vercel.js';
 
 export type ApiErrorCode =
   | 'bad_request'
   | 'unauthorized'
+  | 'forbidden'
   | 'not_found'
   | 'method_not_allowed'
   | 'conflict'
@@ -11,14 +13,17 @@ export type ApiErrorCode =
   | 'server_error';
 
 export function sendData<T>(res: VercelResponse, data: T, status = 200) {
+  ensureRequestId(res);
   return res.status(status).json({ data });
 }
 
 export function sendNoContent(res: VercelResponse) {
+  ensureRequestId(res);
   return res.status(204).end();
 }
 
 export function sendError(res: VercelResponse, code: ApiErrorCode, message: string, status = 400) {
+  ensureRequestId(res);
   return res.status(status).json({ error: { code, message } });
 }
 
@@ -34,7 +39,7 @@ export function handleApiError(res: VercelResponse, error: unknown) {
 
   if (error instanceof ApiHttpError) {
     if (error.status >= 500) {
-      console.error(error);
+      logServerError(res, error);
       return sendError(res, error.code, 'Something went wrong. Please try again.', error.status);
     }
     return sendError(res, error.code, error.message, error.status);
@@ -45,8 +50,31 @@ export function handleApiError(res: VercelResponse, error: unknown) {
     return sendError(res, databaseError.code, databaseError.message, databaseError.status);
   }
 
-  console.error(error);
+  logServerError(res, error);
   return sendError(res, 'server_error', 'Something went wrong. Please try again.', 500);
+}
+
+const requestIds = new WeakMap<object, string>();
+
+function ensureRequestId(res: VercelResponse) {
+  let requestId = requestIds.get(res);
+  if (!requestId) {
+    requestId = randomUUID();
+    requestIds.set(res, requestId);
+    res.setHeader('X-Request-Id', requestId);
+  }
+  return requestId;
+}
+
+function logServerError(res: VercelResponse, error: unknown) {
+  const safeError = error instanceof Error
+    ? { name: error.name, message: error.message }
+    : { name: 'UnknownError', message: String(error) };
+  console.error(JSON.stringify({
+    event: 'api_server_error',
+    request_id: ensureRequestId(res),
+    ...safeError,
+  }));
 }
 
 export class ApiHttpError extends Error {

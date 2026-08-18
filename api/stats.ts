@@ -1,10 +1,16 @@
-import { requireUser } from './_shared/auth.js';
 import { isBountyCheckRequest } from './_shared/bountyRoute.js';
+import { isCollaborationRequest } from './_shared/collaborationEndpoint.js';
 import { classifyDueDate, getRequestToday } from './_shared/dateOnly.js';
 import { ApiHttpError, handleApiError, methodNotAllowed, sendData } from './_shared/http.js';
 import type { VercelRequest, VercelResponse } from './_shared/vercel.js';
+import { requireBoard } from './_shared/workspace.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (isCollaborationRequest(req)) {
+    const { handleCollaboration } = await import('./_shared/collaborationEndpoint.js');
+    return handleCollaboration(req, res);
+  }
+
   if (isBountyCheckRequest(req)) {
     const { handleBountyCheck } = await import('./_shared/bountyEndpoint.js');
     return handleBountyCheck(req, res);
@@ -12,11 +18,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method !== 'GET') return methodNotAllowed(res, req.method);
-    const { supabase, user } = await requireUser(req);
+    const { supabase, board } = await requireBoard(req, 'read');
     const { data, error } = await supabase
       .from('tasks')
       .select('status,priority,due_date')
-      .eq('user_id', user.id);
+      .eq('board_id', board.id);
     if (error) throw new ApiHttpError('server_error', error.message, 500);
     const tasks = data ?? [];
     const today = getRequestToday(req);

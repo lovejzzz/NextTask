@@ -1,8 +1,8 @@
 # Next Task
 
-Next Task is a polished full-stack Kanban board built for the NP SDE assessment. It uses React, TypeScript, Vite, Vercel Serverless Functions, Supabase anonymous auth with email recovery, and Supabase Row Level Security.
+Next Task is a secure collaborative Kanban workspace built with React, TypeScript, Vite, Vercel Serverless Functions, Supabase Auth, Realtime, and Row Level Security.
 
-Current app version: `0.0.4` (derived from `package.json`).
+Current app version: `0.1.0` (derived from `package.json`).
 
 ## Features
 
@@ -13,7 +13,10 @@ Current app version: `0.0.4` (derived from `package.json`).
 - Mobile status navigation with one visible lane at a time and direct status move controls
 - Automatic guest session via Supabase anonymous auth
 - Email recovery links so users can save and reopen a board across devices
-- User-isolated data through RLS policies
+- Multi-board workspaces with owner, editor, and viewer roles
+- Expiring one-time invitation links with optional email binding
+- Realtime synchronization for tasks, comments, activity, members, and boards
+- Board-scoped authorization through RLS policies on every shared data table
 - Backend API endpoints for task reads, creation, updates, reorder, comments, activity, team members, labels, and stats
 - Team members and multi-assignee tasks
 - Task comments
@@ -135,7 +138,12 @@ Set `SMOKE_TIMEZONE` to repeat the browser suite in a specific IANA time zone, f
 8. Run `supabase/migrations/001_init.sql`.
 9. Run `supabase/migrations/002_reorder_rpc.sql`.
 10. Run `supabase/migrations/003_data_constraints.sql`.
-11. Confirm RLS is enabled on:
+11. Run `supabase/migrations/004_workspace_collaboration.sql`.
+12. Confirm RLS is enabled on:
+   - `workspaces`
+   - `workspace_members`
+   - `boards`
+   - `workspace_invitations`
    - `tasks`
    - `team_members`
    - `task_assignees`
@@ -144,16 +152,15 @@ Set `SMOKE_TIMEZONE` to repeat the browser suite in a specific IANA time zone, f
    - `comments`
    - `activity_events`
 
-`002_reorder_rpc.sql` is required for public deployment. It installs the transactional `reorder_tasks(updates jsonb)` RPC used by task drag/drop. `003_data_constraints.sql` adds defense-in-depth payload and position constraints, makes existing activity history append-only, and installs the transactional `reset_board()` RPC. `npm run verify:supabase` must report both `dataConstraints.ok: true` (including `atomicResetApplied`) and `reorderRpc.ok: true` without `skipped`; a missing migration fails release verification.
+`002_reorder_rpc.sql` installs transactional drag/drop. `003_data_constraints.sql` adds database validation, append-only activity, and transactional reset. `004_workspace_collaboration.sql` safely backfills each existing user into a personal workspace and board, switches authorization to board membership, installs role/invitation RPCs, publishes realtime tables, and adds a durable authenticated-write limiter. `npm run verify:supabase` now exercises owner/editor/viewer behavior, invitation replay and downgrade protection, nonmember isolation, cross-board relations, immutable attribution, reorder rollback, database constraints, and the durable limiter.
 
 Do not use or expose the Supabase service role key. This project only needs the public anon/publishable key.
 
-For public deployments, keep anonymous sign-ins protected with Supabase CAPTCHA/rate-limit settings where available. Before authentication, the API enforces a configurable per-IP write limit through `API_IP_WRITE_LIMIT_PER_MINUTE`; authenticated writes also use `API_WRITE_LIMIT_PER_MINUTE` per user.
+For public deployments, keep anonymous sign-ins protected with Supabase CAPTCHA/rate-limit settings where available. Before authentication, the API enforces a bounded per-instance IP limit through `API_IP_WRITE_LIMIT_PER_MINUTE`; authenticated writes additionally consume a durable Postgres bucket through `API_WRITE_LIMIT_PER_MINUTE`.
 
 Local-only escape hatches exist for unfinished development databases:
 
 ```bash
-ALLOW_MISSING_REORDER_RPC=true npm run verify:supabase
 ALLOW_REORDER_RPC_FALLBACK=true npm run dev:full
 ALLOW_RESET_RPC_FALLBACK=true npm run dev:full
 ```
@@ -187,6 +194,17 @@ Additional product endpoints:
 - `GET /api/stats`
 - `POST /api/bootstrap/demo`
 - `POST /api/bootstrap/reset`
+- `GET /api/workspaces`
+- `POST /api/workspaces`
+- `PATCH /api/workspaces/:id`
+- `DELETE /api/workspaces/:id`
+- `POST /api/workspaces/:id/boards`
+- `POST /api/workspaces/:id/invitations`
+- `PATCH /api/workspaces/:id/members/:userId`
+- `DELETE /api/workspaces/:id/members/:userId`
+- `PATCH /api/boards/:id`
+- `DELETE /api/boards/:id`
+- `POST /api/invitations/accept`
 - `GET /api/x402/bounty-check` (public service manifest)
 - `POST /api/x402/bounty-check` (public, x402 payment required)
 
@@ -194,9 +212,10 @@ Authenticated board API requests must include:
 
 ```http
 Authorization: Bearer <supabase_access_token>
+X-NextTask-Board-Id: <board_uuid>
 ```
 
-The API creates a Supabase client with that token, so RLS remains the security boundary.
+The API validates the selected board and role before every board request, then creates a Supabase client with the user token so RLS remains the authoritative security boundary. Responses include `X-Request-Id` for operational correlation.
 
 ## Vercel deployment
 
@@ -273,17 +292,22 @@ Manual checks:
 - Mobile layout exposes all statuses and stats at 390px width
 - The bottom grey version number opens the changelog
 - Two browser profiles cannot see each other's data after the migrations are applied
+- An owner can create a workspace, board, editor invite, and viewer invite
+- Editors can create and update tasks; viewers can read but cannot mutate
+- Realtime changes appear in a second signed-in browser without manual refresh
+- Reusing an accepted invitation fails and accepting a lower-role link cannot downgrade an existing member
 
-## v0.0.4 public release checklist
+## v0.1.0 public release checklist
 
 - Supabase migration `supabase/migrations/001_init.sql` has been applied.
 - Supabase migration `supabase/migrations/002_reorder_rpc.sql` has been applied.
 - Supabase migration `supabase/migrations/003_data_constraints.sql` has been applied.
+- Supabase migration `supabase/migrations/004_workspace_collaboration.sql` has been applied after a pre-migration row-count backup/check.
 - Anonymous auth, email auth, and required OAuth redirect URLs are configured.
 - Vercel env vars match the deployment section and `VITE_ENABLE_LOCAL_DEMO=false`.
 - `npm run verify:ci` passes locally and in CI.
 - `npm run verify:production-env` passes before build.
-- `npm run verify:supabase` passes against the target Supabase project with `dataConstraints.ok: true` and no skipped `reorderRpc`.
+- `npm run verify:supabase` passes against the target project with collaboration, isolation, invitations, board boundaries, constraints, reorder, and rate-limit checks all `ok: true`.
 - `npm run smoke:browser` passes locally against the full API-backed dev server.
 - `npm run verify:release` passes before the public push.
 - After deploy, run `npm run verify:deployment -- https://your-deployment.vercel.app`.

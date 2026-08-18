@@ -7,6 +7,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
   const id = overrides.id ?? nextId();
   return {
     id,
+    board_id: 'board-1',
     user_id: 'user-1',
     title: `Task ${id}`,
     description: '',
@@ -28,6 +29,7 @@ export function makeLabel(overrides: Partial<Label> = {}): Label {
   const id = overrides.id ?? nextId();
   return {
     id,
+    board_id: 'board-1',
     user_id: 'user-1',
     name: `Label ${id}`,
     color: '#2E90FA',
@@ -41,6 +43,7 @@ export function makeMember(overrides: Partial<TeamMember> = {}): TeamMember {
   const id = overrides.id ?? nextId();
   return {
     id,
+    board_id: 'board-1',
     user_id: 'user-1',
     name: `Member ${id}`,
     avatar_url: null,

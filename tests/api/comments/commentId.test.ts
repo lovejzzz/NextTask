@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VercelRequest, VercelResponse } from '../../../api/_shared/vercel.js';
 
 const mocks = vi.hoisted(() => ({
-  requireUser: vi.fn(),
+  requireBoard: vi.fn(),
   getTaskOrThrow: vi.fn(),
   recordActivityBestEffort: vi.fn(),
 }));
 
-vi.mock('../../../api/_shared/auth.js', () => ({ requireUser: mocks.requireUser }));
+vi.mock('../../../api/_shared/workspace.js', () => ({ requireBoard: mocks.requireBoard }));
 vi.mock('../../../api/_shared/data.js', () => ({
   getTaskOrThrow: mocks.getTaskOrThrow,
   recordActivityBestEffort: mocks.recordActivityBestEffort,
@@ -28,7 +28,7 @@ beforeEach(() => {
 describe('DELETE task comment', () => {
   it('returns not found and does not emit false deletion activity when no comment was deleted', async () => {
     const supabase = supabaseWithDeleteResult({ data: null, error: null });
-    mocks.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+    mocks.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
     const { res, result } = response();
 
     await handler(request(), res);
@@ -42,7 +42,7 @@ describe('DELETE task comment', () => {
 
   it('returns no content after deleting an existing comment', async () => {
     const supabase = supabaseWithDeleteResult({ data: { id: commentId }, error: null });
-    mocks.requireUser.mockResolvedValue({ supabase, user: { id: 'user-id' } });
+    mocks.requireBoard.mockResolvedValue({ supabase, user: { id: 'user-id' }, board: { id: 'board-id' } });
     const { res, result } = response();
 
     await handler(request(), res);

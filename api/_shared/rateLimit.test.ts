@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, expect, it, vi } from 'vitest';
 
-import { MemoryRateLimiter, enforceIpWriteRateLimit, readLimit } from './rateLimit.js';
+import { MemoryRateLimiter, enforceDurableUserWriteRateLimit, enforceIpWriteRateLimit, readLimit } from './rateLimit.js';
 import type { VercelRequest } from './vercel.js';
 
 describe('MemoryRateLimiter', () => {
@@ -32,6 +33,40 @@ describe('MemoryRateLimiter', () => {
     const limiter = new MemoryRateLimiter({ maxBuckets: 1 });
     limiter.check('user:one', null, 'Slow down');
     expect(limiter.size).toBe(0);
+  });
+});
+
+describe('durable authenticated rate limiting', () => {
+  it('consumes the database bucket for writes', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    await enforceDurableUserWriteRateLimit(
+      { method: 'POST', headers: {}, query: {}, socket: {} },
+      { rpc } as unknown as SupabaseClient,
+    );
+    expect(rpc).toHaveBeenCalledWith('consume_api_rate_limit', {
+      rate_scope: 'api-write',
+      maximum_requests: 45,
+      window_seconds: 60,
+    });
+  });
+
+  it('rejects a write after the shared bucket is exhausted', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    await expect(
+      enforceDurableUserWriteRateLimit(
+        { method: 'PATCH', headers: {}, query: {}, socket: {} },
+        { rpc } as unknown as SupabaseClient,
+      ),
+    ).rejects.toMatchObject({ code: 'too_many_requests', status: 429 });
+  });
+
+  it('does not consume a bucket for reads', async () => {
+    const rpc = vi.fn();
+    await enforceDurableUserWriteRateLimit(
+      { method: 'GET', headers: {}, query: {}, socket: {} },
+      { rpc } as unknown as SupabaseClient,
+    );
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
 

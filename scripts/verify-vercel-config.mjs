@@ -58,6 +58,22 @@ for (const directive of ['public', 'max-age=31536000', 'immutable']) {
 const rewrites = new Map((config.rewrites ?? []).map((rewrite) => [rewrite.source, rewrite.destination]));
 check(rewrites.get('/api/bootstrap/reset') === '/api/bootstrap/demo?mode=reset', 'Reset rewrite is missing or changed.');
 check(rewrites.get('/api/x402/bounty-check') === '/api/stats?mode=bounty-check', 'x402 rewrite is missing or changed.');
+check(
+  rewrites.get('/api/workspaces') === '/api/stats?mode=collaboration&resource=workspaces',
+  'Workspace collection rewrite is missing or changed.',
+);
+check(
+  rewrites.get('/api/workspaces/:path*') === '/api/stats?mode=collaboration&resource=workspaces&path=:path*',
+  'Nested workspace rewrite is missing or changed.',
+);
+check(
+  rewrites.get('/api/boards/:path*') === '/api/stats?mode=collaboration&resource=boards&path=:path*',
+  'Board rewrite is missing or changed.',
+);
+check(
+  rewrites.get('/api/invitations/:path*') === '/api/stats?mode=collaboration&resource=invitations&path=:path*',
+  'Invitation rewrite is missing or changed.',
+);
 
 const result = {
   ok: errors.length === 0,

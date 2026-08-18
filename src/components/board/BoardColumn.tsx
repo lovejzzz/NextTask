@@ -21,6 +21,7 @@ export function BoardColumn({
   onOpen,
   onMove,
   mobileActive,
+  canEdit = true,
 }: {
   status: TaskStatus;
   title: string;
@@ -32,8 +33,9 @@ export function BoardColumn({
   onOpen: (id: string) => void;
   onMove: (id: string, status: TaskStatus) => void;
   mobileActive: boolean;
+  canEdit?: boolean;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
+  const { setNodeRef, isOver } = useDroppable({ id: `column-${status}`, disabled: !canEdit });
   const [inlineOpen, setInlineOpen] = useState(false);
   const [quickTitle, setQuickTitle] = useState('');
   const [saving, setSaving] = useState(false);
@@ -82,7 +84,7 @@ export function BoardColumn({
               <TaskSkeleton />
             </>
           ) : tasks.length ? (
-            tasks.map((task) => <SortableTaskCard key={task.id} task={task} onOpen={onOpen} onMove={onMove} />)
+            tasks.map((task) => <SortableTaskCard key={task.id} task={task} onOpen={onOpen} onMove={canEdit ? onMove : undefined} disabled={!canEdit} />)
           ) : (
             <div className="empty-column">
               <Sparkles size={17} />
@@ -92,7 +94,7 @@ export function BoardColumn({
         </div>
       </SortableContext>
 
-      {inlineOpen ? (
+      {canEdit && inlineOpen ? (
         <form className="inline-task-create" onSubmit={(event) => void submitQuickCreate(event)}>
           <input
             value={quickTitle}
@@ -111,7 +113,7 @@ export function BoardColumn({
             </button>
           </div>
         </form>
-      ) : (
+      ) : canEdit ? (
         <div className="column-actions">
           <button className="column-add" onClick={() => setInlineOpen(true)} type="button">
             <Plus size={16} />
@@ -121,7 +123,7 @@ export function BoardColumn({
             Details
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -374,6 +374,80 @@ textarea:focus-visible,
   padding: 16px 24px 36px;
 }
 
+.workspace-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.workspace-selector-group,
+.workspace-meta,
+.role-chip,
+.realtime-chip {
+  display: flex;
+  align-items: center;
+}
+
+.workspace-selector-group,
+.workspace-meta {
+  gap: 10px;
+}
+
+.workspace-selector-group label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.workspace-selector-group select,
+.workspace-member-row select,
+.invite-grid select {
+  min-height: 34px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.workspace-separator {
+  color: var(--muted);
+}
+
+.role-chip,
+.realtime-chip {
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.realtime-live {
+  border-color: rgba(18, 183, 106, 0.28);
+  color: var(--emerald);
+}
+
+.realtime-error {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+  color: var(--danger);
+}
+
 .sync-status {
   align-self: center;
   color: var(--muted);
@@ -1399,6 +1473,113 @@ textarea:focus-visible,
   box-shadow: var(--shadow-4);
 }
 
+.workspace-manager {
+  position: fixed;
+  z-index: 50;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  width: min(560px, calc(100vw - 28px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-4);
+}
+
+.workspace-manager-body {
+  display: grid;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.workspace-board-row,
+.workspace-member-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--text);
+  text-align: left;
+}
+
+.workspace-board-row span:last-child,
+.workspace-member-row div span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workspace-member-row div {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.workspace-profile-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.workspace-profile-grid label {
+  display: grid;
+  flex: 1;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.workspace-profile-grid input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.invitation-list {
+  margin-top: 10px;
+}
+
+.invite-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.invite-grid input,
+.invite-link input {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.invite-link {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.invite-link input {
+  flex: 1;
+}
+
 .task-drawer {
   top: 14px;
   right: 14px;
@@ -2019,6 +2200,39 @@ textarea:focus-visible,
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 12px 14px;
     gap: 12px;
+  }
+
+  .workspace-bar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 10px 14px;
+  }
+
+  .workspace-selector-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .workspace-separator {
+    display: none;
+  }
+
+  .workspace-selector-group label {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workspace-meta {
+    justify-content: space-between;
+  }
+
+  .invite-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-profile-grid {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .brand-block {

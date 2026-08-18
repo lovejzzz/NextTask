@@ -1,4 +1,3 @@
-import { requireUser } from '../_shared/auth.js';
 import {
   assertOwnedRelationIds,
   getAssigneeIds,
@@ -15,16 +14,17 @@ import {
 import { ApiHttpError, getUuidParam, handleApiError, methodNotAllowed, parseJsonBody, sendData, sendNoContent } from '../_shared/http.js';
 import { taskUpdateSchema } from '../_shared/validation.js';
 import type { VercelRequest, VercelResponse } from '../_shared/vercel.js';
+import { requireBoard } from '../_shared/workspace.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { supabase, user } = await requireUser(req);
+    const { supabase, user, board } = await requireBoard(req, 'write');
     const id = getUuidParam(req, 'id', 'Task id');
 
     if (req.method === 'PATCH') {
-      const previous = await getTaskOrThrow(supabase, user.id, id);
+      const previous = await getTaskOrThrow(supabase, board.id, id);
       const input = taskUpdateSchema.parse(parseJsonBody(req));
-      await assertOwnedRelationIds(supabase, user.id, input.assignee_ids, input.label_ids);
+      await assertOwnedRelationIds(supabase, board.id, input.assignee_ids, input.label_ids);
 
       const patch = {
         ...(input.title !== undefined ? { title: input.title } : {}),
@@ -37,32 +37,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Capture previous assignee/label sets before replacing, so we can emit
       // one granular activity event per added/removed member or label.
-      const prevAssignees = input.assignee_ids ? await getAssigneeIds(supabase, user.id, id) : null;
-      const prevLabels = input.label_ids ? await getLabelIds(supabase, user.id, id) : null;
+      const prevAssignees = input.assignee_ids ? await getAssigneeIds(supabase, board.id, id) : null;
+      const prevLabels = input.label_ids ? await getLabelIds(supabase, board.id, id) : null;
 
       let assigneesChanged = false;
       let labelsChanged = false;
       try {
         if (input.assignee_ids) {
-          await replaceAssignees(supabase, user.id, id, input.assignee_ids, prevAssignees ?? []);
+          await replaceAssignees(supabase, user.id, board.id, id, input.assignee_ids, prevAssignees ?? []);
           assigneesChanged = true;
         }
 
         if (input.label_ids) {
-          await replaceLabels(supabase, user.id, id, input.label_ids, prevLabels ?? []);
+          await replaceLabels(supabase, user.id, board.id, id, input.label_ids, prevLabels ?? []);
           labelsChanged = true;
         }
 
         if (Object.keys(patch).length) {
-          const { error } = await supabase.from('tasks').update(patch).eq('user_id', user.id).eq('id', id);
+          const { error } = await supabase.from('tasks').update(patch).eq('board_id', board.id).eq('id', id);
           if (error) throw error;
         }
       } catch (error) {
         if (labelsChanged) {
-          await rollbackStep('labels', id, () => replaceLabels(supabase, user.id, id, prevLabels ?? []));
+          await rollbackStep('labels', id, () => replaceLabels(supabase, user.id, board.id, id, prevLabels ?? []));
         }
         if (assigneesChanged) {
-          await rollbackStep('assignees', id, () => replaceAssignees(supabase, user.id, id, prevAssignees ?? []));
+          await rollbackStep('assignees', id, () => replaceAssignees(supabase, user.id, board.id, id, prevAssignees ?? []));
         }
         throw error;
       }
@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const didMove = nextStatus && nextStatus !== previous.status;
       try {
         if (didMove && nextStatus) {
-          await recordActivity(supabase, user.id, id, 'task_moved', taskMoveMessage(previous.status, nextStatus), {
+          await recordActivity(supabase, user.id, board.id, id, 'task_moved', taskMoveMessage(previous.status, nextStatus), {
             from: previous.status,
             to: nextStatus,
           });
@@ -80,20 +80,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Field edits other than the status move get a single "Updated task" event.
         const editedFields = Object.keys(patch).filter((field) => field !== 'status' || !didMove);
         if (editedFields.length) {
-          await recordActivity(supabase, user.id, id, 'task_updated', 'Updated task', { fields: editedFields });
+          await recordActivity(supabase, user.id, board.id, id, 'task_updated', 'Updated task', { fields: editedFields });
         }
 
         if (input.assignee_ids) {
-          await recordAssigneeChanges(supabase, user.id, id, prevAssignees ?? [], input.assignee_ids);
+          await recordAssigneeChanges(supabase, user.id, board.id, id, prevAssignees ?? [], input.assignee_ids);
         }
         if (input.label_ids) {
-          await recordLabelChanges(supabase, user.id, id, prevLabels ?? [], input.label_ids);
+          await recordLabelChanges(supabase, user.id, board.id, id, prevLabels ?? [], input.label_ids);
         }
       } catch (error) {
         console.error(`Failed to record update activity for task ${id}`, error);
       }
 
-      const task = await hydrateTask(supabase, user.id, id);
+      const task = await hydrateTask(supabase, board.id, id);
       return sendData(res, task);
     }
 
@@ -101,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('tasks')
         .delete()
-        .eq('user_id', user.id)
+        .eq('board_id', board.id)
         .eq('id', id)
         .select('id')
         .maybeSingle();
