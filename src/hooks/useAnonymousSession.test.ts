@@ -35,6 +35,27 @@ describe('useAnonymousSession edge cases', () => {
     expect(result.current.isAnonymous).toBe(true);
   });
 
+  it('coalesces concurrent guest bootstrap attempts into one anonymous sign-in', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    let completeSignIn: (() => void) | undefined;
+    mocks.signInAnonymously.mockImplementation(() => new Promise((resolve) => {
+      completeSignIn = () => resolve({
+        data: { user: { id: 'guest-shared', email: null, is_anonymous: true } },
+        error: null,
+      });
+    }));
+
+    const first = renderHook(() => useAnonymousSession());
+    const second = renderHook(() => useAnonymousSession());
+    await waitFor(() => expect(mocks.signInAnonymously).toHaveBeenCalledTimes(1));
+
+    await act(async () => completeSignIn?.());
+    await waitFor(() => expect(first.result.current.status).toBe('ready'));
+    await waitFor(() => expect(second.result.current.status).toBe('ready'));
+    expect(first.result.current.userId).toBe('guest-shared');
+    expect(second.result.current.userId).toBe('guest-shared');
+  });
+
   it('surfaces an error when anonymous sign-in fails (e.g. rate limited)', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
     mocks.signInAnonymously.mockResolvedValue({ data: { user: null }, error: new Error('rate limited') });
